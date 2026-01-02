@@ -53,7 +53,7 @@ local function section(text)
 	lbl.Text = text
 	lbl.Font = Enum.Font.GothamBold
 	lbl.TextSize = 14
-	lbl.TextXAlignment = Left
+	lbl.TextXAlignment = Enum.TextXAlignment.Left
 	lbl.TextColor3 = Color3.fromRGB(200,200,200)
 end
 
