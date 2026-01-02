@@ -91,7 +91,7 @@ end
 local function button(parent, text)
 	local b = Instance.new("TextButton", parent)
 	b.Size = UDim2.new(1,0,0,34)
-	b.BackgroundColor3_toggle = Color3.fromRGB(30,30,30)
+	b.BackgroundColor3 = Color3.fromRGB(30,30,30)
 	b.TextColor3 = Color3.new(1,1,1)
 	b.Font = Enum.Font.Gotham
 	b.TextSize = 14
