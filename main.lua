@@ -1,111 +1,91 @@
--- SIMPLE HUB | M to open
--- Built fully, no manual adding needed
+-- SIMPLE HUB v2 (Fixed UI + Missing Features)
+-- Press M to toggle
 
 ---------------- SERVICES ----------------
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")
 
----------------- CONFIG ----------------
-local flySpeed = 23
+---------------- STATE ----------------
 local flyEnabled = false
 local noclip = false
-local espOn = false
-local boxEsp = false
-local distanceEsp = false
-local teamCheck = false
-local chamsOn = false
-local chamsColor = Color3.fromRGB(255,0,0)
+local walkEnabled = false
+local jumpEnabled = false
+local espEnabled = false
+
+local flySpeed = 23
+local walkSpeed = humanoid.WalkSpeed
+local jumpPower = humanoid.JumpPower
+
+local bv, bg
+local espObjects = {}
 
 ---------------- GUI ----------------
 local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 460, 0, 420)
-main.Position = UDim2.fromScale(0.5,0.5)
-main.AnchorPoint = Vector2.new(0.5,0.5)
-main.BackgroundColor3 = Color3.fromRGB(15,15,15)
+main.Size = UDim2.new(0, 420, 0, 460)
+main.Position = UDim2.fromScale(0.5, 0.5)
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.BackgroundColor3 = Color3.fromRGB(12,12,12)
 main.Visible = false
-Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,16)
 
 local pad = Instance.new("UIPadding", main)
-pad.PaddingTop = UDim.new(0,12)
-pad.PaddingLeft = UDim.new(0,12)
-pad.PaddingRight = UDim.new(0,12)
+pad.PaddingTop = UDim.new(0,14)
+pad.PaddingLeft = UDim.new(0,14)
+pad.PaddingRight = UDim.new(0,14)
 
 local layout = Instance.new("UIListLayout", main)
-layout.Padding = UDim.new(0,8)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1,0,0,36)
-title.BackgroundTransparency = 1
-title.Text = "Simple Hub"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 20
-title.TextColor3 = Color3.new(1,1,1)
-
----------------- DRAG ----------------
-local dragging, dragStart, startPos
-main.InputBegan:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = i.Position
-		startPos = main.Position
-	end
-end)
-UIS.InputEnded:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-	end
-end)
-UIS.InputChanged:Connect(function(i)
-	if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = i.Position - dragStart
-		main.Position = UDim2.new(
-			startPos.X.Scale, startPos.X.Offset + delta.X,
-			startPos.Y.Scale, startPos.Y.Offset + delta.Y
-		)
-	end
-end)
+layout.Padding = UDim.new(0,10)
 
 ---------------- HELPERS ----------------
+local function section(text)
+	local lbl = Instance.new("TextLabel", main)
+	lbl.Size = UDim2.new(1,0,0,24)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = text
+	lbl.Font = Enum.Font.GothamBold
+	lbl.TextSize = 14
+	lbl.TextXAlignment = Left
+	lbl.TextColor3 = Color3.fromRGB(200,200,200)
+end
+
 local function button(text)
 	local b = Instance.new("TextButton", main)
-	b.Size = UDim2.new(1,-10,0,32)
+	b.Size = UDim2.new(1,0,0,34)
 	b.BackgroundColor3 = Color3.fromRGB(30,30,30)
 	b.TextColor3 = Color3.new(1,1,1)
 	b.Font = Enum.Font.Gotham
 	b.TextSize = 14
-	b.Text = text
+	b.Text = text .. ": OFF"
 	Instance.new("UICorner", b)
 	return b
 end
 
 local function slider(label, min, max, value, callback)
 	local frame = Instance.new("Frame", main)
-	frame.Size = UDim2.new(1,-10,0,50)
+	frame.Size = UDim2.new(1,0,0,50)
 	frame.BackgroundTransparency = 1
 
 	local txt = Instance.new("TextLabel", frame)
 	txt.Size = UDim2.new(1,0,0,18)
 	txt.BackgroundTransparency = 1
-	txt.Text = label..": "..value
-	txt.TextColor3 = Color3.new(1,1,1)
+	txt.Text = label .. ": " .. value
 	txt.Font = Enum.Font.Gotham
-	txt.TextSize = 14
+	txt.TextSize = 13
+	txt.TextColor3 = Color3.new(1,1,1)
 
 	local bar = Instance.new("Frame", frame)
 	bar.Position = UDim2.new(0,0,0,26)
 	bar.Size = UDim2.new(1,0,0,10)
-	bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
+	bar.BackgroundColor3 = Color3.fromRGB(45,45,45)
 	Instance.new("UICorner", bar)
 
 	local fill = Instance.new("Frame", bar)
@@ -125,14 +105,13 @@ local function slider(label, min, max, value, callback)
 			local pct = math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,0,1)
 			local val = math.floor(min + (max-min)*pct)
 			fill.Size = UDim2.new(pct,0,1,0)
-			txt.Text = label..": "..val
+			txt.Text = label .. ": " .. val
 			callback(val)
 		end
 	end)
 end
 
 ---------------- MOVEMENT ----------------
-local bv, bg
 RunService.RenderStepped:Connect(function()
 	if flyEnabled then
 		local cam = workspace.CurrentCamera
@@ -146,6 +125,7 @@ RunService.RenderStepped:Connect(function()
 		bv.Velocity = move.Magnitude > 0 and move.Unit * flySpeed or Vector3.zero
 		bg.CFrame = cam.CFrame
 	end
+
 	if noclip then
 		for _,p in pairs(character:GetDescendants()) do
 			if p:IsA("BasePart") then p.CanCollide = false end
@@ -153,9 +133,43 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
----------------- BUTTONS ----------------
-button("Fly").MouseButton1Click:Connect(function()
+---------------- ESP ----------------
+local function toggleESP(btn)
+	espEnabled = not espEnabled
+	btn.Text = "Name ESP: " .. (espEnabled and "ON" or "OFF")
+
+	for _,v in pairs(espObjects) do v:Destroy() end
+	espObjects = {}
+
+	if not espEnabled then return end
+
+	for _,plr in pairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") then
+			local bb = Instance.new("BillboardGui")
+			bb.Size = UDim2.new(0,100,0,30)
+			bb.AlwaysOnTop = true
+			bb.Adornee = plr.Character.Head
+
+			local t = Instance.new("TextLabel", bb)
+			t.Size = UDim2.fromScale(1,1)
+			t.BackgroundTransparency = 1
+			t.Text = plr.Name
+			t.TextColor3 = Color3.new(1,1,1)
+			t.TextStrokeTransparency = 0
+
+			bb.Parent = gui
+			table.insert(espObjects, bb)
+		end
+	end
+end
+
+---------------- UI BUILD ----------------
+section("Movement")
+
+local flyBtn = button("Fly")
+flyBtn.MouseButton1Click:Connect(function()
 	flyEnabled = not flyEnabled
+	flyBtn.Text = "Fly: " .. (flyEnabled and "ON" or "OFF")
 	if flyEnabled then
 		bv = Instance.new("BodyVelocity", root)
 		bv.MaxForce = Vector3.new(1e5,1e5,1e5)
@@ -167,13 +181,44 @@ button("Fly").MouseButton1Click:Connect(function()
 	end
 end)
 
-button("Noclip").MouseButton1Click:Connect(function()
+local noclipBtn = button("Noclip")
+noclipBtn.MouseButton1Click:Connect(function()
 	noclip = not noclip
+	noclipBtn.Text = "Noclip: " .. (noclip and "ON" or "OFF")
 end)
 
 slider("Fly Speed", 5, 100, flySpeed, function(v) flySpeed = v end)
-slider("WalkSpeed", 8, 100, humanoid.WalkSpeed, function(v) humanoid.WalkSpeed = v end)
-slider("JumpPower", 20, 150, humanoid.JumpPower, function(v) humanoid.JumpPower = v end)
+
+local walkBtn = button("WalkSpeed")
+walkBtn.MouseButton1Click:Connect(function()
+	walkEnabled = not walkEnabled
+	humanoid.WalkSpeed = walkEnabled and walkSpeed or 16
+	walkBtn.Text = "WalkSpeed: " .. (walkEnabled and "ON" or "OFF")
+end)
+
+slider("WalkSpeed Value", 8, 100, walkSpeed, function(v)
+	walkSpeed = v
+	if walkEnabled then humanoid.WalkSpeed = v end
+end)
+
+local jumpBtn = button("JumpPower")
+jumpBtn.MouseButton1Click:Connect(function()
+	jumpEnabled = not jumpEnabled
+	humanoid.JumpPower = jumpEnabled and jumpPower or 50
+	jumpBtn.Text = "JumpPower: " .. (jumpEnabled and "ON" or "OFF")
+end)
+
+slider("JumpPower Value", 20, 150, jumpPower, function(v)
+	jumpPower = v
+	if jumpEnabled then humanoid.JumpPower = v end
+end)
+
+section("ESP")
+
+local espBtn = button("Name ESP")
+espBtn.MouseButton1Click:Connect(function()
+	toggleESP(espBtn)
+end)
 
 ---------------- MENU TOGGLE ----------------
 UIS.InputBegan:Connect(function(i,gp)
@@ -183,4 +228,4 @@ UIS.InputBegan:Connect(function(i,gp)
 	end
 end)
 
-print("Hub loaded")
+print("Simple Hub v2 loaded")
