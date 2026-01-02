@@ -357,16 +357,23 @@ local function slider(parent, label, min, max, value, callback)
 end
 
 ---------------- FRAMES ----------------
-local movementFrame = Instance.new("Frame", content)
-local combatFrame = Instance.new("Frame", content)
-local espFrame = Instance.new("Frame", content)
-local extraFrame = Instance.new("Frame", content)
+local movementFrame = Instance.new("ScrollingFrame", content)
+local combatFrame = Instance.new("ScrollingFrame", content)
+local espFrame = Instance.new("ScrollingFrame", content)
+local extraFrame = Instance.new("ScrollingFrame", content)
+
 
 for _,f in pairs({movementFrame, combatFrame, espFrame, extraFrame}) do
 	f.Size = UDim2.new(1, 0, 1, 0)
+	f.CanvasSize = UDim2.new(0, 0, 0, 0) -- auto
+	f.ScrollBarImageTransparency = 0.2
+	f.ScrollBarThickness = 6
+	f.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	f.ScrollingDirection = Enum.ScrollingDirection.Y
 	f.BackgroundTransparency = 1
 	f.Visible = false
 	f.BorderSizePixel = 0
+
 
 	local pad = Instance.new("UIPadding", f)
 	pad.PaddingTop = UDim.new(0, 16)
