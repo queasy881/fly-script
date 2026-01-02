@@ -1,6 +1,7 @@
 -- Roblox Flight Script with Toggle
 -- Speed: 23 studs per second
 -- Toggle Key: F
+print("FLIGHT SCRIPT LOADED")
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
