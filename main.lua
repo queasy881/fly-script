@@ -362,21 +362,23 @@ for _,f in pairs({movementFrame, combatFrame, espFrame, extraFrame}) do
 	f.Size = UDim2.new(1, 0, 1, 0)
 	f.BackgroundTransparency = 1
 	f.Visible = false
-	f.ClipsDescendants = true
+	f.ClipsDescendants = false
 	f.BorderSizePixel = 0
 	f.ScrollBarThickness = 6
 	f.ScrollBarImageColor3 = Color3.fromRGB(88, 166, 255)
-	f.CanvasSize = UDim2.new(0, 0, 0, 0)
+	f.CanvasSize = UDim2.new(0, 0, 2, 0)
 	f.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	f.ScrollingDirection = Enum.ScrollingDirection.Y
 
 	local pad = Instance.new("UIPadding", f)
 	pad.PaddingTop = UDim.new(0, 16)
 	pad.PaddingLeft = UDim.new(0, 20)
-	pad.PaddingRight = UDim.new(0, 20)
+	pad.PaddingRight = UDim.new(0, 26)
 	pad.PaddingBottom = UDim.new(0, 16)
 
 	local layout = Instance.new("UIListLayout", f)
 	layout.Padding = UDim.new(0, 10)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
 end
 
 movementFrame.Visible = true
