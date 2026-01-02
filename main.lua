@@ -55,7 +55,7 @@ local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 780, 0, 420)
+main.Size = UDim2.new(0, 780, 0, 480)
 main.Position = UDim2.fromScale(0.5, 0.5)
 main.AnchorPoint = Vector2.new(0.5, 0.5)
 main.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
@@ -306,15 +306,20 @@ local function slider(parent, label, min, max, value, callback)
 end
 
 ---------------- FRAMES ----------------
-local movementFrame = Instance.new("Frame", content)
-local espFrame = Instance.new("Frame", content)
-local extraFrame = Instance.new("Frame", content)
+local movementFrame = Instance.new("ScrollingFrame", content)
+local espFrame = Instance.new("ScrollingFrame", content)
+local extraFrame = Instance.new("ScrollingFrame", content)
 
 for _,f in pairs({movementFrame, espFrame, extraFrame}) do
 	f.Size = UDim2.new(1, 0, 1, 0)
 	f.BackgroundTransparency = 1
 	f.Visible = false
 	f.ClipsDescendants = true
+	f.BorderSizePixel = 0
+	f.ScrollBarThickness = 6
+	f.ScrollBarImageColor3 = Color3.fromRGB(88, 166, 255)
+	f.CanvasSize = UDim2.new(0, 0, 0, 0)
+	f.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 	local pad = Instance.new("UIPadding", f)
 	pad.PaddingTop = UDim.new(0, 16)
@@ -461,18 +466,6 @@ boxBtn.MouseButton1Click:Connect(function()
 
 	for _,h in pairs(boxESPObjects) do h:Destroy() end
 	boxESPObjects = {}
-
-	if not boxESP then return end
-
-	for _,plr in pairs(Players:GetPlayers()) do
-		if plr ~= player and plr.Character then
-			local hl = Instance.new("Highlight")
-			hl.FillColor = Color3.fromRGB(255,0,0)
-			hl.OutlineColor = Color3.new(1,1,1)
-			hl.Parent = plr.Character
-			table.insert(boxESPObjects, hl)
-		end
-	end
 end)
 
 section(espFrame, "VISIBILITY")
@@ -666,6 +659,59 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
+	-- Box ESP update (actual boxes)
+	if boxESP then
+		for _,h in pairs(boxESPObjects) do h:Destroy() end
+		boxESPObjects = {}
+
+		for _,plr in pairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				local hrp = plr.Character.HumanoidRootPart
+				
+				-- Create BillboardGui for the box
+				local billboard = Instance.new("BillboardGui")
+				billboard.Adornee = hrp
+				billboard.Size = UDim2.new(4, 0, 5, 0)
+				billboard.AlwaysOnTop = true
+				billboard.Parent = gui
+				
+				-- Create the box frame
+				local box = Instance.new("Frame", billboard)
+				box.Size = UDim2.fromScale(1, 1)
+				box.BackgroundTransparency = 1
+				box.BorderSizePixel = 0
+				
+				-- Create box corners/edges
+				local function createLine(parent, pos, size)
+					local line = Instance.new("Frame", parent)
+					line.Position = pos
+					line.Size = size
+					line.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+					line.BorderSizePixel = 0
+					return line
+				end
+				
+				-- Top lines
+				createLine(box, UDim2.new(0, 0, 0, 0), UDim2.new(0.3, 0, 0, 2))
+				createLine(box, UDim2.new(0.7, 0, 0, 0), UDim2.new(0.3, 0, 0, 2))
+				
+				-- Bottom lines
+				createLine(box, UDim2.new(0, 0, 1, -2), UDim2.new(0.3, 0, 0, 2))
+				createLine(box, UDim2.new(0.7, 0, 1, -2), UDim2.new(0.3, 0, 0, 2))
+				
+				-- Left lines
+				createLine(box, UDim2.new(0, 0, 0, 0), UDim2.new(0, 2, 0.3, 0))
+				createLine(box, UDim2.new(0, 0, 0.7, 0), UDim2.new(0, 2, 0.3, 0))
+				
+				-- Right lines
+				createLine(box, UDim2.new(1, -2, 0, 0), UDim2.new(0, 2, 0.3, 0))
+				createLine(box, UDim2.new(1, -2, 0.7, 0), UDim2.new(0, 2, 0.3, 0))
+				
+				table.insert(boxESPObjects, billboard)
+			end
+		end
+	end
+
 	-- Tracers update
 	if tracersEnabled then
 		for _,t in pairs(tracerObjects) do t:Destroy() end
@@ -673,22 +719,25 @@ RunService.RenderStepped:Connect(function()
 
 		for _,plr in pairs(Players:GetPlayers()) do
 			if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-				local line = Instance.new("Line")
+				local hrp = plr.Character.HumanoidRootPart
+				
+				-- Create beam for tracer
 				local a0 = Instance.new("Attachment", workspace.Terrain)
-				local a1 = Instance.new("Attachment", workspace.Terrain)
+				local a1 = Instance.new("Attachment", hrp)
 				
 				a0.WorldPosition = camera.CFrame.Position
-				a1.WorldPosition = plr.Character.HumanoidRootPart.Position
 				
-				line.Attachment0 = a0
-				line.Attachment1 = a1
-				line.Color = Color3.fromRGB(255, 255, 0)
-				line.Thickness = 0.1
-				line.Parent = workspace.Terrain
+				local beam = Instance.new("Beam")
+				beam.Attachment0 = a0
+				beam.Attachment1 = a1
+				beam.Color = ColorSequence.new(Color3.fromRGB(255, 255, 0))
+				beam.Width0 = 0.1
+				beam.Width1 = 0.1
+				beam.FaceCamera = true
+				beam.Parent = workspace.Terrain
 				
-				table.insert(tracerObjects, line)
+				table.insert(tracerObjects, beam)
 				table.insert(tracerObjects, a0)
-				table.insert(tracerObjects, a1)
 			end
 		end
 	end
@@ -703,13 +752,13 @@ RunService.RenderStepped:Connect(function()
 				local distance = (plr.Character.Head.Position - root.Position).Magnitude
 				
 				local bb = Instance.new("BillboardGui")
-				bb.Size = UDim2.new(0,100,0,20)
+				bb.Size = UDim2.new(0, 100, 0, 25)
 				bb.AlwaysOnTop = true
 				bb.Adornee = plr.Character.Head
-				bb.StudsOffset = Vector3.new(0, 2, 0)
+				bb.StudsOffset = Vector3.new(0, 2.5, 0)
 
 				local t = Instance.new("TextLabel", bb)
-				t.Size = UDim2.fromScale(1,1)
+				t.Size = UDim2.fromScale(1, 1)
 				t.BackgroundTransparency = 1
 				t.Text = math.floor(distance) .. " studs"
 				t.TextColor3 = Color3.fromRGB(255, 255, 0)
