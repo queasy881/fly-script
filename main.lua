@@ -137,6 +137,25 @@ content.ClipsDescendants = true
 
 ---------------- HELPERS ----------------
 local activeTab = nil
+local tabButtons = {}
+
+local function setActiveTab(b)
+	if activeTab then
+		tween(activeTab, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(activeTab, {TextColor3 = Color3.fromRGB(140, 140, 160)}, 0.25)
+		local oldIndicator = activeTab:FindFirstChild("Frame")
+		if oldIndicator then
+			tween(oldIndicator, {Size = UDim2.new(0, 0, 0, 3)}, 0.25)
+		end
+	end
+	activeTab = b
+	tween(b, {BackgroundColor3 = Color3.fromRGB(88, 166, 255)}, 0.25)
+	tween(b, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	local indicator = b:FindFirstChild("Frame")
+	if indicator then
+		tween(indicator, {Size = UDim2.new(0.8, 0, 0, 3)}, 0.3, Enum.EasingStyle.Back)
+	end
+end
 
 local function tabButton(text)
 	local b = Instance.new("TextButton", tabBar)
@@ -175,21 +194,6 @@ local function tabButton(text)
 			tween(b, {TextColor3 = Color3.fromRGB(140, 140, 160)}, 0.2)
 		end
 	end)
-	
-	b.setActive = function()
-		if activeTab then
-			tween(activeTab, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
-			tween(activeTab, {TextColor3 = Color3.fromRGB(140, 140, 160)}, 0.25)
-			local oldIndicator = activeTab:FindFirstChild("Frame")
-			if oldIndicator then
-				tween(oldIndicator, {Size = UDim2.new(0, 0, 0, 3)}, 0.25)
-			end
-		end
-		activeTab = b
-		tween(b, {BackgroundColor3 = Color3.fromRGB(88, 166, 255)}, 0.25)
-		tween(b, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
-		tween(indicator, {Size = UDim2.new(0.8, 0, 0, 3)}, 0.3, Enum.EasingStyle.Back)
-	end
 
 	return b
 end
@@ -526,24 +530,24 @@ local moveTab = tabButton("Movement")
 local espTab = tabButton("ESP")
 local extraTab = tabButton("Extra")
 
-moveTab.setActive()
+setActiveTab(moveTab)
 
 moveTab.MouseButton1Click:Connect(function()
-	moveTab.setActive()
+	setActiveTab(moveTab)
 	movementFrame.Visible = true
 	espFrame.Visible = false
 	extraFrame.Visible = false
 end)
 
 espTab.MouseButton1Click:Connect(function()
-	espTab.setActive()
+	setActiveTab(espTab)
 	movementFrame.Visible = false
 	espFrame.Visible = true
 	extraFrame.Visible = false
 end)
 
 extraTab.MouseButton1Click:Connect(function()
-	extraTab.setActive()
+	setActiveTab(extraTab)
 	movementFrame.Visible = false
 	espFrame.Visible = false
 	extraFrame.Visible = true
