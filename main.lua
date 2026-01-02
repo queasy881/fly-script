@@ -15,6 +15,42 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")
 
+-- Character respawn handler
+player.CharacterAdded:Connect(function(char)
+	character = char
+	humanoid = char:WaitForChild("Humanoid")
+	root = char:WaitForChild("HumanoidRootPart")
+	
+	-- Reapply invisibility if it was on
+	if invisible then
+		task.wait(0.1)
+		applyInvisibility()
+	end
+	
+	-- Reapply fly if it was on
+	if fly then
+		task.wait(0.1)
+		if bv then bv:Destroy() end
+		if bg then bg:Destroy() end
+		bv = Instance.new("BodyVelocity", root)
+		bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+		bg = Instance.new("BodyGyro", root)
+		bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+	end
+	
+	-- Reapply walk speed if it was on
+	if walkEnabled then
+		task.wait(0.1)
+		humanoid.WalkSpeed = walkSpeed
+	end
+	
+	-- Reapply jump power if it was on
+	if jumpEnabled then
+		task.wait(0.1)
+		humanoid.JumpPower = jumpPower
+	end
+end)
+
 ---------------- STATE ----------------
 local fly = false
 local noclip = false
@@ -38,6 +74,9 @@ local aimSmoothness = 0.5
 local showFOVCircle = false
 local teamCheck = true
 local visibilityCheck = true
+local silentAimEnabled = false
+local silentAimFOV = 150
+local hitChance = 100
 
 local defaultFOV = camera.FieldOfView
 
@@ -315,11 +354,11 @@ end
 
 ---------------- FRAMES ----------------
 local movementFrame = Instance.new("ScrollingFrame", content)
+local combatFrame = Instance.new("ScrollingFrame", content)
 local espFrame = Instance.new("ScrollingFrame", content)
-local aimFrame = Instance.new("ScrollingFrame", content)
 local extraFrame = Instance.new("ScrollingFrame", content)
 
-for _,f in pairs({movementFrame, espFrame, aimFrame, extraFrame}) do
+for _,f in pairs({movementFrame, combatFrame, espFrame, extraFrame}) do
 	f.Size = UDim2.new(1, 0, 1, 0)
 	f.BackgroundTransparency = 1
 	f.Visible = false
@@ -643,6 +682,29 @@ tween(teamCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0)
 tween(visCheckBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0)
 tween(visCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0)
 
+section(aimFrame, "SILENT AIM")
+
+local silentAimBtn = button(aimFrame, "Silent Aim: OFF")
+silentAimBtn.MouseButton1Click:Connect(function()
+	silentAimEnabled = not silentAimEnabled
+	silentAimBtn.Text = "Silent Aim: " .. (silentAimEnabled and "ON" or "OFF")
+	if silentAimEnabled then
+		tween(silentAimBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(silentAimBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(silentAimBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(silentAimBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+	end
+end)
+
+slider(aimFrame, "Silent Aim FOV", 20, 500, silentAimFOV, function(v)
+	silentAimFOV = v
+end)
+
+slider(aimFrame, "Hit Chance %", 0, 100, hitChance, function(v)
+	hitChance = v
+end)
+
 ---------------- EXTRA TAB ----------------
 section(extraFrame, "EXTRA")
 
@@ -695,8 +757,8 @@ end)
 
 ---------------- TAB SWITCH ----------------
 local moveTab = tabButton("Movement")
+local combatTab = tabButton("Combat")
 local espTab = tabButton("ESP")
-local aimTab = tabButton("Aim Assist")
 local extraTab = tabButton("Extra")
 
 -- Set initial active tab
@@ -706,32 +768,32 @@ setActiveTab(moveTab)
 moveTab.MouseButton1Click:Connect(function()
 	setActiveTab(moveTab)
 	movementFrame.Visible = true
+	combatFrame.Visible = false
 	espFrame.Visible = false
-	aimFrame.Visible = false
+	extraFrame.Visible = false
+end)
+
+combatTab.MouseButton1Click:Connect(function()
+	setActiveTab(combatTab)
+	movementFrame.Visible = false
+	combatFrame.Visible = true
+	espFrame.Visible = false
 	extraFrame.Visible = false
 end)
 
 espTab.MouseButton1Click:Connect(function()
 	setActiveTab(espTab)
 	movementFrame.Visible = false
+	combatFrame.Visible = false
 	espFrame.Visible = true
-	aimFrame.Visible = false
-	extraFrame.Visible = false
-end)
-
-aimTab.MouseButton1Click:Connect(function()
-	setActiveTab(aimTab)
-	movementFrame.Visible = false
-	espFrame.Visible = false
-	aimFrame.Visible = true
 	extraFrame.Visible = false
 end)
 
 extraTab.MouseButton1Click:Connect(function()
 	setActiveTab(extraTab)
 	movementFrame.Visible = false
+	combatFrame.Visible = false
 	espFrame.Visible = false
-	aimFrame.Visible = false
 	extraFrame.Visible = true
 end)
 
