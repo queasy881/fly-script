@@ -49,7 +49,7 @@ tabBar.BackgroundColor3 = Color3.fromRGB(20,20,20)
 
 local tabLayout = Instance.new("UIListLayout", tabBar)
 tabLayout.FillDirection = Enum.FillDirection.Horizontal
-tabLayout.HorizontalAlignment = Center
+tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 tabLayout.Padding = UDim.new(0,10)
 
 -- Content holder
