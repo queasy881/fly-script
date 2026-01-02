@@ -406,7 +406,7 @@ slider(movementFrame, "JumpPower Value", 20, 150, jumpPower, function(v)
 end)
 
 ---------------- ESP TAB ----------------
-section(espFrame, "ESP")
+section(espFrame, "PLAYER ESP")
 
 local nameBtn = button(espFrame, "Name ESP: OFF")
 nameBtn.MouseButton1Click:Connect(function()
@@ -475,6 +475,82 @@ boxBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
+section(espFrame, "VISIBILITY")
+
+local tracersEnabled = false
+local tracerObjects = {}
+
+local tracersBtn = button(espFrame, "Tracers: OFF")
+tracersBtn.MouseButton1Click:Connect(function()
+	tracersEnabled = not tracersEnabled
+	tracersBtn.Text = "Tracers: " .. (tracersEnabled and "ON" or "OFF")
+
+	if tracersEnabled then
+		tween(tracersBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(tracersBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(tracersBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(tracersBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+		for _,t in pairs(tracerObjects) do t:Destroy() end
+		tracerObjects = {}
+	end
+end)
+
+local chamsEnabled = false
+local chamsObjects = {}
+
+local chamsBtn = button(espFrame, "Chams: OFF")
+chamsBtn.MouseButton1Click:Connect(function()
+	chamsEnabled = not chamsEnabled
+	chamsBtn.Text = "Chams: " .. (chamsEnabled and "ON" or "OFF")
+
+	if chamsEnabled then
+		tween(chamsBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(chamsBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(chamsBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(chamsBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+		for _,c in pairs(chamsObjects) do c:Destroy() end
+		chamsObjects = {}
+	end
+
+	for _,c in pairs(chamsObjects) do c:Destroy() end
+	chamsObjects = {}
+
+	if not chamsEnabled then return end
+
+	for _,plr in pairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character then
+			local hl = Instance.new("Highlight")
+			hl.FillColor = Color3.fromRGB(0, 255, 100)
+			hl.FillTransparency = 0.5
+			hl.OutlineColor = Color3.fromRGB(0, 200, 80)
+			hl.OutlineTransparency = 0
+			hl.Parent = plr.Character
+			table.insert(chamsObjects, hl)
+		end
+	end
+end)
+
+local distanceEnabled = false
+local distanceObjects = {}
+
+local distanceBtn = button(espFrame, "Distance ESP: OFF")
+distanceBtn.MouseButton1Click:Connect(function()
+	distanceEnabled = not distanceEnabled
+	distanceBtn.Text = "Distance ESP: " .. (distanceEnabled and "ON" or "OFF")
+
+	if distanceEnabled then
+		tween(distanceBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(distanceBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(distanceBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(distanceBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+		for _,d in pairs(distanceObjects) do d:Destroy() end
+		distanceObjects = {}
+	end
+end)
+
 ---------------- EXTRA TAB ----------------
 section(extraFrame, "EXTRA")
 
@@ -530,6 +606,8 @@ local moveTab = tabButton("Movement")
 local espTab = tabButton("ESP")
 local extraTab = tabButton("Extra")
 
+-- Set initial active tab
+task.wait()
 setActiveTab(moveTab)
 
 moveTab.MouseButton1Click:Connect(function()
@@ -585,6 +663,63 @@ RunService.RenderStepped:Connect(function()
 	if noclip then
 		for _,p in pairs(character:GetDescendants()) do
 			if p:IsA("BasePart") then p.CanCollide = false end
+		end
+	end
+
+	-- Tracers update
+	if tracersEnabled then
+		for _,t in pairs(tracerObjects) do t:Destroy() end
+		tracerObjects = {}
+
+		for _,plr in pairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				local line = Instance.new("Line")
+				local a0 = Instance.new("Attachment", workspace.Terrain)
+				local a1 = Instance.new("Attachment", workspace.Terrain)
+				
+				a0.WorldPosition = camera.CFrame.Position
+				a1.WorldPosition = plr.Character.HumanoidRootPart.Position
+				
+				line.Attachment0 = a0
+				line.Attachment1 = a1
+				line.Color = Color3.fromRGB(255, 255, 0)
+				line.Thickness = 0.1
+				line.Parent = workspace.Terrain
+				
+				table.insert(tracerObjects, line)
+				table.insert(tracerObjects, a0)
+				table.insert(tracerObjects, a1)
+			end
+		end
+	end
+
+	-- Distance ESP update
+	if distanceEnabled then
+		for _,d in pairs(distanceObjects) do d:Destroy() end
+		distanceObjects = {}
+
+		for _,plr in pairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character and plr.Character:FindFirstChild("Head") and root then
+				local distance = (plr.Character.Head.Position - root.Position).Magnitude
+				
+				local bb = Instance.new("BillboardGui")
+				bb.Size = UDim2.new(0,100,0,20)
+				bb.AlwaysOnTop = true
+				bb.Adornee = plr.Character.Head
+				bb.StudsOffset = Vector3.new(0, 2, 0)
+
+				local t = Instance.new("TextLabel", bb)
+				t.Size = UDim2.fromScale(1,1)
+				t.BackgroundTransparency = 1
+				t.Text = math.floor(distance) .. " studs"
+				t.TextColor3 = Color3.fromRGB(255, 255, 0)
+				t.TextStrokeTransparency = 0
+				t.Font = Enum.Font.GothamBold
+				t.TextSize = 14
+
+				bb.Parent = gui
+				table.insert(distanceObjects, bb)
+			end
 		end
 	end
 end)
