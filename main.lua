@@ -32,11 +32,19 @@ local teleportEnabled = false
 local invisible = false
 local invisAmount = 1
 
+local aimAssistEnabled = false
+local aimFOV = 100
+local aimSmoothness = 0.5
+local showFOVCircle = false
+local teamCheck = true
+local visibilityCheck = true
+
 local defaultFOV = camera.FieldOfView
 
 local bv, bg
 local nameESPObjects = {}
 local boxESPObjects = {}
+local fovCircle = nil
 
 ---------------- INVISIBILITY ----------------
 local function applyInvisibility()
@@ -159,7 +167,7 @@ end
 
 local function tabButton(text)
 	local b = Instance.new("TextButton", tabBar)
-	b.Size = UDim2.new(0, 180, 0, 36)
+	b.Size = UDim2.new(0, 160, 0, 36)
 	b.Text = text
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 13
@@ -308,9 +316,10 @@ end
 ---------------- FRAMES ----------------
 local movementFrame = Instance.new("ScrollingFrame", content)
 local espFrame = Instance.new("ScrollingFrame", content)
+local aimFrame = Instance.new("ScrollingFrame", content)
 local extraFrame = Instance.new("ScrollingFrame", content)
 
-for _,f in pairs({movementFrame, espFrame, extraFrame}) do
+for _,f in pairs({movementFrame, espFrame, aimFrame, extraFrame}) do
 	f.Size = UDim2.new(1, 0, 1, 0)
 	f.BackgroundTransparency = 1
 	f.Visible = false
@@ -544,6 +553,96 @@ distanceBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
+---------------- AIM ASSIST TAB ----------------
+section(aimFrame, "AIM ASSIST")
+
+local aimBtn = button(aimFrame, "Aim Assist: OFF")
+aimBtn.MouseButton1Click:Connect(function()
+	aimAssistEnabled = not aimAssistEnabled
+	aimBtn.Text = "Aim Assist: " .. (aimAssistEnabled and "ON" or "OFF")
+	if aimAssistEnabled then
+		tween(aimBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(aimBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(aimBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(aimBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+	end
+end)
+
+slider(aimFrame, "FOV Size", 20, 500, aimFOV, function(v)
+	aimFOV = v
+	if fovCircle then
+		fovCircle.Radius = v
+	end
+end)
+
+slider(aimFrame, "Smoothness", 0.1, 1, aimSmoothness, function(v)
+	aimSmoothness = v
+end)
+
+section(aimFrame, "VISUAL")
+
+local fovCircleBtn = button(aimFrame, "Show FOV Circle: OFF")
+fovCircleBtn.MouseButton1Click:Connect(function()
+	showFOVCircle = not showFOVCircle
+	fovCircleBtn.Text = "Show FOV Circle: " .. (showFOVCircle and "ON" or "OFF")
+	if showFOVCircle then
+		tween(fovCircleBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(fovCircleBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+		
+		if not fovCircle then
+			fovCircle = Drawing.new("Circle")
+			fovCircle.Thickness = 2
+			fovCircle.NumSides = 50
+			fovCircle.Radius = aimFOV
+			fovCircle.Color = Color3.fromRGB(255, 255, 255)
+			fovCircle.Transparency = 0.8
+			fovCircle.Filled = false
+		end
+		fovCircle.Visible = true
+	else
+		tween(fovCircleBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(fovCircleBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+		if fovCircle then
+			fovCircle.Visible = false
+		end
+	end
+end)
+
+section(aimFrame, "FILTERS")
+
+local teamCheckBtn = button(aimFrame, "Team Check: ON")
+teamCheckBtn.MouseButton1Click:Connect(function()
+	teamCheck = not teamCheck
+	teamCheckBtn.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
+	if teamCheck then
+		tween(teamCheckBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(teamCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(teamCheckBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(teamCheckBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+	end
+end)
+
+local visCheckBtn = button(aimFrame, "Visibility Check: ON")
+visCheckBtn.MouseButton1Click:Connect(function()
+	visibilityCheck = not visibilityCheck
+	visCheckBtn.Text = "Visibility Check: " .. (visibilityCheck and "ON" or "OFF")
+	if visibilityCheck then
+		tween(visCheckBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(visCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(visCheckBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(visCheckBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+	end
+end)
+
+-- Set initial state
+tween(teamCheckBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0)
+tween(teamCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0)
+tween(visCheckBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0)
+tween(visCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0)
+
 ---------------- EXTRA TAB ----------------
 section(extraFrame, "EXTRA")
 
@@ -597,6 +696,7 @@ end)
 ---------------- TAB SWITCH ----------------
 local moveTab = tabButton("Movement")
 local espTab = tabButton("ESP")
+local aimTab = tabButton("Aim Assist")
 local extraTab = tabButton("Extra")
 
 -- Set initial active tab
@@ -607,6 +707,7 @@ moveTab.MouseButton1Click:Connect(function()
 	setActiveTab(moveTab)
 	movementFrame.Visible = true
 	espFrame.Visible = false
+	aimFrame.Visible = false
 	extraFrame.Visible = false
 end)
 
@@ -614,6 +715,15 @@ espTab.MouseButton1Click:Connect(function()
 	setActiveTab(espTab)
 	movementFrame.Visible = false
 	espFrame.Visible = true
+	aimFrame.Visible = false
+	extraFrame.Visible = false
+end)
+
+aimTab.MouseButton1Click:Connect(function()
+	setActiveTab(aimTab)
+	movementFrame.Visible = false
+	espFrame.Visible = false
+	aimFrame.Visible = true
 	extraFrame.Visible = false
 end)
 
@@ -621,6 +731,7 @@ extraTab.MouseButton1Click:Connect(function()
 	setActiveTab(extraTab)
 	movementFrame.Visible = false
 	espFrame.Visible = false
+	aimFrame.Visible = false
 	extraFrame.Visible = true
 end)
 
@@ -637,6 +748,52 @@ UIS.InputBegan:Connect(function(i,gp)
 end)
 
 ---------------- LOOPS ----------------
+-- Aim assist helper function
+local function getClosestPlayerInFOV()
+	local closestPlayer = nil
+	local shortestDistance = math.huge
+	
+	local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+	
+	for _, plr in pairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character then
+			local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+			local head = plr.Character:FindFirstChild("Head")
+			local humanoid = plr.Character:FindFirstChild("Humanoid")
+			
+			if hrp and head and humanoid and humanoid.Health > 0 then
+				-- Team check
+				if teamCheck and plr.Team == player.Team then
+					continue
+				end
+				
+				-- Visibility check
+				if visibilityCheck then
+					local ray = Ray.new(camera.CFrame.Position, (head.Position - camera.CFrame.Position).Unit * 500)
+					local hit = workspace:FindPartOnRayWithIgnoreList(ray, {character})
+					if hit and not hit:IsDescendantOf(plr.Character) then
+						continue
+					end
+				end
+				
+				-- Check if in FOV
+				local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
+				if onScreen then
+					local screenPoint = Vector2.new(screenPos.X, screenPos.Y)
+					local distance = (screenPoint - screenCenter).Magnitude
+					
+					if distance <= aimFOV and distance < shortestDistance then
+						closestPlayer = plr
+						shortestDistance = distance
+					end
+				end
+			end
+		end
+	end
+	
+	return closestPlayer
+end
+
 RunService.RenderStepped:Connect(function()
 	if fly and bv and bg then
 		local cam = camera
@@ -656,6 +813,29 @@ RunService.RenderStepped:Connect(function()
 	if noclip then
 		for _,p in pairs(character:GetDescendants()) do
 			if p:IsA("BasePart") then p.CanCollide = false end
+		end
+	end
+
+	-- Update FOV circle position
+	if fovCircle and showFOVCircle then
+		fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+		fovCircle.Radius = aimFOV
+		fovCircle.Visible = true
+	end
+
+	-- Aim assist logic
+	if aimAssistEnabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+		local target = getClosestPlayerInFOV()
+		if target and target.Character then
+			local head = target.Character:FindFirstChild("Head")
+			if head then
+				local targetPos = head.Position
+				local camCFrame = camera.CFrame
+				local targetCFrame = CFrame.new(camCFrame.Position, targetPos)
+				
+				-- Smooth aim
+				camera.CFrame = camCFrame:Lerp(targetCFrame, aimSmoothness)
+			end
 		end
 	end
 
