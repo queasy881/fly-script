@@ -16,40 +16,6 @@ local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")
 
 -- Character respawn handler
-player.CharacterAdded:Connect(function(char)
-	character = char
-	humanoid = char:WaitForChild("Humanoid")
-	root = char:WaitForChild("HumanoidRootPart")
-	
-	-- Reapply invisibility if it was on
-	if invisible then
-		task.wait(0.1)
-		applyInvisibility()
-	end
-	
-	-- Reapply fly if it was on
-	if fly then
-		task.wait(0.1)
-		if bv then bv:Destroy() end
-		if bg then bg:Destroy() end
-		bv = Instance.new("BodyVelocity", root)
-		bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-		bg = Instance.new("BodyGyro", root)
-		bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
-	end
-	
-	-- Reapply walk speed if it was on
-	if walkEnabled then
-		task.wait(0.1)
-		humanoid.WalkSpeed = walkSpeed
-	end
-	
-	-- Reapply jump power if it was on
-	if jumpEnabled then
-		task.wait(0.1)
-		humanoid.JumpPower = jumpPower
-	end
-end)
 
 ---------------- STATE ----------------
 local fly = false
@@ -96,6 +62,44 @@ local function applyInvisibility()
 		end
 	end
 end
+
+
+
+player.CharacterAdded:Connect(function(char)
+	character = char
+	humanoid = char:WaitForChild("Humanoid")
+	root = char:WaitForChild("HumanoidRootPart")
+	
+	-- Reapply invisibility if it was on
+	if invisible then
+		task.wait(0.1)
+		applyInvisibility()
+	end
+	
+	-- Reapply fly if it was on
+	if fly then
+		task.wait(0.1)
+		if bv then bv:Destroy() end
+		if bg then bg:Destroy() end
+		bv = Instance.new("BodyVelocity", root)
+		bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+		bg = Instance.new("BodyGyro", root)
+		bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+	end
+	
+	-- Reapply walk speed if it was on
+	if walkEnabled then
+		task.wait(0.1)
+		humanoid.WalkSpeed = walkSpeed
+	end
+	
+	-- Reapply jump power if it was on
+	if jumpEnabled then
+		task.wait(0.1)
+		humanoid.JumpPower = jumpPower
+	end
+end)
+
 
 ---------------- GUI ----------------
 local gui = Instance.new("ScreenGui", player.PlayerGui)
@@ -589,9 +593,9 @@ distanceBtn.MouseButton1Click:Connect(function()
 end)
 
 ---------------- AIM ASSIST TAB ----------------
-section(aimFrame, "AIM ASSIST")
+section(combatFrame, "AIM ASSIST")
 
-local aimBtn = button(aimFrame, "Aim Assist: OFF")
+local aimBtn = button(combatFrame, "Aim Assist: OFF")
 aimBtn.MouseButton1Click:Connect(function()
 	aimAssistEnabled = not aimAssistEnabled
 	aimBtn.Text = "Aim Assist: " .. (aimAssistEnabled and "ON" or "OFF")
@@ -604,20 +608,20 @@ aimBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-slider(aimFrame, "FOV Size", 20, 500, aimFOV, function(v)
+slider(combatFrame, "FOV Size", 20, 500, aimFOV, function(v)
 	aimFOV = v
 	if fovCircle then
 		fovCircle.Radius = v
 	end
 end)
 
-slider(aimFrame, "Smoothness", 0.1, 1, aimSmoothness, function(v)
+slider(combatFrame, "Smoothness", 0.1, 1, aimSmoothness, function(v)
 	aimSmoothness = v
 end)
 
-section(aimFrame, "VISUAL")
+section(combatFrame, "VISUAL")
 
-local fovCircleBtn = button(aimFrame, "Show FOV Circle: OFF")
+local fovCircleBtn = button(combatFrame, "Show FOV Circle: OFF")
 fovCircleBtn.MouseButton1Click:Connect(function()
 	showFOVCircle = not showFOVCircle
 	fovCircleBtn.Text = "Show FOV Circle: " .. (showFOVCircle and "ON" or "OFF")
@@ -644,9 +648,9 @@ fovCircleBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-section(aimFrame, "FILTERS")
+section(combatFrame, "FILTERS")
 
-local teamCheckBtn = button(aimFrame, "Team Check: ON")
+local teamCheckBtn = button(combatFrame, "Team Check: ON")
 teamCheckBtn.MouseButton1Click:Connect(function()
 	teamCheck = not teamCheck
 	teamCheckBtn.Text = "Team Check: " .. (teamCheck and "ON" or "OFF")
@@ -659,7 +663,7 @@ teamCheckBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-local visCheckBtn = button(aimFrame, "Visibility Check: ON")
+local visCheckBtn = button(combatFrame, "Visibility Check: ON")
 visCheckBtn.MouseButton1Click:Connect(function()
 	visibilityCheck = not visibilityCheck
 	visCheckBtn.Text = "Visibility Check: " .. (visibilityCheck and "ON" or "OFF")
@@ -678,9 +682,9 @@ tween(teamCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0)
 tween(visCheckBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0)
 tween(visCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0)
 
-section(aimFrame, "SILENT AIM")
+section(combatFrame, "SILENT AIM")
 
-local silentAimBtn = button(aimFrame, "Silent Aim: OFF")
+local silentAimBtn = button(combatFrame, "Silent Aim: OFF")
 silentAimBtn.MouseButton1Click:Connect(function()
 	silentAimEnabled = not silentAimEnabled
 	silentAimBtn.Text = "Silent Aim: " .. (silentAimEnabled and "ON" or "OFF")
@@ -693,11 +697,11 @@ silentAimBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-slider(aimFrame, "Silent Aim FOV", 20, 500, silentAimFOV, function(v)
+slider(combatFrame, "Silent Aim FOV", 20, 500, silentAimFOV, function(v)
 	silentAimFOV = v
 end)
 
-slider(aimFrame, "Hit Chance %", 0, 100, hitChance, function(v)
+slider(combatFrame, "Hit Chance %", 0, 100, hitChance, function(v)
 	hitChance = v
 end)
 
