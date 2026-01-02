@@ -1,4 +1,4 @@
--- SIMPLE HUB v3.2 – FINAL FUNCTIONAL BASE
+-- SIMPLE HUB v3.3 – v3.2 + Extra tab (nothing removed)
 -- Press M to toggle
 
 ---------------- SERVICES ----------------
@@ -7,6 +7,9 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+local camera = workspace.CurrentCamera
+
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")
@@ -24,6 +27,8 @@ local jumpPower = humanoid.JumpPower
 local nameESP = false
 local boxESP = false
 
+local defaultFOV = camera.FieldOfView
+
 local bv, bg
 local nameESPObjects = {}
 local boxESPObjects = {}
@@ -33,7 +38,7 @@ local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 560, 0, 380)
+main.Size = UDim2.new(0, 760, 0, 380) -- wider (horizontal)
 main.Position = UDim2.fromScale(0.5, 0.5)
 main.AnchorPoint = Vector2.new(0.5, 0.5)
 main.BackgroundColor3 = Color3.fromRGB(14,14,14)
@@ -144,7 +149,12 @@ espFrame.Size = UDim2.new(1,0,1,0)
 espFrame.BackgroundTransparency = 1
 espFrame.Visible = false
 
-for _,f in pairs({movementFrame, espFrame}) do
+local extraFrame = Instance.new("Frame", content)
+extraFrame.Size = UDim2.new(1,0,1,0)
+extraFrame.BackgroundTransparency = 1
+extraFrame.Visible = false
+
+for _,f in pairs({movementFrame, espFrame, extraFrame}) do
 	local pad = Instance.new("UIPadding", f)
 	pad.PaddingTop = UDim.new(0,14)
 	pad.PaddingLeft = UDim.new(0,14)
@@ -154,7 +164,7 @@ for _,f in pairs({movementFrame, espFrame}) do
 	layout.Padding = UDim.new(0,10)
 end
 
----------------- MOVEMENT TAB ----------------
+---------------- MOVEMENT TAB (UNCHANGED) ----------------
 section(movementFrame, "Movement")
 
 local flyBtn = button(movementFrame, "Fly")
@@ -206,7 +216,7 @@ slider(movementFrame, "JumpPower Value", 20, 150, jumpPower, function(v)
 	if jumpEnabled then humanoid.JumpPower = v end
 end)
 
----------------- ESP TAB ----------------
+---------------- ESP TAB (UNCHANGED) ----------------
 section(espFrame, "ESP")
 
 local nameBtn = button(espFrame, "Name ESP")
@@ -260,18 +270,48 @@ boxBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
+---------------- EXTRA TAB (ADDED) ----------------
+section(extraFrame, "Extra")
+
+slider(extraFrame, "Camera FOV", 40, 120, defaultFOV, function(v)
+	camera.FieldOfView = v
+end)
+
+local resetFovBtn = button(extraFrame, "Reset FOV")
+resetFovBtn.Text = "Reset FOV"
+resetFovBtn.MouseButton1Click:Connect(function()
+	camera.FieldOfView = defaultFOV
+end)
+
+local tpBtn = button(extraFrame, "Teleport To Cursor")
+tpBtn.Text = "Teleport To Cursor"
+tpBtn.MouseButton1Click:Connect(function()
+	if mouse.Hit and root then
+		root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0,3,0))
+	end
+end)
+
 ---------------- TAB SWITCH ----------------
 local moveTab = tabButton("Movement")
 local espTab = tabButton("ESP")
+local extraTab = tabButton("Extra")
 
 moveTab.MouseButton1Click:Connect(function()
 	movementFrame.Visible = true
 	espFrame.Visible = false
+	extraFrame.Visible = false
 end)
 
 espTab.MouseButton1Click:Connect(function()
 	movementFrame.Visible = false
 	espFrame.Visible = true
+	extraFrame.Visible = false
+end)
+
+extraTab.MouseButton1Click:Connect(function()
+	movementFrame.Visible = false
+	espFrame.Visible = false
+	extraFrame.Visible = true
 end)
 
 ---------------- INPUT ----------------
@@ -285,7 +325,7 @@ end)
 ---------------- LOOPS ----------------
 RunService.RenderStepped:Connect(function()
 	if fly and bv and bg then
-		local cam = workspace.CurrentCamera
+		local cam = camera
 		local move = Vector3.zero
 
 		if UIS:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
@@ -306,4 +346,4 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-print("Simple Hub v3.2 loaded")
+print("Simple Hub v3.3 loaded")
