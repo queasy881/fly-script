@@ -142,6 +142,8 @@ return function(deps)
 
     Components.Slider(Combat.page, "Aim Assist FOV", 30, 500, AimAssist.fov, function(v)
         AimAssist.fov = v
+        FOV.radius = v
+
     end)
 
     Components.Toggle(Combat.page, "FOV Circle", false, function(v)
