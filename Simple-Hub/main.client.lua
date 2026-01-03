@@ -1,93 +1,112 @@
--- SIMPLE HUB v3.7
--- Main Client Bootstrap
+-- Simple Hub Main Client
 
----------------- SERVICES ----------------
+assert(_G.requireRemote, "requireRemote is missing — loader.lua did not run")
+
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
----------------- GLOBAL HUB TABLE ----------------
-_G.SimpleHub = {
-    Player = player,
-    LoadedModules = {},
-    State = {},
+-------------------------------------------------
+-- LOAD UI CORE
+-------------------------------------------------
+local UI = {
+	Animations = requireRemote("ui/animations.lua"),
+	Components = requireRemote("ui/components.lua"),
+	Tabs = requireRemote("ui/tabs.lua"),
 }
 
----------------- BASE URL ----------------
-local BASE_URL = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
-
----------------- MODULE LOADER ----------------
-local function requireRemote(path)
-    local src = game:HttpGet(BASE_URL .. path)
-    local fn = loadstring(src)
-    return fn()
-end
-
----------------- LOAD UTILS ----------------
-_G.SimpleHub.Utils = {
-    Helpers = requireRemote("utils/helpers.lua"),
-    Math = requireRemote("utils/math.lua"),
-    Raycast = requireRemote("utils/raycast.lua"),
+-------------------------------------------------
+-- LOAD SETTINGS
+-------------------------------------------------
+local Settings = {
+	UI = requireRemote("settings/ui_settings.lua"),
+	Keybinds = requireRemote("settings/keybinds.lua"),
+	Presets = requireRemote("settings/presets.lua"),
 }
 
----------------- LOAD UI ----------------
-_G.SimpleHub.UI = {
-    Animations = requireRemote("ui/animations.lua"),
-    Components = requireRemote("ui/components.lua"),
-    Tabs = requireRemote("ui/tabs.lua"),
+-------------------------------------------------
+-- LOAD UTILITIES
+-------------------------------------------------
+local Utils = {
+	Helpers = requireRemote("utils/helpers.lua"),
+	Math = requireRemote("utils/math.lua"),
+	Raycast = requireRemote("utils/raycast.lua"),
 }
 
----------------- LOAD SETTINGS ----------------
-_G.SimpleHub.Settings = {
-    Keybinds = requireRemote("settings/keybinds.lua"),
-    Presets = requireRemote("settings/presets.lua"),
-    UISettings = requireRemote("settings/ui_settings.lua"),
+-------------------------------------------------
+-- LOAD MOVEMENT MODULES
+-------------------------------------------------
+local Movement = {
+	Fly = requireRemote("movement/fly.lua"),
+	Dash = requireRemote("movement/dash.lua"),
+	WalkSpeed = requireRemote("movement/walkspeed.lua"),
+	JumpPower = requireRemote("movement/jumppower.lua"),
+	BunnyHop = requireRemote("movement/bunnyhop.lua"),
+	AirControl = requireRemote("movement/air-control.lua"),
+	NoClip = requireRemote("movement/no-clip.lua"),
 }
 
----------------- LOAD MOVEMENT ----------------
-_G.SimpleHub.Movement = {
-    Fly = requireRemote("movement/fly.lua"),
-    Dash = requireRemote("movement/dash.lua"),
-    BunnyHop = requireRemote("movement/bunnyhop.lua"),
-    WalkSpeed = requireRemote("movement/walkspeed.lua"),
-    JumpPower = requireRemote("movement/jumppower.lua"),
-    Noclip = requireRemote("movement/no-clip.lua"),
-    AirControl = requireRemote("movement/air-control.lua"),
+-------------------------------------------------
+-- LOAD ESP MODULES
+-------------------------------------------------
+local ESP = {
+	Name = requireRemote("esp/name_esp.lua"),
+	Box = requireRemote("esp/box_esp.lua"),
+	Health = requireRemote("esp/health_esp.lua"),
+	Distance = requireRemote("esp/distance_esp.lua"),
+	Tracers = requireRemote("esp/tracers.lua"),
+	Chams = requireRemote("esp/chams.lua"),
+	Offscreen = requireRemote("esp/offscreen_arrows.lua"),
 }
 
----------------- LOAD COMBAT ----------------
-_G.SimpleHub.Combat = {
-    AimAssist = requireRemote("combat/aim_assist.lua"),
-    SilentAim = requireRemote("combat/silent_aim.lua"),
-    FOV = requireRemote("combat/fov.lua"),
+-------------------------------------------------
+-- LOAD COMBAT MODULES
+-------------------------------------------------
+local Combat = {
+	AimAssist = requireRemote("combat/aim_assist.lua"),
+	SilentAim = requireRemote("combat/silent_aim.lua"),
+	FOV = requireRemote("combat/fov.lua"),
 }
 
----------------- LOAD ESP ----------------
-_G.SimpleHub.ESP = {
-    Box = requireRemote("esp/box_esp.lua"),
-    Name = requireRemote("esp/name_esp.lua"),
-    Health = requireRemote("esp/health_esp.lua"),
-    Distance = requireRemote("esp/distance_esp.lua"),
-    Chams = requireRemote("esp/chams.lua"),
-    Tracers = requireRemote("esp/tracers.lua"),
-    Offscreen = requireRemote("esp/offscreen_arrows.lua"),
+-------------------------------------------------
+-- LOAD EXTRA / MISC MODULES
+-------------------------------------------------
+local Extra = {
+	Teleport = requireRemote("extra/teleport.lua"),
+	Invisibility = requireRemote("extra/invisibility.lua"),
+	Fullbright = requireRemote("extra/fullbright.lua"),
+	RemoveGrass = requireRemote("extra/remove-grass.lua"),
+	ThirdPerson = requireRemote("extra/third-person.lua"),
+	WalkOnWater = requireRemote("extra/walk-on-water.lua"),
+	AntiAFK = requireRemote("extra/anti_afk.lua"),
+	FakeLag = requireRemote("extra/fake_lag.lua"),
+	FakeDeath = requireRemote("extra/fake-death.lua"),
+	Spinbot = requireRemote("extra/spinbot.lua"),
 }
 
----------------- LOAD EXTRA ----------------
-_G.SimpleHub.Extra = {
-    Teleport = requireRemote("extra/teleport.lua"),
-    Invisibility = requireRemote("extra/invisibility.lua"),
-    AntiAFK = requireRemote("extra/anti_afk.lua"),
-    FakeLag = requireRemote("extra/fake_lag.lua"),
-    FakeDeath = requireRemote("extra/fake-death.lua"),
-    SpinBot = requireRemote("extra/spinbot.lua"),
-    WalkOnWater = requireRemote("extra/walk-on-water.lua"),
-    Fullbright = requireRemote("extra/fullbright.lua"),
-    RemoveGrass = requireRemote("extra/remove-grass.lua"),
-    ThirdPerson = requireRemote("extra/third-person.lua"),
-}
+-------------------------------------------------
+-- INIT UI
+-------------------------------------------------
+local Hub = UI.Components.createMainWindow({
+	title = "SIMPLE HUB",
+	version = "v3.7",
+	keybind = Enum.KeyCode.M,
+})
 
----------------- FINALIZE ----------------
-print("✅ Simple Hub v3.7 Loaded Successfully")
-print("📦 Modules Loaded:", HttpService:JSONEncode(_G.SimpleHub))
+-------------------------------------------------
+-- REGISTER TABS
+-------------------------------------------------
+UI.Tabs.register(Hub, "Movement", Movement)
+UI.Tabs.register(Hub, "Combat", Combat)
+UI.Tabs.register(Hub, "ESP", ESP)
+UI.Tabs.register(Hub, "Extra", Extra)
+UI.Tabs.register(Hub, "Settings", Settings)
+
+-------------------------------------------------
+-- FINALIZE
+-------------------------------------------------
+UI.Animations.intro(Hub)
+
+print("✅ Simple Hub v3.7 fully loaded")
