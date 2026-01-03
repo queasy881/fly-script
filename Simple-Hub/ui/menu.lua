@@ -664,7 +664,7 @@ return function(deps)
 	-- ============================================
 	Tabs.activate(movementTab, movementContent)
 	
-	-- ============================================
+-- ============================================
 -- KEYBINDS
 -- ============================================
 UIS.InputBegan:Connect(function(input, gameProcessed)
@@ -679,6 +679,11 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 			UIS.MouseBehavior = Enum.MouseBehavior.Default
 			UIS.MouseIconEnabled = true
 			
+			-- ❌ HIDE ROBLOX FPS CROSSHAIR
+			pcall(function()
+				UserSettings().GameSettings.RotationType = Enum.RotationType.CameraRelative
+			end)
+			
 			main.Size = UDim2.new(0, 0, 0, 0)
 			Animations.tween(
 				main,
@@ -689,9 +694,15 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 			-- 🔒 LOCK MOUSE BACK TO FIRST PERSON
 			UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
 			UIS.MouseIconEnabled = false
+			
+			-- ✅ RESTORE FPS CAMERA
+			pcall(function()
+				UserSettings().GameSettings.RotationType = Enum.RotationType.MovementRelative
+			end)
 		end
 	end
 	
+	-- DASH (F KEY) — KEEP THIS
 	if input.KeyCode == Enum.KeyCode.F then
 		if Dash and Dash.enabled then
 			local root = getRoot()
@@ -701,6 +712,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 		end
 	end
 end)
+
 
 	
 	-- ============================================
