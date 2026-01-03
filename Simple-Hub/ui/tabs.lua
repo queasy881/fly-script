@@ -1,12 +1,9 @@
-local Animations = _G.Animations
-assert(Animations, "[Tabs] Animations not loaded")
-
 local Tabs = {}
 Tabs.active = nil
 
-function Tabs.create(tabBar, container, text)
+function Tabs.create(tabBar, pages, text)
     local button = Instance.new("TextButton", tabBar)
-    button.Size = UDim2.new(0,160,0,36)
+    button.Size = UDim2.new(0,140,1,0)
     button.Text = text
     button.Font = Enum.Font.GothamBold
     button.TextSize = 13
@@ -17,15 +14,20 @@ function Tabs.create(tabBar, container, text)
 
     Instance.new("UICorner", button).CornerRadius = UDim.new(0,8)
 
-    -- page
-    local page = Instance.new("ScrollingFrame", container)
+    local page = Instance.new("ScrollingFrame", pages)
     page.Size = UDim2.fromScale(1,1)
     page.CanvasSize = UDim2.new(0,0,0,0)
     page.ScrollBarThickness = 6
     page.Visible = false
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
     local layout = Instance.new("UIListLayout", page)
-    layout.Padding = UDim.new(0,8)
+    layout.Padding = UDim.new(0,10)
+
+    local padding = Instance.new("UIPadding", page)
+    padding.PaddingTop = UDim.new(0,10)
+    padding.PaddingLeft = UDim.new(0,10)
+    padding.PaddingRight = UDim.new(0,10)
 
     button.MouseButton1Click:Connect(function()
         if Tabs.active then
@@ -35,10 +37,7 @@ function Tabs.create(tabBar, container, text)
         page.Visible = true
     end)
 
-    return {
-        button = button,
-        page = page
-    }
+    return {button = button, page = page}
 end
 
 return Tabs
