@@ -1,5 +1,5 @@
 -- ui/menu.lua
--- Premium main menu interface
+-- Premium main menu interface - FULLY WIRED UP
 
 return function(deps)
 	local Tabs = deps.Tabs
@@ -15,9 +15,119 @@ return function(deps)
 	local Players = game:GetService("Players")
 	local UIS = game:GetService("UserInputService")
 	local TweenService = game:GetService("TweenService")
+	local RunService = game:GetService("RunService")
 	local player = Players.LocalPlayer
+	local camera = workspace.CurrentCamera
 	
-	-- Colors
+	-- Wait for character
+	local function getCharacter()
+		return player.Character or player.CharacterAdded:Wait()
+	end
+	
+	local function getRoot()
+		local char = getCharacter()
+		return char and char:FindFirstChild("HumanoidRootPart")
+	end
+	
+	local function getHumanoid()
+		local char = getCharacter()
+		return char and char:FindFirstChildOfClass("Humanoid")
+	end
+	
+	-- ============================================
+	-- LOAD ALL MODULES
+	-- ============================================
+	local BASE = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
+	
+	local function loadModule(path)
+		local success, result = pcall(function()
+			local src = game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
+			return loadstring(src)()
+		end)
+		if success then
+			return result
+		else
+			warn("[SimpleHub] Failed to load " .. path .. ": " .. tostring(result))
+			return nil
+		end
+	end
+	
+	-- Movement modules
+	local Fly = loadModule("movement/fly.lua")
+	local Noclip = loadModule("movement/noclip.lua")
+	local WalkSpeed = loadModule("movement/walkspeed.lua")
+	local JumpPower = loadModule("movement/jumppower.lua")
+	local BunnyHop = loadModule("movement/bunnyhop.lua")
+	local Dash = loadModule("movement/dash.lua")
+	local AirControl = loadModule("movement/air-control.lua")
+	
+	-- Combat modules
+	local AimAssist = loadModule("combat/aim_assist.lua")
+	local SilentAim = loadModule("combat/silent_aim.lua")
+	local FOV = loadModule("combat/fov.lua")
+	
+	-- Extra modules
+	local Fullbright = loadModule("extra/fullbright.lua")
+	local RemoveGrass = loadModule("extra/remove-grass.lua")
+	local ThirdPerson = loadModule("extra/third-person.lua")
+	local AntiAFK = loadModule("extra/anti-afk.lua")
+	local Invisibility = loadModule("extra/invisibility.lua")
+	local WalkOnWater = loadModule("extra/walk-on-water.lua")
+	
+	-- ESP modules (placeholders - wire up if you have them)
+	local NameESP = loadModule("esp/name_esp.lua")
+	local BoxESP = loadModule("esp/box_esp.lua")
+	local HealthESP = loadModule("esp/health_esp.lua")
+	local DistanceESP = loadModule("esp/distance_esp.lua")
+	local Tracers = loadModule("esp/tracers.lua")
+	local Chams = loadModule("esp/chams.lua")
+	
+	-- Create FOV circle if module loaded
+	if FOV and FOV.create then
+		FOV.create()
+	end
+	
+	-- ============================================
+	-- MAIN UPDATE LOOP
+	-- ============================================
+	RunService.RenderStepped:Connect(function(dt)
+		local char = player.Character
+		if not char then return end
+		
+		local root = char:FindFirstChild("HumanoidRootPart")
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if not root or not humanoid then return end
+		
+		-- Movement updates
+		if Fly and Fly.update and Fly.enabled then
+			Fly.update(root, camera, UIS)
+		end
+		
+		if Noclip and Noclip.update and Noclip.enabled then
+			Noclip.update(char)
+		end
+		
+		if BunnyHop and BunnyHop.update and BunnyHop.enabled then
+			BunnyHop.update(humanoid)
+		end
+		
+		if AirControl and AirControl.update and AirControl.strength > 0 then
+			AirControl.update(root, humanoid, camera, UIS)
+		end
+		
+		-- Extra updates
+		if AntiAFK and AntiAFK.update and AntiAFK.enabled then
+			AntiAFK.update(dt)
+		end
+		
+		if WalkOnWater and WalkOnWater.update and WalkOnWater.enabled then
+			WalkOnWater.update(root)
+		end
+	end)
+	
+	-- ============================================
+	-- COLORS
+	-- ============================================
 	local Colors = {
 		Background = Color3.fromRGB(12, 12, 16),
 		Panel = Color3.fromRGB(18, 18, 24),
@@ -25,26 +135,26 @@ return function(deps)
 		Accent = Color3.fromRGB(60, 120, 255),
 		Text = Color3.fromRGB(220, 220, 240),
 		Border = Color3.fromRGB(40, 40, 52),
-		ScreenBg = Color3.fromRGB(12, 14, 18) -- Dark background for full screen
+		ScreenBg = Color3.fromRGB(12, 14, 18)
 	}
 	
-	-- Create ScreenGui
+	-- ============================================
+	-- CREATE GUI
+	-- ============================================
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "SimpleHub"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.IgnoreGuiInset = true -- Cover entire screen including top bar
+	gui.IgnoreGuiInset = true
 	gui.Parent = player:WaitForChild("PlayerGui")
 	
-	-- ============================================
-	-- FULL SCREEN DARK BACKGROUND (NEW)
-	-- ============================================
+	-- Full screen dark background
 	local screenBg = Instance.new("Frame")
 	screenBg.Name = "ScreenBackground"
 	screenBg.Size = UDim2.new(1, 0, 1, 0)
 	screenBg.Position = UDim2.new(0, 0, 0, 0)
 	screenBg.BackgroundColor3 = Colors.ScreenBg
-	screenBg.BackgroundTransparency = 0 -- Fully opaque, no see-through
+	screenBg.BackgroundTransparency = 0
 	screenBg.BorderSizePixel = 0
 	screenBg.ZIndex = 0
 	screenBg.Visible = false
@@ -102,7 +212,6 @@ return function(deps)
 	headerCorner.CornerRadius = UDim.new(0, 12)
 	headerCorner.Parent = header
 	
-	-- Hide bottom corners of header
 	local headerMask = Instance.new("Frame")
 	headerMask.Size = UDim2.new(1, 0, 0, 12)
 	headerMask.Position = UDim2.new(0, 0, 1, -12)
@@ -123,7 +232,6 @@ return function(deps)
 	title.TextSize = 20
 	title.Parent = header
 	
-	-- Accent bar under title
 	local titleAccent = Instance.new("Frame")
 	titleAccent.Size = UDim2.new(0, 60, 0, 3)
 	titleAccent.Position = UDim2.new(0, 24, 1, -8)
@@ -249,111 +357,230 @@ return function(deps)
 	Tabs.connectTab(espTab, espContent)
 	Tabs.connectTab(extraTab, extraContent)
 	
-	-- Populate Movement tab (examples)
+	-- ============================================
+	-- MOVEMENT TAB - WIRED UP
+	-- ============================================
 	Components.createSection(movementContent, "Basic Movement")
+	
 	Components.createToggle(movementContent, "Fly", function(state)
-		print("Fly:", state)
+		if Fly then
+			if state then
+				local root = getRoot()
+				if root then
+					Fly.enable(root, camera)
+				end
+			else
+				Fly.disable()
+			end
+		end
 	end)
+	
 	Components.createToggle(movementContent, "Noclip", function(state)
-		print("Noclip:", state)
+		if Noclip then
+			Noclip.enabled = state
+		end
 	end)
+	
 	Components.createSlider(movementContent, "Walk Speed", 16, 200, 16, function(value)
-		print("WalkSpeed:", value)
+		if WalkSpeed then
+			WalkSpeed.value = value
+			WalkSpeed.enabled = value > 16
+			local humanoid = getHumanoid()
+			if humanoid then
+				WalkSpeed.apply(humanoid)
+			end
+		end
 	end)
+	
 	Components.createSlider(movementContent, "Jump Power", 50, 200, 50, function(value)
-		print("JumpPower:", value)
+		if JumpPower then
+			JumpPower.value = value
+			JumpPower.enabled = value > 50
+			local humanoid = getHumanoid()
+			if humanoid then
+				JumpPower.apply(humanoid)
+			end
+		end
 	end)
 	
 	Components.createDivider(movementContent)
 	Components.createSection(movementContent, "Advanced")
+	
 	Components.createToggle(movementContent, "Bunny Hop", function(state)
-		print("BunnyHop:", state)
-	end)
-	Components.createToggle(movementContent, "Dash", function(state)
-		print("Dash:", state)
-	end)
-	Components.createSlider(movementContent, "Air Control", 0, 10, 0, function(value)
-		print("AirControl:", value)
+		if BunnyHop then
+			BunnyHop.enabled = state
+		end
 	end)
 	
-	-- Populate Combat tab (examples)
+	Components.createToggle(movementContent, "Dash", function(state)
+		if Dash then
+			Dash.enabled = state
+		end
+	end)
+	
+	Components.createSlider(movementContent, "Air Control", 0, 10, 0, function(value)
+		if AirControl then
+			AirControl.strength = value
+		end
+	end)
+	
+	-- ============================================
+	-- COMBAT TAB - WIRED UP
+	-- ============================================
 	Components.createSection(combatContent, "Aim Assist")
+	
 	Components.createToggle(combatContent, "Aim Assist", function(state)
-		print("AimAssist:", state)
+		if AimAssist then
+			AimAssist.enabled = state
+		end
 	end)
+	
 	Components.createSlider(combatContent, "Smoothness", 0, 100, 50, function(value)
-		print("Smoothness:", value)
+		if AimAssist then
+			-- Convert 0-100 to smoothness (lower = stronger, so invert)
+			AimAssist.smoothness = 0.01 + (value / 100) * 0.29 -- Range: 0.01 to 0.30
+		end
 	end)
-	Components.createSlider(combatContent, "FOV", 50, 500, 100, function(value)
-		print("FOV:", value)
+	
+	Components.createSlider(combatContent, "FOV", 50, 500, 150, function(value)
+		if AimAssist then
+			AimAssist.fov = value
+		end
+		if FOV then
+			FOV.radius = value
+		end
 	end)
+	
 	Components.createToggle(combatContent, "Show FOV Circle", function(state)
-		print("ShowFOV:", state)
+		if FOV then
+			FOV.enabled = state
+		end
 	end)
 	
 	Components.createDivider(combatContent)
 	Components.createSection(combatContent, "Silent Aim")
+	
 	Components.createToggle(combatContent, "Silent Aim", function(state)
-		print("SilentAim:", state)
-	end)
-	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value)
-		print("HitChance:", value)
+		if SilentAim then
+			SilentAim.enabled = state
+		end
 	end)
 	
-	-- Populate ESP tab (examples)
+	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value)
+		if SilentAim then
+			SilentAim.hitChance = value
+		end
+	end)
+	
+	-- ============================================
+	-- ESP TAB - WIRED UP
+	-- ============================================
 	Components.createSection(espContent, "Player ESP")
+	
 	Components.createToggle(espContent, "Name ESP", function(state)
-		print("NameESP:", state)
+		if NameESP then
+			NameESP.enabled = state
+			if NameESP.toggle then NameESP.toggle() end
+		end
 	end)
+	
 	Components.createToggle(espContent, "Box ESP", function(state)
-		print("BoxESP:", state)
+		if BoxESP then
+			BoxESP.enabled = state
+			if BoxESP.toggle then BoxESP.toggle() end
+		end
 	end)
+	
 	Components.createToggle(espContent, "Health ESP", function(state)
-		print("HealthESP:", state)
+		if HealthESP then
+			HealthESP.enabled = state
+			if HealthESP.toggle then HealthESP.toggle() end
+		end
 	end)
+	
 	Components.createToggle(espContent, "Distance ESP", function(state)
-		print("DistanceESP:", state)
+		if DistanceESP then
+			DistanceESP.enabled = state
+			if DistanceESP.toggle then DistanceESP.toggle() end
+		end
 	end)
+	
 	Components.createToggle(espContent, "Tracers", function(state)
-		print("Tracers:", state)
+		if Tracers then
+			Tracers.enabled = state
+			if Tracers.toggle then Tracers.toggle() end
+		end
 	end)
 	
 	Components.createDivider(espContent)
 	Components.createSection(espContent, "Visuals")
+	
 	Components.createToggle(espContent, "Chams", function(state)
-		print("Chams:", state)
+		if Chams then
+			Chams.enabled = state
+			if Chams.toggle then Chams.toggle() end
+		end
 	end)
 	
-	-- Populate Extra tab (examples)
+	-- ============================================
+	-- EXTRA TAB - WIRED UP
+	-- ============================================
 	Components.createSection(extraContent, "Visual Tweaks")
+	
 	Components.createToggle(extraContent, "Fullbright", function(state)
-		print("Fullbright:", state)
+		if Fullbright then
+			Fullbright.enabled = state
+			Fullbright.toggle()
+		end
 	end)
+	
 	Components.createToggle(extraContent, "Remove Grass", function(state)
-		print("RemoveGrass:", state)
+		if RemoveGrass then
+			RemoveGrass.enabled = state
+			RemoveGrass.apply()
+		end
 	end)
+	
 	Components.createToggle(extraContent, "Third Person", function(state)
-		print("ThirdPerson:", state)
+		if ThirdPerson then
+			ThirdPerson.enabled = state
+			ThirdPerson.apply(player)
+		end
 	end)
 	
 	Components.createDivider(extraContent)
 	Components.createSection(extraContent, "Misc")
+	
 	Components.createToggle(extraContent, "Anti AFK", function(state)
-		print("AntiAFK:", state)
+		if AntiAFK then
+			AntiAFK.enabled = state
+		end
 	end)
+	
 	Components.createToggle(extraContent, "Invisibility", function(state)
-		print("Invisibility:", state)
+		if Invisibility then
+			Invisibility.enabled = state
+			Invisibility.apply(getCharacter())
+		end
 	end)
+	
 	Components.createToggle(extraContent, "Walk on Water", function(state)
-		print("WalkOnWater:", state)
+		if WalkOnWater then
+			WalkOnWater.enabled = state
+		end
 	end)
 	
 	-- Activate first tab
 	Tabs.activate(movementTab, movementContent)
 	
-	-- Toggle keybind (M)
+	-- ============================================
+	-- KEYBINDS
+	-- ============================================
+	
+	-- Toggle menu (M)
 	UIS.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
+		
 		if input.KeyCode == Enum.KeyCode.M then
 			local isVisible = not main.Visible
 			main.Visible = isVisible
@@ -366,9 +593,21 @@ return function(deps)
 				}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
 			end
 		end
+		
+		-- Dash keybind (F)
+		if input.KeyCode == Enum.KeyCode.F then
+			if Dash and Dash.enabled then
+				local root = getRoot()
+				if root then
+					Dash.tryDash(root, camera)
+				end
+			end
+		end
 	end)
 	
-	-- Dragging functionality
+	-- ============================================
+	-- DRAGGING
+	-- ============================================
 	local dragging = false
 	local dragInput, dragStart, startPos
 	
@@ -400,6 +639,28 @@ return function(deps)
 		
 		if dragging and dragInput then
 			update(dragInput)
+		end
+	end)
+	
+	-- ============================================
+	-- CHARACTER RESPAWN HANDLING
+	-- ============================================
+	player.CharacterAdded:Connect(function(char)
+		-- Re-apply settings on respawn
+		task.wait(0.5)
+		
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			if WalkSpeed and WalkSpeed.enabled then
+				WalkSpeed.apply(humanoid)
+			end
+			if JumpPower and JumpPower.enabled then
+				JumpPower.apply(humanoid)
+			end
+		end
+		
+		if Invisibility and Invisibility.enabled then
+			Invisibility.apply(char)
 		end
 	end)
 	
