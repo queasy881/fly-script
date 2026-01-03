@@ -1,12 +1,13 @@
 -- ui/menu.lua
--- Premium main menu interface
+-- Premium main menu interface with full integration
 
 return function(deps)
 	local Tabs = deps.Tabs
 	local Components = deps.Components
 	local Animations = deps.Animations
+	local Controller = deps.Controller
 	
-	if not Tabs or not Components or not Animations then
+	if not Tabs or not Components or not Animations or not Controller then
 		error("[Menu] Missing dependencies")
 	end
 	
@@ -14,7 +15,6 @@ return function(deps)
 	
 	local Players = game:GetService("Players")
 	local UIS = game:GetService("UserInputService")
-	local TweenService = game:GetService("TweenService")
 	local player = Players.LocalPlayer
 	
 	-- Colors
@@ -45,12 +45,10 @@ return function(deps)
 	main.Visible = false
 	main.Parent = gui
 	
-	-- Rounded corners
 	local mainCorner = Instance.new("UICorner")
 	mainCorner.CornerRadius = UDim.new(0, 12)
 	mainCorner.Parent = main
 	
-	-- Border stroke
 	local mainStroke = Instance.new("UIStroke")
 	mainStroke.Color = Colors.Border
 	mainStroke.Thickness = 1.5
@@ -58,7 +56,6 @@ return function(deps)
 	mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	mainStroke.Parent = main
 	
-	-- Glow effect
 	local mainGlow = Instance.new("ImageLabel")
 	mainGlow.Name = "Glow"
 	mainGlow.Size = UDim2.new(1, 40, 1, 40)
@@ -85,7 +82,6 @@ return function(deps)
 	headerCorner.CornerRadius = UDim.new(0, 12)
 	headerCorner.Parent = header
 	
-	-- Hide bottom corners of header
 	local headerMask = Instance.new("Frame")
 	headerMask.Size = UDim2.new(1, 0, 0, 12)
 	headerMask.Position = UDim2.new(0, 0, 1, -12)
@@ -93,7 +89,6 @@ return function(deps)
 	headerMask.BorderSizePixel = 0
 	headerMask.Parent = header
 	
-	-- Title
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
 	title.Size = UDim2.new(0, 300, 1, 0)
@@ -106,7 +101,6 @@ return function(deps)
 	title.TextSize = 20
 	title.Parent = header
 	
-	-- Accent bar under title
 	local titleAccent = Instance.new("Frame")
 	titleAccent.Size = UDim2.new(0, 60, 0, 3)
 	titleAccent.Position = UDim2.new(0, 24, 1, -8)
@@ -118,7 +112,6 @@ return function(deps)
 	accentCorner.CornerRadius = UDim.new(1, 0)
 	accentCorner.Parent = titleAccent
 	
-	-- Version label
 	local version = Instance.new("TextLabel")
 	version.Size = UDim2.new(0, 100, 0, 20)
 	version.Position = UDim2.new(1, -120, 0.5, 0)
@@ -131,7 +124,6 @@ return function(deps)
 	version.TextSize = 11
 	version.Parent = header
 	
-	-- Close button
 	local closeBtn = Instance.new("TextButton")
 	closeBtn.Name = "CloseButton"
 	closeBtn.Size = UDim2.new(0, 36, 0, 36)
@@ -155,15 +147,11 @@ return function(deps)
 	end)
 	
 	closeBtn.MouseEnter:Connect(function()
-		Animations.tween(closeBtn, {
-			BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+		Animations.tween(closeBtn, {BackgroundColor3 = Color3.fromRGB(220, 50, 50)}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
 	closeBtn.MouseLeave:Connect(function()
-		Animations.tween(closeBtn, {
-			BackgroundColor3 = Color3.fromRGB(45, 45, 58)
-		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+		Animations.tween(closeBtn, {BackgroundColor3 = Color3.fromRGB(45, 45, 58)}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
 	-- Tab bar
@@ -231,104 +219,65 @@ return function(deps)
 	Tabs.connectTab(espTab, espContent)
 	Tabs.connectTab(extraTab, extraContent)
 	
-	-- Populate Movement tab (examples)
+	-- ============================================
+	-- MOVEMENT TAB
+	-- ============================================
 	Components.createSection(movementContent, "Basic Movement")
-	Components.createToggle(movementContent, "Fly", function(state)
-		print("Fly:", state)
-	end)
-	Components.createToggle(movementContent, "Noclip", function(state)
-		print("Noclip:", state)
-	end)
-	Components.createSlider(movementContent, "Walk Speed", 16, 200, 16, function(value)
-		print("WalkSpeed:", value)
-	end)
-	Components.createSlider(movementContent, "Jump Power", 50, 200, 50, function(value)
-		print("JumpPower:", value)
-	end)
+	Components.createToggle(movementContent, "Fly", Controller.toggleFly)
+	Components.createToggle(movementContent, "Noclip", Controller.toggleNoclip)
+	Components.createSlider(movementContent, "Walk Speed", 16, 200, 16, Controller.setWalkSpeed)
+	Components.createSlider(movementContent, "Jump Power", 50, 200, 50, Controller.setJumpPower)
 	
 	Components.createDivider(movementContent)
 	Components.createSection(movementContent, "Advanced")
-	Components.createToggle(movementContent, "Bunny Hop", function(state)
-		print("BunnyHop:", state)
-	end)
-	Components.createToggle(movementContent, "Dash", function(state)
-		print("Dash:", state)
-	end)
-	Components.createSlider(movementContent, "Air Control", 0, 10, 0, function(value)
-		print("AirControl:", value)
-	end)
+	Components.createToggle(movementContent, "Bunny Hop", Controller.toggleBunnyHop)
+	Components.createToggle(movementContent, "Dash (Press F)", Controller.toggleDash)
+	Components.createSlider(movementContent, "Air Control", 0, 10, 0, Controller.setAirControl)
 	
-	-- Populate Combat tab (examples)
+	-- ============================================
+	-- COMBAT TAB
+	-- ============================================
 	Components.createSection(combatContent, "Aim Assist")
-	Components.createToggle(combatContent, "Aim Assist", function(state)
-		print("AimAssist:", state)
-	end)
-	Components.createSlider(combatContent, "Smoothness", 0, 100, 50, function(value)
-		print("Smoothness:", value)
-	end)
-	Components.createSlider(combatContent, "FOV", 50, 500, 100, function(value)
-		print("FOV:", value)
-	end)
-	Components.createToggle(combatContent, "Show FOV Circle", function(state)
-		print("ShowFOV:", state)
-	end)
+	Components.createToggle(combatContent, "Aim Assist (Hold RMB)", Controller.toggleAimAssist)
+	Components.createSlider(combatContent, "Smoothness", 0, 100, 15, Controller.setAimSmoothness)
+	Components.createSlider(combatContent, "FOV", 50, 500, 150, Controller.setFOV)
+	Components.createToggle(combatContent, "Show FOV Circle", Controller.toggleFOVCircle)
 	
 	Components.createDivider(combatContent)
 	Components.createSection(combatContent, "Silent Aim")
-	Components.createToggle(combatContent, "Silent Aim", function(state)
-		print("SilentAim:", state)
-	end)
-	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value)
-		print("HitChance:", value)
-	end)
+	Components.createToggle(combatContent, "Silent Aim", Controller.toggleSilentAim)
+	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, Controller.setHitChance)
 	
-	-- Populate ESP tab (examples)
+	-- ============================================
+	-- ESP TAB
+	-- ============================================
 	Components.createSection(espContent, "Player ESP")
-	Components.createToggle(espContent, "Name ESP", function(state)
-		print("NameESP:", state)
-	end)
-	Components.createToggle(espContent, "Box ESP", function(state)
-		print("BoxESP:", state)
-	end)
-	Components.createToggle(espContent, "Health ESP", function(state)
-		print("HealthESP:", state)
-	end)
-	Components.createToggle(espContent, "Distance ESP", function(state)
-		print("DistanceESP:", state)
-	end)
-	Components.createToggle(espContent, "Tracers", function(state)
-		print("Tracers:", state)
-	end)
+	Components.createToggle(espContent, "Name ESP", Controller.toggleNameESP)
+	Components.createToggle(espContent, "Box ESP", Controller.toggleBoxESP)
+	Components.createToggle(espContent, "Health ESP", Controller.toggleHealthESP)
+	Components.createToggle(espContent, "Distance ESP", Controller.toggleDistanceESP)
+	Components.createToggle(espContent, "Tracers", Controller.toggleTracers)
 	
 	Components.createDivider(espContent)
 	Components.createSection(espContent, "Visuals")
-	Components.createToggle(espContent, "Chams", function(state)
-		print("Chams:", state)
-	end)
+	Components.createToggle(espContent, "Chams", Controller.toggleChams)
 	
-	-- Populate Extra tab (examples)
+	-- ============================================
+	-- EXTRA TAB
+	-- ============================================
 	Components.createSection(extraContent, "Visual Tweaks")
-	Components.createToggle(extraContent, "Fullbright", function(state)
-		print("Fullbright:", state)
-	end)
-	Components.createToggle(extraContent, "Remove Grass", function(state)
-		print("RemoveGrass:", state)
-	end)
-	Components.createToggle(extraContent, "Third Person", function(state)
-		print("ThirdPerson:", state)
-	end)
+	Components.createToggle(extraContent, "Fullbright", Controller.toggleFullbright)
+	Components.createToggle(extraContent, "Remove Grass", Controller.toggleRemoveGrass)
+	Components.createToggle(extraContent, "Third Person", Controller.toggleThirdPerson)
 	
 	Components.createDivider(extraContent)
 	Components.createSection(extraContent, "Misc")
-	Components.createToggle(extraContent, "Anti AFK", function(state)
-		print("AntiAFK:", state)
-	end)
-	Components.createToggle(extraContent, "Invisibility", function(state)
-		print("Invisibility:", state)
-	end)
-	Components.createToggle(extraContent, "Walk on Water", function(state)
-		print("WalkOnWater:", state)
-	end)
+	Components.createToggle(extraContent, "Anti AFK", Controller.toggleAntiAFK)
+	Components.createToggle(extraContent, "Invisibility", Controller.toggleInvisibility)
+	Components.createToggle(extraContent, "Walk on Water", Controller.toggleWalkOnWater)
+	Components.createToggle(extraContent, "Spin Bot", Controller.toggleSpinBot)
+	Components.createToggle(extraContent, "Fake Lag", Controller.toggleFakeLag)
+	Components.createToggle(extraContent, "Fake Death", Controller.toggleFakeDeath)
 	
 	-- Activate first tab
 	Tabs.activate(movementTab, movementContent)
