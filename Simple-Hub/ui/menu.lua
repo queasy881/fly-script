@@ -8,7 +8,6 @@ return function(deps)
     local JumpPower = deps.JumpPower
     local Noclip = deps.Noclip
     local BunnyHop = deps.BunnyHop
-    local Dash = deps.Dash
 
     -- combat
     local AimAssist = deps.AimAssist
@@ -41,9 +40,9 @@ return function(deps)
     local root = character:WaitForChild("HumanoidRootPart")
     local camera = workspace.CurrentCamera
 
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     -- GUI
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     local gui = Instance.new("ScreenGui", player.PlayerGui)
     gui.ResetOnSpawn = false
 
@@ -83,28 +82,46 @@ return function(deps)
     Movement.page.Visible = true
     Tabs.active = Movement
 
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     -- MOVEMENT
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     Components.Toggle(Movement.page, "Fly", false, function(v)
         Fly.enabled = v
-        if v then Fly.enable(root, camera) else Fly.disable() end
+        if v then
+            WalkSpeed.enabled = false
+            JumpPower.enabled = false
+            Fly.enable(root, camera)
+        else
+            Fly.disable()
+        end
     end)
 
-    Components.Slider(Movement.page, "Fly Speed", 10, 100, Fly.speed, function(v)
+    Components.Slider(Movement.page, "Fly Speed", 10, 120, Fly.speed, function(v)
         Fly.speed = v
     end)
 
-    Components.Slider(Movement.page, "WalkSpeed", 16, 100, WalkSpeed.value, function(v)
-        WalkSpeed.enabled = true
-        WalkSpeed.value = v
+    Components.Toggle(Movement.page, "WalkSpeed", false, function(v)
+        WalkSpeed.enabled = v
         WalkSpeed.apply(humanoid)
     end)
 
-    Components.Slider(Movement.page, "Jump Power", 50, 200, JumpPower.value, function(v)
-        JumpPower.enabled = true
-        JumpPower.value = v
+    Components.Slider(Movement.page, "WalkSpeed Value", 16, 100, WalkSpeed.value, function(v)
+        WalkSpeed.value = v
+        if WalkSpeed.enabled then
+            WalkSpeed.apply(humanoid)
+        end
+    end)
+
+    Components.Toggle(Movement.page, "Jump Power", false, function(v)
+        JumpPower.enabled = v
         JumpPower.apply(humanoid)
+    end)
+
+    Components.Slider(Movement.page, "Jump Power Value", 50, 200, JumpPower.value, function(v)
+        JumpPower.value = v
+        if JumpPower.enabled then
+            JumpPower.apply(humanoid)
+        end
     end)
 
     Components.Toggle(Movement.page, "Noclip", false, function(v)
@@ -115,14 +132,15 @@ return function(deps)
         BunnyHop.enabled = v
     end)
 
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     -- COMBAT
-    ----------------------------------------------------------------
-    Components.Toggle(Combat.page, "Aim Assist", false, function(v)
+    ------------------------------------------------------------
+    Components.Toggle(Combat.page, "Aim Assist (Hold RMB)", false, function(v)
         AimAssist.enabled = v
+        AimAssist.keybind = "RMB"
     end)
 
-    Components.Slider(Combat.page, "Aim Assist FOV", 20, 500, AimAssist.fov, function(v)
+    Components.Slider(Combat.page, "Aim Assist FOV", 30, 500, AimAssist.fov, function(v)
         AimAssist.fov = v
     end)
 
@@ -131,9 +149,9 @@ return function(deps)
         if v then FOV.create() end
     end)
 
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     -- ESP
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     Components.Toggle(ESP.page, "Name ESP", false, function(v)
         if v then NameESP.enable(player, gui) else NameESP.disable() end
     end)
@@ -154,9 +172,9 @@ return function(deps)
         if v then Chams.enable(player) else Chams.disable() end
     end)
 
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     -- EXTRA
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
     Components.Toggle(Extra.page, "Invisibility", false, function(v)
         Invisibility.enabled = v
     end)
@@ -192,9 +210,9 @@ return function(deps)
         AntiAFK.enabled = v
     end)
 
-    ----------------------------------------------------------------
-    -- UPDATE LOOP (CRITICAL)
-    ----------------------------------------------------------------
+    ------------------------------------------------------------
+    -- UPDATE LOOP (THIS MAKES EVERYTHING ACTUALLY WORK)
+    ------------------------------------------------------------
     RunService.RenderStepped:Connect(function(dt)
         if Fly.enabled then
             Fly.update(root, camera, UIS)
