@@ -130,27 +130,27 @@ return function(deps)
 	end)
 	
 	-- ============================================
-	-- COLORS - NO GRAY!
+	-- COLORS - ALL DARK BLUE, NO GRAY
 	-- ============================================
 	local Colors = {
-		Background = Color3.fromRGB(15, 15, 20),      -- Dark blue-black
-		Panel = Color3.fromRGB(20, 20, 28),           -- Slightly lighter
-		Surface = Color3.fromRGB(25, 25, 35),         -- Tab bar
+		Background = Color3.fromRGB(18, 18, 25),      -- Dark blue-black main
+		Panel = Color3.fromRGB(22, 22, 32),           -- Header
+		Surface = Color3.fromRGB(26, 26, 36),         -- Tab bar
+		ContentBg = Color3.fromRGB(20, 20, 28),       -- Content area
 		Accent = Color3.fromRGB(60, 120, 255),        -- Blue accent
 		Text = Color3.fromRGB(220, 220, 240),
-		Border = Color3.fromRGB(45, 45, 60)
+		TextDim = Color3.fromRGB(140, 140, 160),
+		Border = Color3.fromRGB(45, 50, 65)           -- Blue-tinted border
 	}
 	
 	-- ============================================
-	-- CREATE GUI - TRANSPARENT BACKGROUND
+	-- CREATE GUI
 	-- ============================================
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "SimpleHub"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
-	
-	-- NO SCREEN BACKGROUND - fully transparent, see game behind
 	
 	-- Main container
 	local main = Instance.new("Frame")
@@ -159,9 +159,9 @@ return function(deps)
 	main.Position = UDim2.new(0.5, 0, 0.5, 0)
 	main.AnchorPoint = Vector2.new(0.5, 0.5)
 	main.BackgroundColor3 = Colors.Background
-	main.BackgroundTransparency = 0  -- Solid menu panel
+	main.BackgroundTransparency = 0
 	main.BorderSizePixel = 0
-	main.ClipsDescendants = true  -- IMPORTANT: Clips content to rounded corners
+	main.ClipsDescendants = true
 	main.Visible = false
 	main.Parent = gui
 	
@@ -174,42 +174,20 @@ return function(deps)
 	local mainStroke = Instance.new("UIStroke")
 	mainStroke.Color = Colors.Border
 	mainStroke.Thickness = 2
-	mainStroke.Transparency = 0.3
+	mainStroke.Transparency = 0.2
 	mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	mainStroke.Parent = main
 	
-	-- Glow effect (OUTSIDE main, positioned behind)
-	local mainGlow = Instance.new("ImageLabel")
-	mainGlow.Name = "Glow"
-	mainGlow.Size = UDim2.new(0, 860, 0, 580)
-	mainGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
-	mainGlow.AnchorPoint = Vector2.new(0.5, 0.5)
-	mainGlow.BackgroundTransparency = 1
-	mainGlow.Image = "rbxassetid://5028857472"
-	mainGlow.ImageColor3 = Colors.Accent
-	mainGlow.ImageTransparency = 0.85
-	mainGlow.ScaleType = Enum.ScaleType.Slice
-	mainGlow.SliceCenter = Rect.new(24, 24, 276, 276)
-	mainGlow.ZIndex = 0
-	mainGlow.Visible = false
-	mainGlow.Parent = gui
-	
-	-- Header
+	-- ============================================
+	-- HEADER
+	-- ============================================
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, 50)
+	header.Size = UDim2.new(1, 0, 0, 55)
 	header.Position = UDim2.new(0, 0, 0, 0)
 	header.BackgroundColor3 = Colors.Panel
 	header.BorderSizePixel = 0
 	header.Parent = main
-	
-	-- Header bottom border
-	local headerBorder = Instance.new("Frame")
-	headerBorder.Size = UDim2.new(1, 0, 0, 1)
-	headerBorder.Position = UDim2.new(0, 0, 1, 0)
-	headerBorder.BackgroundColor3 = Colors.Border
-	headerBorder.BorderSizePixel = 0
-	headerBorder.Parent = header
 	
 	-- Title
 	local title = Instance.new("TextLabel")
@@ -243,7 +221,7 @@ return function(deps)
 	version.AnchorPoint = Vector2.new(0, 0.5)
 	version.BackgroundTransparency = 1
 	version.Text = "v1.0"
-	version.TextColor3 = Color3.fromRGB(100, 100, 120)
+	version.TextColor3 = Colors.TextDim
 	version.TextXAlignment = Enum.TextXAlignment.Right
 	version.Font = Enum.Font.GothamMedium
 	version.TextSize = 11
@@ -255,7 +233,7 @@ return function(deps)
 	closeBtn.Size = UDim2.new(0, 32, 0, 32)
 	closeBtn.Position = UDim2.new(1, -42, 0.5, 0)
 	closeBtn.AnchorPoint = Vector2.new(0, 0.5)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 	closeBtn.BorderSizePixel = 0
 	closeBtn.Text = "×"
 	closeBtn.TextColor3 = Colors.Text
@@ -270,7 +248,6 @@ return function(deps)
 	
 	closeBtn.MouseButton1Click:Connect(function()
 		main.Visible = false
-		mainGlow.Visible = false
 	end)
 	
 	closeBtn.MouseEnter:Connect(function()
@@ -281,36 +258,41 @@ return function(deps)
 	
 	closeBtn.MouseLeave:Connect(function()
 		Animations.tween(closeBtn, {
-			BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+			BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
-	-- Tab bar
+	-- ============================================
+	-- TAB BAR - Proper height for 44px tabs
+	-- ============================================
 	local tabBar = Instance.new("Frame")
 	tabBar.Name = "TabBar"
-	tabBar.Size = UDim2.new(1, 0, 0, 50)
-	tabBar.Position = UDim2.new(0, 0, 0, 50)
+	tabBar.Size = UDim2.new(1, 0, 0, 68)  -- 44 + 12 + 12 padding
+	tabBar.Position = UDim2.new(0, 0, 0, 55)
 	tabBar.BackgroundColor3 = Colors.Surface
 	tabBar.BorderSizePixel = 0
 	tabBar.Parent = main
 	
-	-- Tab bar bottom border
-	local tabBarBorder = Instance.new("Frame")
-	tabBarBorder.Size = UDim2.new(1, 0, 0, 1)
-	tabBarBorder.Position = UDim2.new(0, 0, 1, 0)
-	tabBarBorder.BackgroundColor3 = Colors.Border
-	tabBarBorder.BorderSizePixel = 0
-	tabBarBorder.Parent = tabBar
-	
 	Tabs.setupTabBar(tabBar)
 	
-	-- Content container - FILLS THE REST
+	-- ============================================
+	-- CONTENT AREA - Dark background, no gray
+	-- ============================================
+	local contentArea = Instance.new("Frame")
+	contentArea.Name = "ContentArea"
+	contentArea.Size = UDim2.new(1, 0, 1, -123)  -- 55 header + 68 tabbar = 123
+	contentArea.Position = UDim2.new(0, 0, 0, 123)
+	contentArea.BackgroundColor3 = Colors.ContentBg
+	contentArea.BorderSizePixel = 0
+	contentArea.Parent = main
+	
+	-- Content container inside content area
 	local contentContainer = Instance.new("Frame")
 	contentContainer.Name = "ContentContainer"
-	contentContainer.Size = UDim2.new(1, -24, 1, -115)
-	contentContainer.Position = UDim2.new(0, 12, 0, 108)
+	contentContainer.Size = UDim2.new(1, -24, 1, -16)
+	contentContainer.Position = UDim2.new(0, 12, 0, 8)
 	contentContainer.BackgroundTransparency = 1
-	contentContainer.Parent = main
+	contentContainer.Parent = contentArea
 	
 	-- Create tab content frames
 	local function createTabContent(name)
@@ -347,7 +329,9 @@ return function(deps)
 	local espContent = createTabContent("ESP")
 	local extraContent = createTabContent("Extra")
 	
-	-- Create tabs
+	-- ============================================
+	-- CREATE TABS
+	-- ============================================
 	local movementTab = Tabs.create(tabBar, "Movement", "⚡")
 	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
 	local espTab = Tabs.create(tabBar, "ESP", "👁")
@@ -606,7 +590,9 @@ return function(deps)
 		end
 	end)
 	
-	-- Activate first tab
+	-- ============================================
+	-- ACTIVATE FIRST TAB
+	-- ============================================
 	Tabs.activate(movementTab, movementContent)
 	
 	-- ============================================
@@ -618,16 +604,11 @@ return function(deps)
 		if input.KeyCode == Enum.KeyCode.M then
 			local isVisible = not main.Visible
 			main.Visible = isVisible
-			mainGlow.Visible = isVisible
 			
 			if isVisible then
 				main.Size = UDim2.new(0, 0, 0, 0)
-				mainGlow.Size = UDim2.new(0, 0, 0, 0)
 				Animations.tween(main, {
 					Size = UDim2.new(0, 820, 0, 540)
-				}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
-				Animations.tween(mainGlow, {
-					Size = UDim2.new(0, 860, 0, 580)
 				}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
 			end
 		end
@@ -653,7 +634,6 @@ return function(deps)
 		local delta = input.Position - dragStart
 		local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 		Animations.tween(main, {Position = newPos}, {Time = 0.1, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
-		Animations.tween(mainGlow, {Position = newPos}, {Time = 0.1, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end
 	
 	header.InputBegan:Connect(function(input)
