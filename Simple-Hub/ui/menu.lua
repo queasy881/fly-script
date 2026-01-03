@@ -18,10 +18,9 @@ return function(deps)
 	local RunService = game:GetService("RunService")
 	local player = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
-
-	local Players = game:GetService("Players")
-	local player = Players.LocalPlayer
 	local mouse = player:GetMouse()
+
+
 
 	
 	-- Wait for character
@@ -670,11 +669,10 @@ return function(deps)
 	Tabs.activate(movementTab, movementContent)
 	
 -- ============================================
--- KEYBINDS
+-- KEYBINDS (FIXED)
 -- ============================================
-UIS.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then return end
-	
+UIS.InputBegan:Connect(function(input)
+	-- 🔑 MENU TOGGLE MUST IGNORE gameProcessed
 	if input.KeyCode == Enum.KeyCode.M then
 		local isVisible = not main.Visible
 		main.Visible = isVisible
@@ -683,11 +681,6 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 			-- 🔓 UNLOCK MOUSE FOR MENU
 			UIS.MouseBehavior = Enum.MouseBehavior.Default
 			UIS.MouseIconEnabled = true
-			
-			-- ❌ HIDE ROBLOX FPS CROSSHAIR
-			pcall(function()
-				UserSettings().GameSettings.RotationType = Enum.RotationType.CameraRelative
-			end)
 			
 			main.Size = UDim2.new(0, 0, 0, 0)
 			Animations.tween(
@@ -699,15 +692,12 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 			-- 🔒 LOCK MOUSE BACK TO FIRST PERSON
 			UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
 			UIS.MouseIconEnabled = false
-			
-			-- ✅ RESTORE FPS CAMERA
-			pcall(function()
-				UserSettings().GameSettings.RotationType = Enum.RotationType.MovementRelative
-			end)
 		end
+		
+		return
 	end
 	
-	-- DASH (F KEY) — KEEP THIS
+	-- OTHER KEYS CAN RESPECT gameProcessed
 	if input.KeyCode == Enum.KeyCode.F then
 		if Dash and Dash.enabled then
 			local root = getRoot()
@@ -717,6 +707,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 		end
 	end
 end)
+
 
 
 	
