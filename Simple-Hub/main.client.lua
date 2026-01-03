@@ -1,112 +1,60 @@
--- Simple Hub Main Client
+-- Simple Hub main.client.lua
 
-assert(_G.requireRemote, "requireRemote is missing — loader.lua did not run")
+local BASE = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
 
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local function load(path)
+	local code = game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
+	return loadstring(code)()
+end
 
-local player = Players.LocalPlayer
+-- utils (must load first)
+load("utils/helpers.lua")
+load("utils/math.lua")
+load("utils/raycast.lua")
 
--------------------------------------------------
--- LOAD UI CORE
--------------------------------------------------
-local UI = {
-	Animations = requireRemote("ui/animations.lua"),
-	Components = requireRemote("ui/components.lua"),
-	Tabs = requireRemote("ui/tabs.lua"),
-}
+-- ui
+load("ui/animations.lua")
+load("ui/components.lua")
+load("ui/tabs.lua")
 
--------------------------------------------------
--- LOAD SETTINGS
--------------------------------------------------
-local Settings = {
-	UI = requireRemote("settings/ui_settings.lua"),
-	Keybinds = requireRemote("settings/keybinds.lua"),
-	Presets = requireRemote("settings/presets.lua"),
-}
+-- settings
+load("settings/ui_settings.lua")
+load("settings/keybinds.lua")
+load("settings/presets.lua")
 
--------------------------------------------------
--- LOAD UTILITIES
--------------------------------------------------
-local Utils = {
-	Helpers = requireRemote("utils/helpers.lua"),
-	Math = requireRemote("utils/math.lua"),
-	Raycast = requireRemote("utils/raycast.lua"),
-}
+-- movement
+load("movement/fly.lua")
+load("movement/noclip.lua")
+load("movement/walkspeed.lua")
+load("movement/jumppower.lua")
+load("movement/bunnyhop.lua")
+load("movement/dash.lua")
+load("movement/air-control.lua")
 
--------------------------------------------------
--- LOAD MOVEMENT MODULES
--------------------------------------------------
-local Movement = {
-	Fly = requireRemote("movement/fly.lua"),
-	Dash = requireRemote("movement/dash.lua"),
-	WalkSpeed = requireRemote("movement/walkspeed.lua"),
-	JumpPower = requireRemote("movement/jumppower.lua"),
-	BunnyHop = requireRemote("movement/bunnyhop.lua"),
-	AirControl = requireRemote("movement/air-control.lua"),
-	NoClip = requireRemote("movement/no-clip.lua"),
-}
+-- esp
+load("esp/name_esp.lua")
+load("esp/box_esp.lua")
+load("esp/health_esp.lua")
+load("esp/distance_esp.lua")
+load("esp/chams.lua")
+load("esp/tracers.lua")
+load("esp/offscreen_arrows.lua")
 
--------------------------------------------------
--- LOAD ESP MODULES
--------------------------------------------------
-local ESP = {
-	Name = requireRemote("esp/name_esp.lua"),
-	Box = requireRemote("esp/box_esp.lua"),
-	Health = requireRemote("esp/health_esp.lua"),
-	Distance = requireRemote("esp/distance_esp.lua"),
-	Tracers = requireRemote("esp/tracers.lua"),
-	Chams = requireRemote("esp/chams.lua"),
-	Offscreen = requireRemote("esp/offscreen_arrows.lua"),
-}
+-- combat
+load("combat/aim_assist.lua")
+load("combat/silent_aim.lua")
+load("combat/fov.lua")
 
--------------------------------------------------
--- LOAD COMBAT MODULES
--------------------------------------------------
-local Combat = {
-	AimAssist = requireRemote("combat/aim_assist.lua"),
-	SilentAim = requireRemote("combat/silent_aim.lua"),
-	FOV = requireRemote("combat/fov.lua"),
-}
+-- extra
+load("extra/fullbright.lua")
+load("extra/remove-grass.lua")
+load("extra/third-person.lua")
+load("extra/invisibility.lua")
+load("extra/anti-afk.lua")
+load("extra/fake-lag.lua")
+load("extra/fake-death.lua")
+load("extra/spinbot.lua")
+load("extra/teleport.lua")
+load("extra/walk-on-water.lua")
 
--------------------------------------------------
--- LOAD EXTRA / MISC MODULES
--------------------------------------------------
-local Extra = {
-	Teleport = requireRemote("extra/teleport.lua"),
-	Invisibility = requireRemote("extra/invisibility.lua"),
-	Fullbright = requireRemote("extra/fullbright.lua"),
-	RemoveGrass = requireRemote("extra/remove-grass.lua"),
-	ThirdPerson = requireRemote("extra/third-person.lua"),
-	WalkOnWater = requireRemote("extra/walk-on-water.lua"),
-	AntiAFK = requireRemote("extra/anti_afk.lua"),
-	FakeLag = requireRemote("extra/fake_lag.lua"),
-	FakeDeath = requireRemote("extra/fake-death.lua"),
-	Spinbot = requireRemote("extra/spinbot.lua"),
-}
-
--------------------------------------------------
--- INIT UI
--------------------------------------------------
-local Hub = UI.Components.createMainWindow({
-	title = "SIMPLE HUB",
-	version = "v3.7",
-	keybind = Enum.KeyCode.M,
-})
-
--------------------------------------------------
--- REGISTER TABS
--------------------------------------------------
-UI.Tabs.register(Hub, "Movement", Movement)
-UI.Tabs.register(Hub, "Combat", Combat)
-UI.Tabs.register(Hub, "ESP", ESP)
-UI.Tabs.register(Hub, "Extra", Extra)
-UI.Tabs.register(Hub, "Settings", Settings)
-
--------------------------------------------------
--- FINALIZE
--------------------------------------------------
-UI.Animations.intro(Hub)
-
-print("✅ Simple Hub v3.7 fully loaded")
+print("[Simple Hub] Loaded successfully")
