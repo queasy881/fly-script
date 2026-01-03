@@ -11,7 +11,9 @@ return function(Anim)
         muted  = Color3.fromRGB(156,163,175)
     }
 
+    ----------------------------------------------------------------
     -- TOGGLE
+    ----------------------------------------------------------------
     function Components.Toggle(parent, text, default, callback)
         local btn = Instance.new("TextButton", parent)
         btn.Size = UDim2.new(1, -12, 0, 42)
@@ -53,7 +55,9 @@ return function(Anim)
         end)
     end
 
+    ----------------------------------------------------------------
     -- SLIDER
+    ----------------------------------------------------------------
     function Components.Slider(parent, text, min, max, value, callback)
         local frame = Instance.new("Frame", parent)
         frame.Size = UDim2.new(1, -12, 0, 52)
@@ -65,7 +69,7 @@ return function(Anim)
         label.Font = Enum.Font.GothamMedium
         label.TextSize = 13
         label.TextColor3 = C.muted
-        label.TextXAlignment = Left
+        label.TextXAlignment = Enum.TextXAlignment.Left  -- ✅ FIX
         label.Text = text .. ": " .. value
 
         local bar = Instance.new("Frame", frame)
