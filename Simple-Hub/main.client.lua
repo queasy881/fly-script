@@ -18,13 +18,16 @@ load("utils/helpers.lua")
 load("utils/math.lua")
 load("utils/raycast.lua")
 
-local startMenu = load("ui/menu.lua")
-startMenu()
+local Animations = load("ui/animations.lua")
+local Components = load("ui/components.lua")
+local Tabs = load("ui/tabs.lua")
 
--- ui
-load("ui/animations.lua")
-load("ui/components.lua")
-load("ui/tabs.lua")
+local startMenu = load("ui/menu.lua")
+startMenu({
+	Tabs = Tabs,
+	Components = Components,
+	Animations = Animations
+})
 
 
 
