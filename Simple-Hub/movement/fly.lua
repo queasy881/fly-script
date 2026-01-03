@@ -1,27 +1,38 @@
--- movement/fly.lua
+-- Fly (FIXED)
 
 local Fly = {}
 
 Fly.enabled = false
-Fly.speed = 23
+Fly.speed = 30
 
-local bv, bg
+local bv, bg, humanoid
 
 function Fly.enable(root, camera)
 	if Fly.enabled then return end
 	Fly.enabled = true
 
+	humanoid = root.Parent:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	end
+
 	bv = Instance.new("BodyVelocity")
-	bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+	bv.MaxForce = Vector3.new(1e5, 1e6, 1e5)
 	bv.Parent = root
 
 	bg = Instance.new("BodyGyro")
-	bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+	bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+	bg.P = 1e4
 	bg.Parent = root
 end
 
 function Fly.disable()
 	Fly.enabled = false
+
+	if humanoid then
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+
 	if bv then bv:Destroy() bv = nil end
 	if bg then bg:Destroy() bg = nil end
 end
@@ -42,4 +53,3 @@ function Fly.update(root, camera, UIS)
 end
 
 return Fly
-
