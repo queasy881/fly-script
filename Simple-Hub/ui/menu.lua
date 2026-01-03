@@ -667,26 +667,42 @@ return function(deps)
 	-- ============================================
 	-- KEYBINDS
 	-- ============================================
-	UIS.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then return end
+	-- ============================================
+-- KEYBINDS
+-- ============================================
+UIS.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	
+	if input.KeyCode == Enum.KeyCode.M then
+		local isVisible = not main.Visible
+		main.Visible = isVisible
 		
-		if input.KeyCode == Enum.KeyCode.M then
-			local isVisible = not main.Visible
-			main.Visible = isVisible
+		if isVisible then
+			-- 🔓 UNLOCK MOUSE FOR MENU
+			UIS.MouseBehavior = Enum.MouseBehavior.Default
+			UIS.MouseIconEnabled = true
 			
-			if isVisible then
-				main.Size = UDim2.new(0, 0, 0, 0)
-				Animations.tween(main, {Size = UDim2.new(0, 820, 0, 540)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
-			end
+			main.Size = UDim2.new(0, 0, 0, 0)
+			Animations.tween(
+				main,
+				{Size = UDim2.new(0, 820, 0, 540)},
+				{Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out}
+			)
+		else
+			-- 🔒 LOCK MOUSE BACK TO FIRST PERSON
+			UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+			UIS.MouseIconEnabled = false
 		end
-		
-		if input.KeyCode == Enum.KeyCode.F then
-			if Dash and Dash.enabled then
-				local root = getRoot()
-				if root then Dash.tryDash(root, camera) end
-			end
+	end
+	
+	if input.KeyCode == Enum.KeyCode.F then
+		if Dash and Dash.enabled then
+			local root = getRoot()
+			if root then Dash.tryDash(root, camera) end
 		end
-	end)
+	end
+end)
+
 	
 	-- ============================================
 	-- DRAGGING
