@@ -9,21 +9,21 @@ local function load(path)
 end
 
 ----------------------------------------------------------------
--- UTILS (MUST LOAD FIRST)
+-- UTILS
 ----------------------------------------------------------------
 load("utils/helpers.lua")
 load("utils/math.lua")
 load("utils/raycast.lua")
 
 ----------------------------------------------------------------
--- UI CORE
+-- UI
 ----------------------------------------------------------------
 local Animations = load("ui/animations.lua")
 local Components = load("ui/components.lua")
 local Tabs = load("ui/tabs.lua")
 
 ----------------------------------------------------------------
--- MOVEMENT MODULES
+-- MOVEMENT
 ----------------------------------------------------------------
 local Fly = load("movement/fly.lua")
 local WalkSpeed = load("movement/walkspeed.lua")
@@ -33,14 +33,13 @@ local BunnyHop = load("movement/bunnyhop.lua")
 local Dash = load("movement/dash.lua")
 
 ----------------------------------------------------------------
--- COMBAT MODULES
+-- COMBAT (NO SILENT AIM)
 ----------------------------------------------------------------
 local AimAssist = load("combat/aim_assist.lua")
-local SilentAim = load("combat/silent_aim.lua")
 local FOV = load("combat/fov.lua")
 
 ----------------------------------------------------------------
--- ESP MODULES
+-- ESP
 ----------------------------------------------------------------
 local NameESP = load("esp/name_esp.lua")
 local BoxESP = load("esp/box_esp.lua")
@@ -49,16 +48,19 @@ local DistanceESP = load("esp/distance_esp.lua")
 local Chams = load("esp/chams.lua")
 
 ----------------------------------------------------------------
--- EXTRA MODULES
+-- EXTRA
 ----------------------------------------------------------------
 local Invisibility = load("extra/invisibility.lua")
 local AntiAFK = load("extra/anti-afk.lua")
 local SpinBot = load("extra/spinbot.lua")
 local FakeLag = load("extra/fake-lag.lua")
 local WalkOnWater = load("extra/walk-on-water.lua")
+local Fullbright = load("extra/fullbright.lua")
+local RemoveGrass = load("extra/remove-grass.lua")
+local ThirdPerson = load("extra/third-person.lua")
 
 ----------------------------------------------------------------
--- START MENU (PASS EVERYTHING EXPLICITLY)
+-- START MENU
 ----------------------------------------------------------------
 local startMenu = load("ui/menu.lua")
 
@@ -77,7 +79,6 @@ startMenu({
 
     -- combat
     AimAssist = AimAssist,
-    SilentAim = SilentAim,
     FOV = FOV,
 
     -- esp
@@ -92,7 +93,10 @@ startMenu({
     AntiAFK = AntiAFK,
     SpinBot = SpinBot,
     FakeLag = FakeLag,
-    WalkOnWater = WalkOnWater
+    WalkOnWater = WalkOnWater,
+    Fullbright = Fullbright,
+    RemoveGrass = RemoveGrass,
+    ThirdPerson = ThirdPerson
 })
 
 print("[Simple Hub] Loaded successfully")
