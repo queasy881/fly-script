@@ -23,4 +23,8 @@ function Loader.load(path)
     return result
 end
 
+
+Loader.load("main.client.lua")
+
+
 return Loader
