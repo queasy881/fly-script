@@ -12,7 +12,6 @@ return function(deps)
 
     -- combat
     local AimAssist = deps.AimAssist
-    local SilentAim = deps.SilentAim
     local FOV = deps.FOV
 
     -- esp
@@ -28,6 +27,9 @@ return function(deps)
     local SpinBot = deps.SpinBot
     local FakeLag = deps.FakeLag
     local WalkOnWater = deps.WalkOnWater
+    local Fullbright = deps.Fullbright
+    local RemoveGrass = deps.RemoveGrass
+    local ThirdPerson = deps.ThirdPerson
 
     local Players = game:GetService("Players")
     local UIS = game:GetService("UserInputService")
@@ -39,7 +41,9 @@ return function(deps)
     local root = character:WaitForChild("HumanoidRootPart")
     local camera = workspace.CurrentCamera
 
+    ----------------------------------------------------------------
     -- GUI
+    ----------------------------------------------------------------
     local gui = Instance.new("ScreenGui", player.PlayerGui)
     gui.ResetOnSpawn = false
 
@@ -71,7 +75,6 @@ return function(deps)
     pages.Size = UDim2.new(1,0,1,-44)
     pages.BackgroundTransparency = 1
 
-    -- tabs
     local Movement = Tabs.create(tabBar, pages, "Movement")
     local Combat   = Tabs.create(tabBar, pages, "Combat")
     local ESP      = Tabs.create(tabBar, pages, "ESP")
@@ -81,7 +84,7 @@ return function(deps)
     Tabs.active = Movement
 
     ----------------------------------------------------------------
-    -- MOVEMENT TAB
+    -- MOVEMENT
     ----------------------------------------------------------------
     Components.Toggle(Movement.page, "Fly", false, function(v)
         Fly.enabled = v
@@ -90,18 +93,6 @@ return function(deps)
 
     Components.Slider(Movement.page, "Fly Speed", 10, 100, Fly.speed, function(v)
         Fly.speed = v
-    end)
-
-    Components.Toggle(Movement.page, "Noclip", false, function(v)
-        Noclip.enabled = v
-    end)
-
-    Components.Toggle(Movement.page, "Bunny Hop", false, function(v)
-        BunnyHop.enabled = v
-    end)
-
-    Components.Toggle(Movement.page, "Dash", false, function(v)
-        Dash.enabled = v
     end)
 
     Components.Slider(Movement.page, "WalkSpeed", 16, 100, WalkSpeed.value, function(v)
@@ -116,8 +107,16 @@ return function(deps)
         JumpPower.apply(humanoid)
     end)
 
+    Components.Toggle(Movement.page, "Noclip", false, function(v)
+        Noclip.enabled = v
+    end)
+
+    Components.Toggle(Movement.page, "Bunny Hop", false, function(v)
+        BunnyHop.enabled = v
+    end)
+
     ----------------------------------------------------------------
-    -- COMBAT TAB
+    -- COMBAT
     ----------------------------------------------------------------
     Components.Toggle(Combat.page, "Aim Assist", false, function(v)
         AimAssist.enabled = v
@@ -127,25 +126,13 @@ return function(deps)
         AimAssist.fov = v
     end)
 
-    Components.Toggle(Combat.page, "Silent Aim", false, function(v)
-        SilentAim.enabled = v
-    end)
-
-    Components.Slider(Combat.page, "Silent Aim FOV", 20, 500, SilentAim.fov, function(v)
-        SilentAim.fov = v
-    end)
-
     Components.Toggle(Combat.page, "FOV Circle", false, function(v)
         FOV.enabled = v
         if v then FOV.create() end
     end)
 
-    Components.Slider(Combat.page, "FOV Circle Radius", 20, 500, FOV.radius, function(v)
-        FOV.radius = v
-    end)
-
     ----------------------------------------------------------------
-    -- ESP TAB
+    -- ESP
     ----------------------------------------------------------------
     Components.Toggle(ESP.page, "Name ESP", false, function(v)
         if v then NameESP.enable(player, gui) else NameESP.disable() end
@@ -168,14 +155,25 @@ return function(deps)
     end)
 
     ----------------------------------------------------------------
-    -- EXTRA TAB
+    -- EXTRA
     ----------------------------------------------------------------
     Components.Toggle(Extra.page, "Invisibility", false, function(v)
         Invisibility.enabled = v
     end)
 
-    Components.Toggle(Extra.page, "Anti AFK", false, function(v)
-        AntiAFK.enabled = v
+    Components.Toggle(Extra.page, "Fullbright", false, function(v)
+        Fullbright.enabled = v
+        Fullbright.toggle()
+    end)
+
+    Components.Toggle(Extra.page, "Remove Grass", false, function(v)
+        RemoveGrass.enabled = v
+        RemoveGrass.apply()
+    end)
+
+    Components.Toggle(Extra.page, "Third Person", false, function(v)
+        ThirdPerson.enabled = v
+        ThirdPerson.apply(player)
     end)
 
     Components.Toggle(Extra.page, "Spinbot", false, function(v)
@@ -190,15 +188,37 @@ return function(deps)
         WalkOnWater.enabled = v
     end)
 
+    Components.Toggle(Extra.page, "Anti AFK", false, function(v)
+        AntiAFK.enabled = v
+    end)
+
     ----------------------------------------------------------------
-    -- UPDATE LOOP (MAKES BUTTONS ACTUALLY WORK)
+    -- UPDATE LOOP (CRITICAL)
     ----------------------------------------------------------------
     RunService.RenderStepped:Connect(function(dt)
-        if Noclip.enabled then Noclip.update(character) end
-        if BunnyHop.enabled then BunnyHop.update(humanoid) end
-        if SpinBot.enabled then SpinBot.update(root, dt) end
-        if FakeLag.enabled then FakeLag.update(root) end
-        if WalkOnWater.enabled then WalkOnWater.update(root) end
-        if AntiAFK.enabled then AntiAFK.update(dt) end
+        if Fly.enabled then
+            Fly.update(root, camera, UIS)
+        end
+        if Noclip.enabled then
+            Noclip.update(character)
+        end
+        if BunnyHop.enabled then
+            BunnyHop.update(humanoid)
+        end
+        if SpinBot.enabled then
+            SpinBot.update(root, dt)
+        end
+        if FakeLag.enabled then
+            FakeLag.update(root)
+        end
+        if WalkOnWater.enabled then
+            WalkOnWater.update(root)
+        end
+        if Invisibility.enabled then
+            Invisibility.apply(character)
+        end
+        if AntiAFK.enabled then
+            AntiAFK.update(dt)
+        end
     end)
 end
