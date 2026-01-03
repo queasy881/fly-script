@@ -19,8 +19,9 @@ load("utils/raycast.lua")
 -- UI
 ----------------------------------------------------------------
 local Animations = load("ui/animations.lua")
-local Components = load("ui/components.lua")
-local Tabs = load("ui/tabs.lua")
+local Components = load("ui/components.lua")(Animations)
+local Tabs = load("ui/tabs.lua")(Animations)
+
 
 ----------------------------------------------------------------
 -- MOVEMENT
