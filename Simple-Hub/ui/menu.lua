@@ -7,12 +7,14 @@ return function(deps)
     local RunService = game:GetService("RunService")
 
     local player = Players.LocalPlayer
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hum = char:WaitForChild("Humanoid")
-    local root = char:WaitForChild("HumanoidRootPart")
-    local cam = workspace.CurrentCamera
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local root = character:WaitForChild("HumanoidRootPart")
+    local camera = workspace.CurrentCamera
 
+    -- GUI
     local gui = Instance.new("ScreenGui", player.PlayerGui)
+    gui.Name = "SimpleHub"
     gui.ResetOnSpawn = false
 
     local main = Instance.new("Frame", gui)
@@ -30,6 +32,7 @@ return function(deps)
 
     local tabBar = Instance.new("Frame", main)
     tabBar.Size = UDim2.new(1,0,0,50)
+    tabBar.BackgroundTransparency = 1
 
     local pages = Instance.new("Frame", main)
     pages.Position = UDim2.new(0,0,0,50)
@@ -46,11 +49,15 @@ return function(deps)
     Tabs.active = Movement
 
     ----------------------------------------------------------------
-    -- MOVEMENT
+    -- MOVEMENT TAB
     ----------------------------------------------------------------
     Components.Toggle(Movement.page, "Fly", false, function(v)
         Fly.enabled = v
-        if not v then Fly.disable() else Fly.enable(root, cam) end
+        if v then Fly.enable(root, camera) else Fly.disable() end
+    end)
+
+    Components.Slider(Movement.page, "Fly Speed", 10, 100, Fly.speed, function(v)
+        Fly.speed = v
     end)
 
     Components.Toggle(Movement.page, "Noclip", false, function(v)
@@ -65,15 +72,35 @@ return function(deps)
         Dash.enabled = v
     end)
 
+    Components.Slider(Movement.page, "WalkSpeed", 16, 100, WalkSpeed.value, function(v)
+        WalkSpeed.enabled = true
+        WalkSpeed.value = v
+        WalkSpeed.apply(humanoid)
+    end)
+
+    Components.Slider(Movement.page, "Jump Power", 50, 200, JumpPower.value, function(v)
+        JumpPower.enabled = true
+        JumpPower.value = v
+        JumpPower.apply(humanoid)
+    end)
+
     ----------------------------------------------------------------
-    -- COMBAT
+    -- COMBAT TAB
     ----------------------------------------------------------------
     Components.Toggle(Combat.page, "Aim Assist", false, function(v)
         AimAssist.enabled = v
     end)
 
+    Components.Slider(Combat.page, "Aim Assist FOV", 20, 500, AimAssist.fov, function(v)
+        AimAssist.fov = v
+    end)
+
     Components.Toggle(Combat.page, "Silent Aim", false, function(v)
         SilentAim.enabled = v
+    end)
+
+    Components.Slider(Combat.page, "Silent Aim FOV", 20, 500, SilentAim.fov, function(v)
+        SilentAim.fov = v
     end)
 
     Components.Toggle(Combat.page, "FOV Circle", false, function(v)
@@ -81,8 +108,12 @@ return function(deps)
         if v then FOV.create() end
     end)
 
+    Components.Slider(Combat.page, "FOV Circle Radius", 20, 500, FOV.radius, function(v)
+        FOV.radius = v
+    end)
+
     ----------------------------------------------------------------
-    -- ESP
+    -- ESP TAB
     ----------------------------------------------------------------
     Components.Toggle(ESP.page, "Name ESP", false, function(v)
         if v then NameESP.enable(player, gui) else NameESP.disable() end
@@ -105,10 +136,14 @@ return function(deps)
     end)
 
     ----------------------------------------------------------------
-    -- EXTRA
+    -- EXTRA TAB
     ----------------------------------------------------------------
     Components.Toggle(Extra.page, "Invisibility", false, function(v)
         Invisibility.enabled = v
+    end)
+
+    Components.Slider(Extra.page, "Invisibility Strength", 0, 1, Invisibility.amount, function(v)
+        Invisibility.amount = v
     end)
 
     Components.Toggle(Extra.page, "Anti AFK", false, function(v)
