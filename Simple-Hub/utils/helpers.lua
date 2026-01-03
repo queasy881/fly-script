@@ -6,125 +6,96 @@ local RunService = game:GetService("RunService")
 
 local Helpers = {}
 
+-- Remote loader
+function Helpers.requireRemote(path)
+    local url =
+        "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/" .. path
+    local source = game:HttpGet(url)
+    local fn, err = loadstring(source)
+    if not fn then
+        error("Loadstring failed for " .. path .. ": " .. tostring(err))
+    end
+    return fn()
+end
+
 -- Returns the LocalPlayer
 function Helpers.getLocalPlayer()
-	return Players.LocalPlayer
+    return Players.LocalPlayer
 end
 
--- Waits for and returns a character for the given player (or LocalPlayer)
+-- Waits for and returns character
 function Helpers.waitForCharacter(player)
-	player = player or Players.LocalPlayer
-	if not player then return nil end
-	local char = player.Character
-	if char and char.Parent then return char end
-	return player.CharacterAdded:Wait()
+    player = player or Players.LocalPlayer
+    if not player then return nil end
+    if player.Character and player.Character.Parent then
+        return player.Character
+    end
+    return player.CharacterAdded:Wait()
 end
 
-
-
-local Helpers = {}
-
-function Helpers.requireRemote(path)
-    local url = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/" .. path
-    local source = game:HttpGet(url)
-    return loadstring(source)()
-end
-
-return Helpers
-
-
--- Returns humanoid (or nil)
+-- Returns humanoid
 function Helpers.getHumanoid(player)
-	local char = Helpers.waitForCharacter(player)
-	if not char then return nil end
-	return char:FindFirstChildOfClass("Humanoid")
+    local char = Helpers.waitForCharacter(player)
+    return char and char:FindFirstChildOfClass("Humanoid")
 end
 
--- Returns HumanoidRootPart (or waits for it)
+-- Returns HumanoidRootPart
 function Helpers.getRoot(player)
-	local char = Helpers.waitForCharacter(player)
-	if not char then return nil end
-	return char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart")
+    local char = Helpers.waitForCharacter(player)
+    return char and (char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart"))
 end
 
--- Is player alive?
+-- Alive check
 function Helpers.isAlive(player)
-	local humanoid = Helpers.getHumanoid(player)
-	return humanoid and humanoid.Health and humanoid.Health > 0
+    local hum = Helpers.getHumanoid(player)
+    return hum and hum.Health > 0
 end
 
--- Return array of other players (excluding local)
+-- Other players
 function Helpers.getOtherPlayers()
-	local localP = Players.LocalPlayer
-	local out = {}
-	for _,p in ipairs(Players:GetPlayers()) do
-		if p ~= localP then
-			table.insert(out, p)
-		end
-	end
-	return out
+    local localP = Players.LocalPlayer
+    local t = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= localP then
+            table.insert(t, p)
+        end
+    end
+    return t
 end
 
--- Iterate other players with callback(plr)
-function Helpers.forEachOtherPlayer(cb)
-	for _,p in ipairs(Helpers.getOtherPlayers()) do
-		task.spawn(cb, p)
-	end
-end
-
--- Safe FindFirstChild with timeout (seconds). Returns object or nil.
-function Helpers.safeFindFirstChild(parent, name, timeout)
-	if not parent then return nil end
-	local found = parent:FindFirstChild(name)
-	if found then return found end
-	if timeout and timeout > 0 then
-		local start = tick()
-		repeat
-			found = parent:FindFirstChild(name)
-			if found then return found end
-			RunService.Heartbeat:Wait()
-		until tick() - start >= timeout
-		return nil
-	end
-	return nil
-end
-
--- Simple debounce wrapper: returns a function that only runs fn once per `delay` seconds
-function Helpers.debounceWrap(fn, delay)
-	delay = delay or 0.2
-	local last = 0
-	return function(...)
-		local now = tick()
-		if now - last >= delay then
-			last = now
-			return fn(...)
-		end
-	end
-end
-
--- Returns shallow copy of table
-function Helpers.shallowCopy(t)
-	if type(t) ~= "table" then return t end
-	local out = {}
-	for k,v in pairs(t) do out[k] = v end
-	return out
-end
-
--- Merge t2 into t1 (shallow), returns t1
-function Helpers.mergeTables(t1, t2)
-	if type(t1) ~= "table" or type(t2) ~= "table" then return t1 end
-	for k,v in pairs(t2) do t1[k] = v end
-	return t1
-end
-
--- Safe task spawn (avoids erroring whole thread)
+-- Safe spawn
 function Helpers.safeSpawn(fn, ...)
-	task.spawn(function()
-		local ok, err = pcall(fn, ...)
-		if not ok then
-			warn("Helpers.safeSpawn error:", err)
-		end
-	end)
+    task.spawn(function(...)
+        local ok, err = pcall(fn, ...)
+        if not ok then
+            warn("[Helpers.safeSpawn]", err)
+        end
+    end, ...)
+end
+
+-- Debounce wrapper
+function Helpers.debounceWrap(fn, delay)
+    delay = delay or 0.2
+    local last = 0
+    return function(...)
+        local now = tick()
+        if now - last >= delay then
+            last = now
+            return fn(...)
+        end
+    end
+end
+
+-- Table helpers
+function Helpers.shallowCopy(t)
+    local o = {}
+    for k, v in pairs(t) do o[k] = v end
+    return o
+end
+
+function Helpers.mergeTables(a, b)
+    for k, v in pairs(b) do a[k] = v end
+    return a
 end
 
 return Helpers
