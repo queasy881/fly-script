@@ -12,12 +12,14 @@ end
 
 
 
-local startMenu = load("ui/menu.lua")
-startMenu()
+
 -- utils (must load first)
 load("utils/helpers.lua")
 load("utils/math.lua")
 load("utils/raycast.lua")
+
+local startMenu = load("ui/menu.lua")
+startMenu()
 
 -- ui
 load("ui/animations.lua")
