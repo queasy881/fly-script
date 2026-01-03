@@ -1,244 +1,388 @@
+-- ui/menu.lua
+-- Premium main menu interface
+
 return function(deps)
-    local Tabs = deps.Tabs
-    local Components = deps.Components
-
-    -- movement
-    local Fly = deps.Fly
-    local WalkSpeed = deps.WalkSpeed
-    local JumpPower = deps.JumpPower
-    local Noclip = deps.Noclip
-    local BunnyHop = deps.BunnyHop
-
-    -- combat
-    local AimAssist = deps.AimAssist
-    local FOV = deps.FOV
-
-    -- esp
-    local NameESP = deps.NameESP
-    local BoxESP = deps.BoxESP
-    local HealthESP = deps.HealthESP
-    local DistanceESP = deps.DistanceESP
-    local Chams = deps.Chams
-
-    -- extra
-    local Invisibility = deps.Invisibility
-    local AntiAFK = deps.AntiAFK
-    local SpinBot = deps.SpinBot
-    local FakeLag = deps.FakeLag
-    local WalkOnWater = deps.WalkOnWater
-    local Fullbright = deps.Fullbright
-    local RemoveGrass = deps.RemoveGrass
-    local ThirdPerson = deps.ThirdPerson
-
-    local Players = game:GetService("Players")
-    local UIS = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
-
-    local player = Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    local root = character:WaitForChild("HumanoidRootPart")
-    local camera = workspace.CurrentCamera
-
-    ------------------------------------------------------------
-    -- GUI
-    ------------------------------------------------------------
-    local gui = Instance.new("ScreenGui", player.PlayerGui)
-    gui.ResetOnSpawn = false
-
-    local main = Instance.new("Frame", gui)
-    main.Size = UDim2.new(0,780,0,520)
-    main.Position = UDim2.fromScale(0.5,0.5)
-    main.AnchorPoint = Vector2.new(0.5,0.5)
-    main.BackgroundColor3 = Color3.fromRGB(18,18,22)
-    main.Visible = false
-    Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
-
-    UIS.InputBegan:Connect(function(i,gp)
-        if not gp and i.KeyCode == Enum.KeyCode.M then
-            main.Visible = not main.Visible
-        end
-    end)
-
-    local tabBar = Instance.new("Frame", main)
-    tabBar.Size = UDim2.new(1,0,0,44)
-    tabBar.BackgroundTransparency = 1
-
-    local tabLayout = Instance.new("UIListLayout", tabBar)
-    tabLayout.FillDirection = Enum.FillDirection.Horizontal
-    tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    tabLayout.Padding = UDim.new(0,12)
-
-    local pages = Instance.new("Frame", main)
-    pages.Position = UDim2.new(0,0,0,44)
-    pages.Size = UDim2.new(1,0,1,-44)
-    pages.BackgroundTransparency = 1
-
-    local Movement = Tabs.create(tabBar, pages, "Movement")
-    local Combat   = Tabs.create(tabBar, pages, "Combat")
-    local ESP      = Tabs.create(tabBar, pages, "ESP")
-    local Extra    = Tabs.create(tabBar, pages, "Extra")
-
-    Movement.page.Visible = true
-    Tabs.active = Movement
-
-    ------------------------------------------------------------
-    -- MOVEMENT
-    ------------------------------------------------------------
-    Components.Toggle(Movement.page, "Fly", false, function(v)
-        Fly.enabled = v
-        if v then
-            WalkSpeed.enabled = false
-            JumpPower.enabled = false
-            Fly.enable(root, camera)
-        else
-            Fly.disable()
-        end
-    end)
-
-    Components.Slider(Movement.page, "Fly Speed", 10, 120, Fly.speed, function(v)
-        Fly.speed = v
-    end)
-
-    Components.Toggle(Movement.page, "WalkSpeed", false, function(v)
-        WalkSpeed.enabled = v
-        WalkSpeed.apply(humanoid)
-    end)
-
-    Components.Slider(Movement.page, "WalkSpeed Value", 16, 100, WalkSpeed.value, function(v)
-        WalkSpeed.value = v
-        if WalkSpeed.enabled then
-            WalkSpeed.apply(humanoid)
-        end
-    end)
-
-    Components.Toggle(Movement.page, "Jump Power", false, function(v)
-        JumpPower.enabled = v
-        JumpPower.apply(humanoid)
-    end)
-
-    Components.Slider(Movement.page, "Jump Power Value", 50, 200, JumpPower.value, function(v)
-        JumpPower.value = v
-        if JumpPower.enabled then
-            JumpPower.apply(humanoid)
-        end
-    end)
-
-    Components.Toggle(Movement.page, "Noclip", false, function(v)
-        Noclip.enabled = v
-    end)
-
-    Components.Toggle(Movement.page, "Bunny Hop", false, function(v)
-        BunnyHop.enabled = v
-    end)
-
-    ------------------------------------------------------------
-    -- COMBAT
-    ------------------------------------------------------------
-    Components.Toggle(Combat.page, "Aim Assist (Hold RMB)", false, function(v)
-        AimAssist.enabled = v
-        AimAssist.keybind = "RMB"
-    end)
-
-    Components.Slider(Combat.page, "Aim Assist FOV", 30, 500, AimAssist.fov, function(v)
-        AimAssist.fov = v
-        FOV.radius = v
-
-    end)
-
-    Components.Toggle(Combat.page, "FOV Circle", false, function(v)
-        FOV.enabled = v
-        if v then FOV.create() end
-    end)
-
-    ------------------------------------------------------------
-    -- ESP
-    ------------------------------------------------------------
-    Components.Toggle(ESP.page, "Name ESP", false, function(v)
-        if v then NameESP.enable(player, gui) else NameESP.disable() end
-    end)
-
-    Components.Toggle(ESP.page, "Box ESP", false, function(v)
-        if v then BoxESP.enable(player, gui) else BoxESP.disable() end
-    end)
-
-    Components.Toggle(ESP.page, "Health ESP", false, function(v)
-        if v then HealthESP.enable(player, gui) else HealthESP.disable() end
-    end)
-
-    Components.Toggle(ESP.page, "Distance ESP", false, function(v)
-        if v then DistanceESP.enable(player, gui, root) else DistanceESP.disable() end
-    end)
-
-    Components.Toggle(ESP.page, "Chams", false, function(v)
-        if v then Chams.enable(player) else Chams.disable() end
-    end)
-
-    ------------------------------------------------------------
-    -- EXTRA
-    ------------------------------------------------------------
-    Components.Toggle(Extra.page, "Invisibility", false, function(v)
-        Invisibility.enabled = v
-    end)
-
-    Components.Toggle(Extra.page, "Fullbright", false, function(v)
-        Fullbright.enabled = v
-        Fullbright.toggle()
-    end)
-
-    Components.Toggle(Extra.page, "Remove Grass", false, function(v)
-        RemoveGrass.enabled = v
-        RemoveGrass.apply()
-    end)
-
-    Components.Toggle(Extra.page, "Third Person", false, function(v)
-        ThirdPerson.enabled = v
-        ThirdPerson.apply(player)
-    end)
-
-    Components.Toggle(Extra.page, "Spinbot", false, function(v)
-        SpinBot.enabled = v
-    end)
-
-    Components.Toggle(Extra.page, "Fake Lag", false, function(v)
-        FakeLag.enabled = v
-    end)
-
-    Components.Toggle(Extra.page, "Walk on Water", false, function(v)
-        WalkOnWater.enabled = v
-    end)
-
-    Components.Toggle(Extra.page, "Anti AFK", false, function(v)
-        AntiAFK.enabled = v
-    end)
-
-    ------------------------------------------------------------
-    -- UPDATE LOOP (THIS MAKES EVERYTHING ACTUALLY WORK)
-    ------------------------------------------------------------
-    RunService.RenderStepped:Connect(function(dt)
-        if Fly.enabled then
-            Fly.update(root, camera, UIS)
-        end
-        if Noclip.enabled then
-            Noclip.update(character)
-        end
-        if BunnyHop.enabled then
-            BunnyHop.update(humanoid)
-        end
-        if SpinBot.enabled then
-            SpinBot.update(root, dt)
-        end
-        if FakeLag.enabled then
-            FakeLag.update(root)
-        end
-        if WalkOnWater.enabled then
-            WalkOnWater.update(root)
-        end
-        if Invisibility.enabled then
-            Invisibility.apply(character)
-        end
-        if AntiAFK.enabled then
-            AntiAFK.update(dt)
-        end
-    end)
+	local Tabs = deps.Tabs
+	local Components = deps.Components
+	local Animations = deps.Animations
+	
+	if not Tabs or not Components or not Animations then
+		error("[Menu] Missing dependencies")
+	end
+	
+	print("[SimpleHub] Initializing premium UI...")
+	
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local TweenService = game:GetService("TweenService")
+	local player = Players.LocalPlayer
+	
+	-- Colors
+	local Colors = {
+		Background = Color3.fromRGB(12, 12, 16),
+		Panel = Color3.fromRGB(18, 18, 24),
+		Surface = Color3.fromRGB(24, 24, 32),
+		Accent = Color3.fromRGB(60, 120, 255),
+		Text = Color3.fromRGB(220, 220, 240),
+		Border = Color3.fromRGB(40, 40, 52)
+	}
+	
+	-- Create ScreenGui
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "SimpleHub"
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = player:WaitForChild("PlayerGui")
+	
+	-- Main container
+	local main = Instance.new("Frame")
+	main.Name = "Main"
+	main.Size = UDim2.new(0, 820, 0, 540)
+	main.Position = UDim2.new(0.5, 0, 0.5, 0)
+	main.AnchorPoint = Vector2.new(0.5, 0.5)
+	main.BackgroundColor3 = Colors.Background
+	main.BorderSizePixel = 0
+	main.Visible = false
+	main.Parent = gui
+	
+	-- Rounded corners
+	local mainCorner = Instance.new("UICorner")
+	mainCorner.CornerRadius = UDim.new(0, 12)
+	mainCorner.Parent = main
+	
+	-- Border stroke
+	local mainStroke = Instance.new("UIStroke")
+	mainStroke.Color = Colors.Border
+	mainStroke.Thickness = 1.5
+	mainStroke.Transparency = 0.4
+	mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	mainStroke.Parent = main
+	
+	-- Glow effect
+	local mainGlow = Instance.new("ImageLabel")
+	mainGlow.Name = "Glow"
+	mainGlow.Size = UDim2.new(1, 40, 1, 40)
+	mainGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
+	mainGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+	mainGlow.BackgroundTransparency = 1
+	mainGlow.Image = "rbxassetid://5028857472"
+	mainGlow.ImageColor3 = Colors.Accent
+	mainGlow.ImageTransparency = 0.7
+	mainGlow.ScaleType = Enum.ScaleType.Slice
+	mainGlow.SliceCenter = Rect.new(24, 24, 276, 276)
+	mainGlow.ZIndex = main.ZIndex - 1
+	mainGlow.Parent = main
+	
+	-- Header
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 60)
+	header.BackgroundColor3 = Colors.Panel
+	header.BorderSizePixel = 0
+	header.Parent = main
+	
+	local headerCorner = Instance.new("UICorner")
+	headerCorner.CornerRadius = UDim.new(0, 12)
+	headerCorner.Parent = header
+	
+	-- Hide bottom corners of header
+	local headerMask = Instance.new("Frame")
+	headerMask.Size = UDim2.new(1, 0, 0, 12)
+	headerMask.Position = UDim2.new(0, 0, 1, -12)
+	headerMask.BackgroundColor3 = Colors.Panel
+	headerMask.BorderSizePixel = 0
+	headerMask.Parent = header
+	
+	-- Title
+	local title = Instance.new("TextLabel")
+	title.Name = "Title"
+	title.Size = UDim2.new(0, 300, 1, 0)
+	title.Position = UDim2.new(0, 24, 0, 0)
+	title.BackgroundTransparency = 1
+	title.Text = "SIMPLE HUB"
+	title.TextColor3 = Colors.Text
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 20
+	title.Parent = header
+	
+	-- Accent bar under title
+	local titleAccent = Instance.new("Frame")
+	titleAccent.Size = UDim2.new(0, 60, 0, 3)
+	titleAccent.Position = UDim2.new(0, 24, 1, -8)
+	titleAccent.BackgroundColor3 = Colors.Accent
+	titleAccent.BorderSizePixel = 0
+	titleAccent.Parent = header
+	
+	local accentCorner = Instance.new("UICorner")
+	accentCorner.CornerRadius = UDim.new(1, 0)
+	accentCorner.Parent = titleAccent
+	
+	-- Version label
+	local version = Instance.new("TextLabel")
+	version.Size = UDim2.new(0, 100, 0, 20)
+	version.Position = UDim2.new(1, -120, 0.5, 0)
+	version.AnchorPoint = Vector2.new(0, 0.5)
+	version.BackgroundTransparency = 1
+	version.Text = "v1.0"
+	version.TextColor3 = Color3.fromRGB(100, 100, 120)
+	version.TextXAlignment = Enum.TextXAlignment.Right
+	version.Font = Enum.Font.GothamMedium
+	version.TextSize = 11
+	version.Parent = header
+	
+	-- Close button
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Name = "CloseButton"
+	closeBtn.Size = UDim2.new(0, 36, 0, 36)
+	closeBtn.Position = UDim2.new(1, -48, 0.5, 0)
+	closeBtn.AnchorPoint = Vector2.new(0, 0.5)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+	closeBtn.BorderSizePixel = 0
+	closeBtn.Text = "×"
+	closeBtn.TextColor3 = Colors.Text
+	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.TextSize = 24
+	closeBtn.AutoButtonColor = false
+	closeBtn.Parent = header
+	
+	local closeBtnCorner = Instance.new("UICorner")
+	closeBtnCorner.CornerRadius = UDim.new(0, 6)
+	closeBtnCorner.Parent = closeBtn
+	
+	closeBtn.MouseButton1Click:Connect(function()
+		main.Visible = false
+	end)
+	
+	closeBtn.MouseEnter:Connect(function()
+		Animations.tween(closeBtn, {
+			BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+	end)
+	
+	closeBtn.MouseLeave:Connect(function()
+		Animations.tween(closeBtn, {
+			BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+	end)
+	
+	-- Tab bar
+	local tabBar = Instance.new("Frame")
+	tabBar.Name = "TabBar"
+	tabBar.Size = UDim2.new(1, 0, 0, 68)
+	tabBar.Position = UDim2.new(0, 0, 0, 60)
+	tabBar.BackgroundColor3 = Colors.Surface
+	tabBar.BorderSizePixel = 0
+	tabBar.Parent = main
+	
+	Tabs.setupTabBar(tabBar)
+	
+	-- Content container
+	local contentContainer = Instance.new("Frame")
+	contentContainer.Name = "ContentContainer"
+	contentContainer.Size = UDim2.new(1, -32, 1, -160)
+	contentContainer.Position = UDim2.new(0, 16, 0, 144)
+	contentContainer.BackgroundTransparency = 1
+	contentContainer.Parent = main
+	
+	-- Create tab content frames
+	local function createTabContent(name)
+		local scroll = Instance.new("ScrollingFrame")
+		scroll.Name = name .. "Content"
+		scroll.Size = UDim2.new(1, 0, 1, 0)
+		scroll.BackgroundTransparency = 1
+		scroll.BorderSizePixel = 0
+		scroll.ScrollBarThickness = 4
+		scroll.ScrollBarImageColor3 = Colors.Accent
+		scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+		scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		scroll.Visible = false
+		scroll.Parent = contentContainer
+		
+		local layout = Instance.new("UIListLayout")
+		layout.Padding = UDim.new(0, 10)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = scroll
+		
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop = UDim.new(0, 8)
+		padding.PaddingBottom = UDim.new(0, 8)
+		padding.PaddingLeft = UDim.new(0, 8)
+		padding.PaddingRight = UDim.new(0, 12)
+		padding.Parent = scroll
+		
+		return scroll
+	end
+	
+	local movementContent = createTabContent("Movement")
+	local combatContent = createTabContent("Combat")
+	local espContent = createTabContent("ESP")
+	local extraContent = createTabContent("Extra")
+	
+	-- Create tabs
+	local movementTab = Tabs.create(tabBar, "Movement", "⚡")
+	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
+	local espTab = Tabs.create(tabBar, "ESP", "👁")
+	local extraTab = Tabs.create(tabBar, "Extra", "⚙")
+	
+	-- Connect tabs to content
+	Tabs.connectTab(movementTab, movementContent)
+	Tabs.connectTab(combatTab, combatContent)
+	Tabs.connectTab(espTab, espContent)
+	Tabs.connectTab(extraTab, extraContent)
+	
+	-- Populate Movement tab (examples)
+	Components.createSection(movementContent, "Basic Movement")
+	Components.createToggle(movementContent, "Fly", function(state)
+		print("Fly:", state)
+	end)
+	Components.createToggle(movementContent, "Noclip", function(state)
+		print("Noclip:", state)
+	end)
+	Components.createSlider(movementContent, "Walk Speed", 16, 200, 16, function(value)
+		print("WalkSpeed:", value)
+	end)
+	Components.createSlider(movementContent, "Jump Power", 50, 200, 50, function(value)
+		print("JumpPower:", value)
+	end)
+	
+	Components.createDivider(movementContent)
+	Components.createSection(movementContent, "Advanced")
+	Components.createToggle(movementContent, "Bunny Hop", function(state)
+		print("BunnyHop:", state)
+	end)
+	Components.createToggle(movementContent, "Dash", function(state)
+		print("Dash:", state)
+	end)
+	Components.createSlider(movementContent, "Air Control", 0, 10, 0, function(value)
+		print("AirControl:", value)
+	end)
+	
+	-- Populate Combat tab (examples)
+	Components.createSection(combatContent, "Aim Assist")
+	Components.createToggle(combatContent, "Aim Assist", function(state)
+		print("AimAssist:", state)
+	end)
+	Components.createSlider(combatContent, "Smoothness", 0, 100, 50, function(value)
+		print("Smoothness:", value)
+	end)
+	Components.createSlider(combatContent, "FOV", 50, 500, 100, function(value)
+		print("FOV:", value)
+	end)
+	Components.createToggle(combatContent, "Show FOV Circle", function(state)
+		print("ShowFOV:", state)
+	end)
+	
+	Components.createDivider(combatContent)
+	Components.createSection(combatContent, "Silent Aim")
+	Components.createToggle(combatContent, "Silent Aim", function(state)
+		print("SilentAim:", state)
+	end)
+	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value)
+		print("HitChance:", value)
+	end)
+	
+	-- Populate ESP tab (examples)
+	Components.createSection(espContent, "Player ESP")
+	Components.createToggle(espContent, "Name ESP", function(state)
+		print("NameESP:", state)
+	end)
+	Components.createToggle(espContent, "Box ESP", function(state)
+		print("BoxESP:", state)
+	end)
+	Components.createToggle(espContent, "Health ESP", function(state)
+		print("HealthESP:", state)
+	end)
+	Components.createToggle(espContent, "Distance ESP", function(state)
+		print("DistanceESP:", state)
+	end)
+	Components.createToggle(espContent, "Tracers", function(state)
+		print("Tracers:", state)
+	end)
+	
+	Components.createDivider(espContent)
+	Components.createSection(espContent, "Visuals")
+	Components.createToggle(espContent, "Chams", function(state)
+		print("Chams:", state)
+	end)
+	
+	-- Populate Extra tab (examples)
+	Components.createSection(extraContent, "Visual Tweaks")
+	Components.createToggle(extraContent, "Fullbright", function(state)
+		print("Fullbright:", state)
+	end)
+	Components.createToggle(extraContent, "Remove Grass", function(state)
+		print("RemoveGrass:", state)
+	end)
+	Components.createToggle(extraContent, "Third Person", function(state)
+		print("ThirdPerson:", state)
+	end)
+	
+	Components.createDivider(extraContent)
+	Components.createSection(extraContent, "Misc")
+	Components.createToggle(extraContent, "Anti AFK", function(state)
+		print("AntiAFK:", state)
+	end)
+	Components.createToggle(extraContent, "Invisibility", function(state)
+		print("Invisibility:", state)
+	end)
+	Components.createToggle(extraContent, "Walk on Water", function(state)
+		print("WalkOnWater:", state)
+	end)
+	
+	-- Activate first tab
+	Tabs.activate(movementTab, movementContent)
+	
+	-- Toggle keybind (M)
+	UIS.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.KeyCode == Enum.KeyCode.M then
+			main.Visible = not main.Visible
+			
+			if main.Visible then
+				main.Size = UDim2.new(0, 0, 0, 0)
+				Animations.tween(main, {
+					Size = UDim2.new(0, 820, 0, 540)
+				}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+			end
+		end
+	end)
+	
+	-- Dragging functionality
+	local dragging = false
+	local dragInput, dragStart, startPos
+	
+	local function update(input)
+		local delta = input.Position - dragStart
+		Animations.tween(main, {
+			Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		}, {Time = 0.1, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+	end
+	
+	header.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = main.Position
+			
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+	
+	UIS.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+		
+		if dragging and dragInput then
+			update(dragInput)
+		end
+	end)
+	
+	print("[SimpleHub] Premium UI loaded successfully")
+	print("[SimpleHub] Press M to toggle menu")
 end
