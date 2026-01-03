@@ -20,6 +20,19 @@ function Helpers.waitForCharacter(player)
 	return player.CharacterAdded:Wait()
 end
 
+
+
+local Helpers = {}
+
+function Helpers.requireRemote(path)
+    local url = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/" .. path
+    local source = game:HttpGet(url)
+    return loadstring(source)()
+end
+
+return Helpers
+
+
 -- Returns humanoid (or nil)
 function Helpers.getHumanoid(player)
 	local char = Helpers.waitForCharacter(player)
