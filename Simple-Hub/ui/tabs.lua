@@ -1,43 +1,50 @@
+local Anim = require(script.Parent.animations)
+
 local Tabs = {}
 Tabs.active = nil
 
-function Tabs.create(tabBar, pages, text)
-    local button = Instance.new("TextButton", tabBar)
-    button.Size = UDim2.new(0,140,1,0)
-    button.Text = text
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 13
-    button.BackgroundColor3 = Color3.fromRGB(30,30,40)
-    button.TextColor3 = Color3.fromRGB(200,200,220)
-    button.BorderSizePixel = 0
-    button.AutoButtonColor = false
+local ACTIVE = Color3.fromRGB(88,166,255)
+local INACTIVE = Color3.fromRGB(35,35,45)
+local TEXT = Color3.fromRGB(220,220,230)
 
-    Instance.new("UICorner", button).CornerRadius = UDim.new(0,8)
+function Tabs.create(tabBar, pages, text)
+    local btn = Instance.new("TextButton", tabBar)
+    btn.Size = UDim2.new(0,140,1,0)
+    btn.BackgroundColor3 = INACTIVE
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.TextColor3 = TEXT
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8)
 
     local page = Instance.new("ScrollingFrame", pages)
     page.Size = UDim2.fromScale(1,1)
     page.CanvasSize = UDim2.new(0,0,0,0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
     page.ScrollBarThickness = 6
     page.Visible = false
-    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
     local layout = Instance.new("UIListLayout", page)
     layout.Padding = UDim.new(0,10)
 
-    local padding = Instance.new("UIPadding", page)
-    padding.PaddingTop = UDim.new(0,10)
-    padding.PaddingLeft = UDim.new(0,10)
-    padding.PaddingRight = UDim.new(0,10)
+    local pad = Instance.new("UIPadding", page)
+    pad.PaddingTop = UDim.new(0,12)
+    pad.PaddingLeft = UDim.new(0,12)
+    pad.PaddingRight = UDim.new(0,12)
 
-    button.MouseButton1Click:Connect(function()
+    btn.MouseButton1Click:Connect(function()
         if Tabs.active then
+            Anim.tween(Tabs.active.button, 0.15, {BackgroundColor3 = INACTIVE})
             Tabs.active.page.Visible = false
         end
-        Tabs.active = {button = button, page = page}
+        Tabs.active = {button = btn, page = page}
         page.Visible = true
+        Anim.tween(btn, 0.15, {BackgroundColor3 = ACTIVE})
     end)
 
-    return {button = button, page = page}
+    return {button = btn, page = page}
 end
 
 return Tabs
