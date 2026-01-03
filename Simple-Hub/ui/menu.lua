@@ -8,6 +8,8 @@ local player = Players.LocalPlayer
 
 return function()
 	print("[UI] Initializing menu")
+	print("[UI] menu.lua loaded")
+
 
 	-- ScreenGui
 	local gui = Instance.new("ScreenGui")
