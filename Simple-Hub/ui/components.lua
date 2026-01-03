@@ -2,9 +2,6 @@
 -- Premium component library
 
 local Components = {}
-local Animations = _G.Animations
-
-assert(Animations, "[Components] Animations must be loaded first")
 
 -- Color palette
 local Colors = {
@@ -59,8 +56,15 @@ local function addStroke(obj, color, thickness)
 	return stroke
 end
 
+-- Get Animations safely
+local function getAnimations()
+	return _G.Animations
+end
+
 -- Toggle Button
 function Components.createToggle(parent, text, callback)
+	local Animations = getAnimations()
+	
 	local button = Instance.new("TextButton")
 	button.Name = "Toggle_" .. text
 	button.Size = UDim2.new(1, -20, 0, 38)
@@ -99,21 +103,29 @@ function Components.createToggle(parent, text, callback)
 	local state = false
 	
 	button.MouseEnter:Connect(function()
-		Animations.buttonHover(button, true)
+		if Animations then
+			Animations.buttonHover(button, true)
+		end
 	end)
 	
 	button.MouseLeave:Connect(function()
-		Animations.buttonHover(button, false)
+		if Animations then
+			Animations.buttonHover(button, false)
+		end
 	end)
 	
 	button.MouseButton1Click:Connect(function()
-		Animations.buttonClick(button)
+		if Animations then
+			Animations.buttonClick(button)
+		end
 		state = not state
 		
-		if state then
-			Animations.toggleOn(button)
-		else
-			Animations.toggleOff(button)
+		if Animations then
+			if state then
+				Animations.toggleOn(button)
+			else
+				Animations.toggleOff(button)
+			end
 		end
 		
 		if callback then
@@ -126,6 +138,8 @@ end
 
 -- Slider
 function Components.createSlider(parent, text, min, max, default, callback)
+	local Animations = getAnimations()
+	
 	local container = Instance.new("Frame")
 	container.Name = "Slider_" .. text
 	container.Size = UDim2.new(1, -20, 0, 60)
@@ -198,7 +212,9 @@ function Components.createSlider(parent, text, min, max, default, callback)
 		value = math.floor(min + (max - min) * pos)
 		valueLabel.Text = tostring(value)
 		
-		Animations.updateSlider(sliderBg, pos)
+		if Animations then
+			Animations.updateSlider(sliderBg, pos)
+		end
 		
 		if callback then
 			callback(value)
