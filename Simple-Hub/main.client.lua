@@ -1,107 +1,93 @@
--- SIMPLE HUB v3.7 – Main Client
--- DO NOT EXECUTE DIRECTLY (use loader.lua)
+-- SIMPLE HUB v3.7
+-- Main Client Bootstrap
 
 ---------------- SERVICES ----------------
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Lighting = game:GetService("Lighting")
+local HttpService = game:GetService("HttpService")
 
----------------- PLAYER ----------------
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-local camera = workspace.CurrentCamera
 
----------------- CHARACTER ----------------
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local root = character:WaitForChild("HumanoidRootPart")
-
----------------- GLOBAL STATE ----------------
-_G.Hub = {
-	Player = player,
-	Mouse = mouse,
-	Camera = camera,
-	Character = character,
-	Humanoid = humanoid,
-	Root = root,
-
-	-- Toggles
-	Fly = false,
-	Noclip = false,
-	WalkEnabled = false,
-	JumpEnabled = false,
-	Invisible = false,
-	AimAssist = false,
-	SilentAim = false,
-	BoxESP = false,
-	NameESP = false,
-	Teleport = false,
-
-	-- Values
-	FlySpeed = 23,
-	WalkSpeed = humanoid.WalkSpeed,
-	JumpPower = humanoid.JumpPower,
-	InvisAmount = 1,
-	AimFOV = 100,
-	AimSmoothness = 0.5,
-
-	-- UI
-	UIOpen = false,
+---------------- GLOBAL HUB TABLE ----------------
+_G.SimpleHub = {
+    Player = player,
+    LoadedModules = {},
+    State = {},
 }
 
----------------- CHARACTER RESPAWN ----------------
-player.CharacterAdded:Connect(function(char)
-	character = char
-	humanoid = char:WaitForChild("Humanoid")
-	root = char:WaitForChild("HumanoidRootPart")
-
-	_G.Hub.Character = character
-	_G.Hub.Humanoid = humanoid
-	_G.Hub.Root = root
-end)
+---------------- BASE URL ----------------
+local BASE_URL = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
 
 ---------------- MODULE LOADER ----------------
-local BASE_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/"
-
-local function load(file)
-	return loadstring(game:HttpGet(BASE_URL .. file, true))()
+local function requireRemote(path)
+    local src = game:HttpGet(BASE_URL .. path)
+    local fn = loadstring(src)
+    return fn()
 end
 
+---------------- LOAD UTILS ----------------
+_G.SimpleHub.Utils = {
+    Helpers = requireRemote("utils/helpers.lua"),
+    Math = requireRemote("utils/math.lua"),
+    Raycast = requireRemote("utils/raycast.lua"),
+}
+
 ---------------- LOAD UI ----------------
-load("ui/components.lua")
-load("ui/animations.lua")
-load("ui/tabs.lua")
+_G.SimpleHub.UI = {
+    Animations = requireRemote("ui/animations.lua"),
+    Components = requireRemote("ui/components.lua"),
+    Tabs = requireRemote("ui/tabs.lua"),
+}
 
----------------- LOAD FEATURES ----------------
--- Movement
-load("movement/fly.lua")
-load("movement/walkspeed.lua")
-load("movement/jump.lua")
+---------------- LOAD SETTINGS ----------------
+_G.SimpleHub.Settings = {
+    Keybinds = requireRemote("settings/keybinds.lua"),
+    Presets = requireRemote("settings/presets.lua"),
+    UISettings = requireRemote("settings/ui_settings.lua"),
+}
 
--- Combat
-load("combat/aim_assist.lua")
-load("combat/silent_aim.lua")
+---------------- LOAD MOVEMENT ----------------
+_G.SimpleHub.Movement = {
+    Fly = requireRemote("movement/fly.lua"),
+    Dash = requireRemote("movement/dash.lua"),
+    BunnyHop = requireRemote("movement/bunnyhop.lua"),
+    WalkSpeed = requireRemote("movement/walkspeed.lua"),
+    JumpPower = requireRemote("movement/jumppower.lua"),
+    Noclip = requireRemote("movement/no-clip.lua"),
+    AirControl = requireRemote("movement/air-control.lua"),
+}
 
--- ESP
-load("esp/box_esp.lua")
-load("esp/name_esp.lua")
+---------------- LOAD COMBAT ----------------
+_G.SimpleHub.Combat = {
+    AimAssist = requireRemote("combat/aim_assist.lua"),
+    SilentAim = requireRemote("combat/silent_aim.lua"),
+    FOV = requireRemote("combat/fov.lua"),
+}
 
--- Extra
-load("extra/invisibility.lua")
-load("extra/teleport.lua")
+---------------- LOAD ESP ----------------
+_G.SimpleHub.ESP = {
+    Box = requireRemote("esp/box_esp.lua"),
+    Name = requireRemote("esp/name_esp.lua"),
+    Health = requireRemote("esp/health_esp.lua"),
+    Distance = requireRemote("esp/distance_esp.lua"),
+    Chams = requireRemote("esp/chams.lua"),
+    Tracers = requireRemote("esp/tracers.lua"),
+    Offscreen = requireRemote("esp/offscreen_arrows.lua"),
+}
 
----------------- MENU TOGGLE ----------------
-UIS.InputBegan:Connect(function(input, gp)
-	if gp then return end
-	if input.KeyCode == Enum.KeyCode.M then
-		_G.Hub.UIOpen = not _G.Hub.UIOpen
-		if _G.Hub.ToggleUI then
-			_G.Hub.ToggleUI(_G.Hub.UIOpen)
-		end
-	end
-end)
+---------------- LOAD EXTRA ----------------
+_G.SimpleHub.Extra = {
+    Teleport = requireRemote("extra/teleport.lua"),
+    Invisibility = requireRemote("extra/invisibility.lua"),
+    AntiAFK = requireRemote("extra/anti_afk.lua"),
+    FakeLag = requireRemote("extra/fake_lag.lua"),
+    FakeDeath = requireRemote("extra/fake-death.lua"),
+    SpinBot = requireRemote("extra/spinbot.lua"),
+    WalkOnWater = requireRemote("extra/walk-on-water.lua"),
+    Fullbright = requireRemote("extra/fullbright.lua"),
+    RemoveGrass = requireRemote("extra/remove-grass.lua"),
+    ThirdPerson = requireRemote("extra/third-person.lua"),
+}
 
-print("✅ Simple Hub v3.7 main.client.lua loaded")
-
+---------------- FINALIZE ----------------
+print("✅ Simple Hub v3.7 Loaded Successfully")
+print("📦 Modules Loaded:", HttpService:JSONEncode(_G.SimpleHub))
