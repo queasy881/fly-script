@@ -25,7 +25,7 @@ return function(deps)
 		Accent = Color3.fromRGB(60, 120, 255),
 		Text = Color3.fromRGB(220, 220, 240),
 		Border = Color3.fromRGB(40, 40, 52),
-		ScreenBackground = Color3.fromRGB(15, 15, 22) -- Dark blue-ish background for full screen
+		ScreenBg = Color3.fromRGB(12, 14, 18) -- Dark background for full screen
 	}
 	
 	-- Create ScreenGui
@@ -33,44 +33,22 @@ return function(deps)
 	gui.Name = "SimpleHub"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.IgnoreGuiInset = true -- Makes it cover the entire screen including top bar
+	gui.IgnoreGuiInset = true -- Cover entire screen including top bar
 	gui.Parent = player:WaitForChild("PlayerGui")
 	
-	-- Full screen background overlay (solid dark blue, not transparent)
-	local screenBackground = Instance.new("Frame")
-	screenBackground.Name = "ScreenBackground"
-	screenBackground.Size = UDim2.new(1, 0, 1, 0)
-	screenBackground.Position = UDim2.new(0, 0, 0, 0)
-	screenBackground.BackgroundColor3 = Colors.ScreenBackground
-	screenBackground.BackgroundTransparency = 0 -- Fully opaque
-	screenBackground.BorderSizePixel = 0
-	screenBackground.ZIndex = 0
-	screenBackground.Visible = false
-	screenBackground.Parent = gui
-	
-	-- Optional: Add subtle pattern/texture to background
-	local bgPattern = Instance.new("ImageLabel")
-	bgPattern.Name = "Pattern"
-	bgPattern.Size = UDim2.new(1, 0, 1, 0)
-	bgPattern.BackgroundTransparency = 1
-	bgPattern.Image = "rbxassetid://5028857472" -- Subtle glow texture
-	bgPattern.ImageColor3 = Colors.Accent
-	bgPattern.ImageTransparency = 0.95
-	bgPattern.ScaleType = Enum.ScaleType.Tile
-	bgPattern.TileSize = UDim2.new(0, 200, 0, 200)
-	bgPattern.ZIndex = 1
-	bgPattern.Parent = screenBackground
-	
-	-- Vignette effect for depth
-	local vignette = Instance.new("ImageLabel")
-	vignette.Name = "Vignette"
-	vignette.Size = UDim2.new(1, 0, 1, 0)
-	vignette.BackgroundTransparency = 1
-	vignette.Image = "rbxassetid://1039797646" -- Radial gradient vignette
-	vignette.ImageColor3 = Color3.fromRGB(0, 0, 0)
-	vignette.ImageTransparency = 0.5
-	vignette.ZIndex = 2
-	vignette.Parent = screenBackground
+	-- ============================================
+	-- FULL SCREEN DARK BACKGROUND (NEW)
+	-- ============================================
+	local screenBg = Instance.new("Frame")
+	screenBg.Name = "ScreenBackground"
+	screenBg.Size = UDim2.new(1, 0, 1, 0)
+	screenBg.Position = UDim2.new(0, 0, 0, 0)
+	screenBg.BackgroundColor3 = Colors.ScreenBg
+	screenBg.BackgroundTransparency = 0 -- Fully opaque, no see-through
+	screenBg.BorderSizePixel = 0
+	screenBg.ZIndex = 0
+	screenBg.Visible = false
+	screenBg.Parent = gui
 	
 	-- Main container
 	local main = Instance.new("Frame")
@@ -80,7 +58,7 @@ return function(deps)
 	main.AnchorPoint = Vector2.new(0.5, 0.5)
 	main.BackgroundColor3 = Colors.Background
 	main.BorderSizePixel = 0
-	main.ZIndex = 10
+	main.ZIndex = 1
 	main.Visible = false
 	main.Parent = gui
 	
@@ -109,7 +87,7 @@ return function(deps)
 	mainGlow.ImageTransparency = 0.7
 	mainGlow.ScaleType = Enum.ScaleType.Slice
 	mainGlow.SliceCenter = Rect.new(24, 24, 276, 276)
-	mainGlow.ZIndex = main.ZIndex - 1
+	mainGlow.ZIndex = 0
 	mainGlow.Parent = main
 	
 	-- Header
@@ -118,7 +96,6 @@ return function(deps)
 	header.Size = UDim2.new(1, 0, 0, 60)
 	header.BackgroundColor3 = Colors.Panel
 	header.BorderSizePixel = 0
-	header.ZIndex = main.ZIndex + 1
 	header.Parent = main
 	
 	local headerCorner = Instance.new("UICorner")
@@ -131,7 +108,6 @@ return function(deps)
 	headerMask.Position = UDim2.new(0, 0, 1, -12)
 	headerMask.BackgroundColor3 = Colors.Panel
 	headerMask.BorderSizePixel = 0
-	headerMask.ZIndex = header.ZIndex
 	headerMask.Parent = header
 	
 	-- Title
@@ -145,7 +121,6 @@ return function(deps)
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Font = Enum.Font.GothamBold
 	title.TextSize = 20
-	title.ZIndex = header.ZIndex + 1
 	title.Parent = header
 	
 	-- Accent bar under title
@@ -154,7 +129,6 @@ return function(deps)
 	titleAccent.Position = UDim2.new(0, 24, 1, -8)
 	titleAccent.BackgroundColor3 = Colors.Accent
 	titleAccent.BorderSizePixel = 0
-	titleAccent.ZIndex = header.ZIndex + 1
 	titleAccent.Parent = header
 	
 	local accentCorner = Instance.new("UICorner")
@@ -172,7 +146,6 @@ return function(deps)
 	version.TextXAlignment = Enum.TextXAlignment.Right
 	version.Font = Enum.Font.GothamMedium
 	version.TextSize = 11
-	version.ZIndex = header.ZIndex + 1
 	version.Parent = header
 	
 	-- Close button
@@ -188,7 +161,6 @@ return function(deps)
 	closeBtn.Font = Enum.Font.GothamBold
 	closeBtn.TextSize = 24
 	closeBtn.AutoButtonColor = false
-	closeBtn.ZIndex = header.ZIndex + 1
 	closeBtn.Parent = header
 	
 	local closeBtnCorner = Instance.new("UICorner")
@@ -197,7 +169,7 @@ return function(deps)
 	
 	closeBtn.MouseButton1Click:Connect(function()
 		main.Visible = false
-		screenBackground.Visible = false
+		screenBg.Visible = false
 	end)
 	
 	closeBtn.MouseEnter:Connect(function()
@@ -219,7 +191,6 @@ return function(deps)
 	tabBar.Position = UDim2.new(0, 0, 0, 60)
 	tabBar.BackgroundColor3 = Colors.Surface
 	tabBar.BorderSizePixel = 0
-	tabBar.ZIndex = main.ZIndex + 1
 	tabBar.Parent = main
 	
 	Tabs.setupTabBar(tabBar)
@@ -230,7 +201,6 @@ return function(deps)
 	contentContainer.Size = UDim2.new(1, -32, 1, -160)
 	contentContainer.Position = UDim2.new(0, 16, 0, 144)
 	contentContainer.BackgroundTransparency = 1
-	contentContainer.ZIndex = main.ZIndex + 1
 	contentContainer.Parent = main
 	
 	-- Create tab content frames
@@ -245,7 +215,6 @@ return function(deps)
 		scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 		scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 		scroll.Visible = false
-		scroll.ZIndex = contentContainer.ZIndex + 1
 		scroll.Parent = contentContainer
 		
 		local layout = Instance.new("UIListLayout")
@@ -388,16 +357,9 @@ return function(deps)
 		if input.KeyCode == Enum.KeyCode.M then
 			local isVisible = not main.Visible
 			main.Visible = isVisible
-			screenBackground.Visible = isVisible
+			screenBg.Visible = isVisible
 			
 			if isVisible then
-				-- Animate background fade in
-				screenBackground.BackgroundTransparency = 1
-				Animations.tween(screenBackground, {
-					BackgroundTransparency = 0
-				}, {Time = 0.3, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
-				
-				-- Animate main panel
 				main.Size = UDim2.new(0, 0, 0, 0)
 				Animations.tween(main, {
 					Size = UDim2.new(0, 820, 0, 540)
