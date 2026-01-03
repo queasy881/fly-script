@@ -1,5 +1,5 @@
 -- ui/animations.lua
--- Premium animation system with easing curves
+-- Premium animation system (FIXED: no button shrinking)
 
 local TweenService = game:GetService("TweenService")
 
@@ -30,14 +30,13 @@ function Animations.tween(obj, props, profile)
 	return tween
 end
 
--- Button hover: glow + scale
+-- Button hover: REMOVED size changes
 function Animations.buttonHover(button, entering)
 	local profile = Profiles.Fast
 	
 	if entering then
 		Animations.tween(button, {
-			BackgroundColor3 = Color3.fromRGB(45, 45, 58),
-			Size = UDim2.new(button.Size.X.Scale, button.Size.X.Offset, button.Size.Y.Scale, button.Size.Y.Offset + 2)
+			BackgroundColor3 = Color3.fromRGB(45, 45, 58)
 		}, profile)
 		
 		local glow = button:FindFirstChild("Glow")
@@ -46,8 +45,7 @@ function Animations.buttonHover(button, entering)
 		end
 	else
 		Animations.tween(button, {
-			BackgroundColor3 = Color3.fromRGB(35, 35, 45),
-			Size = UDim2.new(button.Size.X.Scale, button.Size.X.Offset, button.Size.Y.Scale, button.Size.Y.Offset - 2)
+			BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 		}, profile)
 		
 		local glow = button:FindFirstChild("Glow")
@@ -57,19 +55,9 @@ function Animations.buttonHover(button, entering)
 	end
 end
 
--- Button click: micro-shrink
+-- Button click: REMOVED (was causing shrinking)
 function Animations.buttonClick(button)
-	local original = button.Size
-	
-	Animations.tween(button, {
-		Size = UDim2.new(original.X.Scale * 0.95, 0, original.Y.Scale * 0.95, 0)
-	}, Profiles.Fast)
-	
-	task.wait(0.08)
-	
-	Animations.tween(button, {
-		Size = original
-	}, {Time = 0.2, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+	-- Removed to prevent size issues
 end
 
 -- Toggle ON state
@@ -78,9 +66,12 @@ function Animations.toggleOn(button)
 		BackgroundColor3 = Color3.fromRGB(60, 120, 255)
 	}, Profiles.Medium)
 	
-	Animations.tween(button.Label, {
-		TextColor3 = Color3.fromRGB(255, 255, 255)
-	}, Profiles.Medium)
+	local label = button:FindFirstChild("Label")
+	if label then
+		Animations.tween(label, {
+			TextColor3 = Color3.fromRGB(255, 255, 255)
+		}, Profiles.Medium)
+	end
 	
 	local indicator = button:FindFirstChild("Indicator")
 	if indicator then
@@ -105,9 +96,12 @@ function Animations.toggleOff(button)
 		BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 	}, Profiles.Medium)
 	
-	Animations.tween(button.Label, {
-		TextColor3 = Color3.fromRGB(180, 180, 200)
-	}, Profiles.Medium)
+	local label = button:FindFirstChild("Label")
+	if label then
+		Animations.tween(label, {
+			TextColor3 = Color3.fromRGB(180, 180, 200)
+		}, Profiles.Medium)
+	end
 	
 	local indicator = button:FindFirstChild("Indicator")
 	if indicator then
