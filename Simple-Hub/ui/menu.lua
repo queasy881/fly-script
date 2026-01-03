@@ -1,5 +1,5 @@
 -- ui/menu.lua
--- Premium main menu interface with full integration
+-- Premium main menu interface (FIXED: backgrounds, glow clipping)
 
 return function(deps)
 	local Tabs = deps.Tabs
@@ -34,7 +34,7 @@ return function(deps)
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
 	
-	-- Main container
+	-- Main container (FIXED: ClipsDescendants to contain glow)
 	local main = Instance.new("Frame")
 	main.Name = "Main"
 	main.Size = UDim2.new(0, 820, 0, 540)
@@ -42,6 +42,7 @@ return function(deps)
 	main.AnchorPoint = Vector2.new(0.5, 0.5)
 	main.BackgroundColor3 = Colors.Background
 	main.BorderSizePixel = 0
+	main.ClipsDescendants = true
 	main.Visible = false
 	main.Parent = gui
 	
@@ -56,18 +57,19 @@ return function(deps)
 	mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	mainStroke.Parent = main
 	
+	-- Glow effect (CONTAINED within main frame)
 	local mainGlow = Instance.new("ImageLabel")
 	mainGlow.Name = "Glow"
-	mainGlow.Size = UDim2.new(1, 40, 1, 40)
+	mainGlow.Size = UDim2.new(1, 30, 1, 30)
 	mainGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
 	mainGlow.AnchorPoint = Vector2.new(0.5, 0.5)
 	mainGlow.BackgroundTransparency = 1
 	mainGlow.Image = "rbxassetid://5028857472"
 	mainGlow.ImageColor3 = Colors.Accent
-	mainGlow.ImageTransparency = 0.7
+	mainGlow.ImageTransparency = 0.8
 	mainGlow.ScaleType = Enum.ScaleType.Slice
 	mainGlow.SliceCenter = Rect.new(24, 24, 276, 276)
-	mainGlow.ZIndex = main.ZIndex - 1
+	mainGlow.ZIndex = 0
 	mainGlow.Parent = main
 	
 	-- Header
@@ -76,6 +78,7 @@ return function(deps)
 	header.Size = UDim2.new(1, 0, 0, 60)
 	header.BackgroundColor3 = Colors.Panel
 	header.BorderSizePixel = 0
+	header.ZIndex = 1
 	header.Parent = main
 	
 	local headerCorner = Instance.new("UICorner")
@@ -154,23 +157,26 @@ return function(deps)
 		Animations.tween(closeBtn, {BackgroundColor3 = Color3.fromRGB(45, 45, 58)}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
-	-- Tab bar
+	-- Tab bar (FIXED: solid background)
 	local tabBar = Instance.new("Frame")
 	tabBar.Name = "TabBar"
 	tabBar.Size = UDim2.new(1, 0, 0, 68)
 	tabBar.Position = UDim2.new(0, 0, 0, 60)
 	tabBar.BackgroundColor3 = Colors.Surface
 	tabBar.BorderSizePixel = 0
+	tabBar.ZIndex = 1
 	tabBar.Parent = main
 	
 	Tabs.setupTabBar(tabBar)
 	
-	-- Content container
+	-- Content container (FIXED: solid background)
 	local contentContainer = Instance.new("Frame")
 	contentContainer.Name = "ContentContainer"
 	contentContainer.Size = UDim2.new(1, -32, 1, -160)
 	contentContainer.Position = UDim2.new(0, 16, 0, 144)
-	contentContainer.BackgroundTransparency = 1
+	contentContainer.BackgroundColor3 = Colors.Background
+	contentContainer.BorderSizePixel = 0
+	contentContainer.ZIndex = 1
 	contentContainer.Parent = main
 	
 	-- Create tab content frames
