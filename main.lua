@@ -1,4 +1,4 @@
--- SIMPLE HUB v3.6 – Polished UI Edition
+-- SIMPLE HUB v3.7 – Enhanced Edition
 -- Press M to toggle
 
 ---------------- SERVICES ----------------
@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -14,8 +15,6 @@ local camera = workspace.CurrentCamera
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local root = character:WaitForChild("HumanoidRootPart")
-
--- Character respawn handler
 
 ---------------- STATE ----------------
 local fly = false
@@ -44,12 +43,21 @@ local silentAimEnabled = false
 local silentAimFOV = 150
 local hitChance = 100
 
+local infiniteJumpEnabled = false
+local fullbrightEnabled = false
+local thirdPersonEnabled = false
+local removeGrassEnabled = false
+local antiAfkEnabled = false
+local walkOnWaterEnabled = false
+
 local defaultFOV = camera.FieldOfView
+local originalLighting = {}
 
 local bv, bg
 local nameESPObjects = {}
 local boxESPObjects = {}
 local fovCircle = nil
+local waterPlatform = nil
 
 ---------------- INVISIBILITY ----------------
 local function applyInvisibility()
@@ -63,8 +71,7 @@ local function applyInvisibility()
 	end
 end
 
-
-
+---------------- CHARACTER RESPAWN HANDLER ----------------
 player.CharacterAdded:Connect(function(char)
 	character = char
 	humanoid = char:WaitForChild("Humanoid")
@@ -98,15 +105,21 @@ player.CharacterAdded:Connect(function(char)
 		task.wait(0.1)
 		humanoid.JumpPower = jumpPower
 	end
+	
+	-- Reapply third person
+	if thirdPersonEnabled then
+		task.wait(0.1)
+		player.CameraMaxZoomDistance = 100
+		player.CameraMinZoomDistance = 15
+	end
 end)
-
 
 ---------------- GUI ----------------
 local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 780, 0, 480)
+main.Size = UDim2.new(0, 780, 0, 520)
 main.Position = UDim2.fromScale(0.5, 0.5)
 main.AnchorPoint = Vector2.new(0.5, 0.5)
 main.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
@@ -160,7 +173,7 @@ local versionLabel = Instance.new("TextLabel", titleBar)
 versionLabel.Size = UDim2.new(0, 60, 1, 0)
 versionLabel.Position = UDim2.new(1, -80, 0, 0)
 versionLabel.BackgroundTransparency = 1
-versionLabel.Text = "v3.6"
+versionLabel.Text = "v3.7"
 versionLabel.Font = Enum.Font.Gotham
 versionLabel.TextSize = 12
 versionLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
@@ -362,10 +375,9 @@ local combatFrame = Instance.new("ScrollingFrame", content)
 local espFrame = Instance.new("ScrollingFrame", content)
 local extraFrame = Instance.new("ScrollingFrame", content)
 
-
 for _,f in pairs({movementFrame, combatFrame, espFrame, extraFrame}) do
 	f.Size = UDim2.new(1, 0, 1, 0)
-	f.CanvasSize = UDim2.new(0, 0, 0, 0) -- auto
+	f.CanvasSize = UDim2.new(0, 0, 0, 0)
 	f.ScrollBarImageTransparency = 0.2
 	f.ScrollBarThickness = 6
 	f.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -373,7 +385,6 @@ for _,f in pairs({movementFrame, combatFrame, espFrame, extraFrame}) do
 	f.BackgroundTransparency = 1
 	f.Visible = false
 	f.BorderSizePixel = 0
-
 
 	local pad = Instance.new("UIPadding", f)
 	pad.PaddingTop = UDim.new(0, 16)
@@ -599,7 +610,7 @@ distanceBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
----------------- AIM ASSIST TAB ----------------
+---------------- COMBAT TAB ----------------
 section(combatFrame, "AIM ASSIST")
 
 local aimBtn = button(combatFrame, "Aim Assist: OFF")
@@ -683,7 +694,6 @@ visCheckBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Set initial state
 tween(teamCheckBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0)
 tween(teamCheckBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0)
 tween(visCheckBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0)
@@ -713,10 +723,115 @@ slider(combatFrame, "Hit Chance %", 0, 100, hitChance, function(v)
 end)
 
 ---------------- EXTRA TAB ----------------
-section(extraFrame, "EXTRA")
+section(extraFrame, "VISUALS")
 
 slider(extraFrame, "Camera FOV", 40, 120, defaultFOV, function(v)
 	camera.FieldOfView = v
+end)
+
+local fullbrightBtn = button(extraFrame, "Fullbright: OFF")
+fullbrightBtn.MouseButton1Click:Connect(function()
+	fullbrightEnabled = not fullbrightEnabled
+	fullbrightBtn.Text = "Fullbright: " .. (fullbrightEnabled and "ON" or "OFF")
+	
+	if fullbrightEnabled then
+		tween(fullbrightBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(fullbrightBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+		
+		originalLighting.Ambient = Lighting.Ambient
+		originalLighting.Brightness = Lighting.Brightness
+		originalLighting.ColorShift_Bottom = Lighting.ColorShift_Bottom
+		originalLighting.ColorShift_Top = Lighting.ColorShift_Top
+		originalLighting.OutdoorAmbient = Lighting.OutdoorAmbient
+		
+		Lighting.Ambient = Color3.new(1, 1, 1)
+		Lighting.Brightness = 2
+		Lighting.ColorShift_Bottom = Color3.new(1, 1, 1)
+		Lighting.ColorShift_Top = Color3.new(1, 1, 1)
+		Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+	else
+		tween(fullbrightBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(fullbrightBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+		
+		Lighting.Ambient = originalLighting.Ambient
+		Lighting.Brightness = originalLighting.Brightness
+		Lighting.ColorShift_Bottom = originalLighting.ColorShift_Bottom
+		Lighting.ColorShift_Top = originalLighting.ColorShift_Top
+		Lighting.OutdoorAmbient = originalLighting.OutdoorAmbient
+	end
+end)
+
+local removeGrassBtn = button(extraFrame, "Remove Grass/Foliage: OFF")
+removeGrassBtn.MouseButton1Click:Connect(function()
+	removeGrassEnabled = not removeGrassEnabled
+	removeGrassBtn.Text = "Remove Grass/Foliage: " .. (removeGrassEnabled and "ON" or "OFF")
+	
+	if removeGrassEnabled then
+		tween(removeGrassBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(removeGrassBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+		
+		local terrain = workspace:FindFirstChildOfClass("Terrain")
+		if terrain then
+			terrain.Decoration = false
+		end
+		
+		for _, obj in pairs(workspace:GetDescendants()) do
+			if obj:IsA("Part") or obj:IsA("MeshPart") then
+				if obj.Name:lower():find("grass") or obj.Name:lower():find("foliage") or obj.Name:lower():find("bush") then
+					obj.Transparency = 1
+				end
+			end
+		end
+	else
+		tween(removeGrassBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(removeGrassBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+		
+		local terrain = workspace:FindFirstChildOfClass("Terrain")
+		if terrain then
+			terrain.Decoration = true
+		end
+	end
+end)
+
+local thirdPersonBtn = button(extraFrame, "Force Third Person: OFF")
+thirdPersonBtn.MouseButton1Click:Connect(function()
+	thirdPersonEnabled = not thirdPersonEnabled
+	thirdPersonBtn.Text = "Force Third Person: " .. (thirdPersonEnabled and "ON" or "OFF")
+	
+	if thirdPersonEnabled then
+		tween(thirdPersonBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(thirdPersonBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+		
+		player.CameraMaxZoomDistance = 100
+		player.CameraMinZoomDistance = 15
+	else
+		tween(thirdPersonBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(thirdPersonBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+		
+		player.CameraMaxZoomDistance = 128
+		player.CameraMinZoomDistance = 0.5
+	end
+end)
+
+section(extraFrame, "UTILITIES")
+
+local infiniteJumpBtn = button(extraFrame, "Infinite Jump: OFF")
+infiniteJumpBtn.MouseButton1Click:Connect(function()
+	infiniteJumpEnabled = not infiniteJumpEnabled
+	infiniteJumpBtn.Text = "Infinite Jump: " .. (infiniteJumpEnabled and "ON" or "OFF")
+	if infiniteJumpEnabled then
+		tween(infiniteJumpBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(infiniteJumpBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(infiniteJumpBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(infiniteJumpBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+	end
+end)
+
+UIS.JumpRequest:Connect(function()
+	if infiniteJumpEnabled and humanoid then
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
 end)
 
 local tpBtn = button(extraFrame, "Teleport To Cursor (Right Click): OFF")
@@ -731,6 +846,49 @@ tpBtn.MouseButton1Click:Connect(function()
 		tween(tpBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
 	end
 end)
+
+local walkOnWaterBtn = button(extraFrame, "Walk On Water: OFF")
+walkOnWaterBtn.MouseButton1Click:Connect(function()
+	walkOnWaterEnabled = not walkOnWaterEnabled
+	walkOnWaterBtn.Text = "Walk On Water: " .. (walkOnWaterEnabled and "ON" or "OFF")
+	
+	if walkOnWaterEnabled then
+		tween(walkOnWaterBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(walkOnWaterBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+		
+		waterPlatform = Instance.new("Part", workspace)
+		waterPlatform.Size = Vector3.new(20, 1, 20)
+		waterPlatform.Transparency = 0.8
+		waterPlatform.CanCollide = true
+		waterPlatform.Anchored = true
+		waterPlatform.Material = Enum.Material.Ice
+		waterPlatform.BrickColor = BrickColor.new("Cyan")
+	else
+		tween(walkOnWaterBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(walkOnWaterBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+		
+		if waterPlatform then
+			waterPlatform:Destroy()
+			waterPlatform = nil
+		end
+	end
+end)
+
+local antiAfkBtn = button(extraFrame, "Anti-AFK: OFF")
+antiAfkBtn.MouseButton1Click:Connect(function()
+	antiAfkEnabled = not antiAfkEnabled
+	antiAfkBtn.Text = "Anti-AFK: " .. (antiAfkEnabled and "ON" or "OFF")
+	
+	if antiAfkEnabled then
+		tween(antiAfkBtn, {BackgroundColor3 = Color3.fromRGB(70, 140, 220)}, 0.25)
+		tween(antiAfkBtn, {TextColor3 = Color3.fromRGB(255, 255, 255)}, 0.25)
+	else
+		tween(antiAfkBtn, {BackgroundColor3 = Color3.fromRGB(26, 26, 34)}, 0.25)
+		tween(antiAfkBtn, {TextColor3 = Color3.fromRGB(200, 200, 220)}, 0.25)
+	end
+end)
+
+section(extraFrame, "CHARACTER")
 
 local invisBtn = button(extraFrame, "Invisibility: OFF")
 invisBtn.MouseButton1Click:Connect(function()
@@ -768,7 +926,6 @@ local combatTab = tabButton("Combat")
 local espTab = tabButton("ESP")
 local extraTab = tabButton("Extra")
 
--- Set initial active tab
 task.wait()
 setActiveTab(moveTab)
 
@@ -817,7 +974,6 @@ UIS.InputBegan:Connect(function(i,gp)
 end)
 
 ---------------- LOOPS ----------------
--- Aim assist helper function
 local function getClosestPlayerInFOV()
 	local closestPlayer = nil
 	local shortestDistance = math.huge
@@ -831,12 +987,10 @@ local function getClosestPlayerInFOV()
 			local humanoid = plr.Character:FindFirstChild("Humanoid")
 			
 			if hrp and head and humanoid and humanoid.Health > 0 then
-				-- Team check
 				if teamCheck and plr.Team == player.Team then
 					continue
 				end
 				
-				-- Visibility check
 				if visibilityCheck then
 					local ray = Ray.new(camera.CFrame.Position, (head.Position - camera.CFrame.Position).Unit * 500)
 					local hit = workspace:FindPartOnRayWithIgnoreList(ray, {character})
@@ -845,7 +999,6 @@ local function getClosestPlayerInFOV()
 					end
 				end
 				
-				-- Check if in FOV
 				local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
 				if onScreen then
 					local screenPoint = Vector2.new(screenPos.X, screenPos.Y)
@@ -863,7 +1016,8 @@ local function getClosestPlayerInFOV()
 	return closestPlayer
 end
 
-RunService.RenderStepped:Connect(function()
+local afkTime = 0
+RunService.RenderStepped:Connect(function(dt)
 	if fly and bv and bg then
 		local cam = camera
 		local move = Vector3.zero
@@ -885,14 +1039,12 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	-- Update FOV circle position
 	if fovCircle and showFOVCircle then
 		fovCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 		fovCircle.Radius = aimFOV
 		fovCircle.Visible = true
 	end
 
-	-- Aim assist logic
 	if aimAssistEnabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
 		local target = getClosestPlayerInFOV()
 		if target and target.Character then
@@ -902,13 +1054,43 @@ RunService.RenderStepped:Connect(function()
 				local camCFrame = camera.CFrame
 				local targetCFrame = CFrame.new(camCFrame.Position, targetPos)
 				
-				-- Smooth aim
 				camera.CFrame = camCFrame:Lerp(targetCFrame, aimSmoothness)
 			end
 		end
 	end
 
-	-- Box ESP update (actual boxes)
+	if walkOnWaterEnabled and waterPlatform and root then
+		local terrain = workspace:FindFirstChildOfClass("Terrain")
+		if terrain then
+			local region = Region3.new(root.Position - Vector3.new(10, 5, 10), root.Position + Vector3.new(10, 5, 10))
+			region = region:ExpandToGrid(4)
+			
+			local materials, sizes = terrain:ReadVoxels(region, 4)
+			local size = materials.Size
+			
+			for x = 1, size.X do
+				for y = 1, size.Y do
+					for z = 1, size.Z do
+						if materials[x][y][z] == Enum.Material.Water then
+							waterPlatform.CFrame = CFrame.new(root.Position.X, root.Position.Y - 3.5, root.Position.Z)
+							return
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if antiAfkEnabled then
+		afkTime = afkTime + dt
+		if afkTime >= 15 then
+			afkTime = 0
+			local VirtualUser = game:GetService("VirtualUser")
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new())
+		end
+	end
+
 	if boxESP then
 		for _,h in pairs(boxESPObjects) do h:Destroy() end
 		boxESPObjects = {}
@@ -917,20 +1099,17 @@ RunService.RenderStepped:Connect(function()
 			if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 				local hrp = plr.Character.HumanoidRootPart
 				
-				-- Create BillboardGui for the box
 				local billboard = Instance.new("BillboardGui")
 				billboard.Adornee = hrp
 				billboard.Size = UDim2.new(4, 0, 5, 0)
 				billboard.AlwaysOnTop = true
 				billboard.Parent = gui
 				
-				-- Create the box frame
 				local box = Instance.new("Frame", billboard)
 				box.Size = UDim2.fromScale(1, 1)
 				box.BackgroundTransparency = 1
 				box.BorderSizePixel = 0
 				
-				-- Create box corners/edges
 				local function createLine(parent, pos, size)
 					local line = Instance.new("Frame", parent)
 					line.Position = pos
@@ -940,19 +1119,12 @@ RunService.RenderStepped:Connect(function()
 					return line
 				end
 				
-				-- Top lines
 				createLine(box, UDim2.new(0, 0, 0, 0), UDim2.new(0.3, 0, 0, 2))
 				createLine(box, UDim2.new(0.7, 0, 0, 0), UDim2.new(0.3, 0, 0, 2))
-				
-				-- Bottom lines
 				createLine(box, UDim2.new(0, 0, 1, -2), UDim2.new(0.3, 0, 0, 2))
 				createLine(box, UDim2.new(0.7, 0, 1, -2), UDim2.new(0.3, 0, 0, 2))
-				
-				-- Left lines
 				createLine(box, UDim2.new(0, 0, 0, 0), UDim2.new(0, 2, 0.3, 0))
 				createLine(box, UDim2.new(0, 0, 0.7, 0), UDim2.new(0, 2, 0.3, 0))
-				
-				-- Right lines
 				createLine(box, UDim2.new(1, -2, 0, 0), UDim2.new(0, 2, 0.3, 0))
 				createLine(box, UDim2.new(1, -2, 0.7, 0), UDim2.new(0, 2, 0.3, 0))
 				
@@ -961,7 +1133,6 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	-- Tracers update
 	if tracersEnabled then
 		for _,t in pairs(tracerObjects) do t:Destroy() end
 		tracerObjects = {}
@@ -970,7 +1141,6 @@ RunService.RenderStepped:Connect(function()
 			if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 				local hrp = plr.Character.HumanoidRootPart
 				
-				-- Create beam for tracer
 				local a0 = Instance.new("Attachment", workspace.Terrain)
 				local a1 = Instance.new("Attachment", hrp)
 				
@@ -991,7 +1161,6 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	-- Distance ESP update
 	if distanceEnabled then
 		for _,d in pairs(distanceObjects) do d:Destroy() end
 		distanceObjects = {}
@@ -1022,4 +1191,4 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-print("Simple Hub v3.6 - Polished UI Edition loaded")
+print("Simple Hub v3.7 - Enhanced Edition loaded")
