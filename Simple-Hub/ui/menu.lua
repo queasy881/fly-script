@@ -1,47 +1,41 @@
--- ui/menu.lua
 return function(deps)
-	local Tabs = deps.Tabs
-	local Components = deps.Components
-	local Animations = deps.Animations
+    local Tabs = deps.Tabs
+    local Components = deps.Components
 
-	if not Tabs then
-		error("Tabs not loaded")
-	end
+    local Players = game:GetService("Players")
+    local UIS = game:GetService("UserInputService")
+    local player = Players.LocalPlayer
 
-	print("[UI] menu.lua init")
+    local gui = Instance.new("ScreenGui", player.PlayerGui)
+    gui.ResetOnSpawn = false
 
-	local Players = game:GetService("Players")
-	local UIS = game:GetService("UserInputService")
-	local player = Players.LocalPlayer
+    local main = Instance.new("Frame", gui)
+    main.Size = UDim2.new(0,780,0,520)
+    main.Position = UDim2.fromScale(0.5,0.5)
+    main.AnchorPoint = Vector2.new(0.5,0.5)
+    main.Visible = false
+    main.BackgroundColor3 = Color3.fromRGB(18,18,22)
 
-	-- ScreenGui
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "SimpleHub"
-	gui.ResetOnSpawn = false
-	gui.Parent = player:WaitForChild("PlayerGui")
+    UIS.InputBegan:Connect(function(i,gp)
+        if not gp and i.KeyCode == Enum.KeyCode.M then
+            main.Visible = not main.Visible
+        end
+    end)
 
-	-- Main frame
-	local main = Instance.new("Frame", gui)
-	main.Size = UDim2.new(0, 780, 0, 520)
-	main.Position = UDim2.fromScale(0.5, 0.5)
-	main.AnchorPoint = Vector2.new(0.5, 0.5)
-	main.BackgroundColor3 = Color3.fromRGB(18,18,22)
-	main.Visible = false
-	Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
+    local tabBar = Instance.new("Frame", main)
+    tabBar.Size = UDim2.new(1,0,0,50)
 
-	-- Toggle with M
-	UIS.InputBegan:Connect(function(i,gp)
-		if gp then return end
-		if i.KeyCode == Enum.KeyCode.M then
-			main.Visible = not main.Visible
-		end
-	end)
+    local pages = Instance.new("Frame", main)
+    pages.Position = UDim2.new(0,0,0,50)
+    pages.Size = UDim2.new(1,0,1,-50)
+    pages.BackgroundTransparency = 1
 
-	-- Tab bar example
-	local tabBar = Instance.new("Frame", main)
-	tabBar.Size = UDim2.new(1,0,0,50)
-	tabBar.BackgroundTransparency = 1
+    -- Tabs
+    local movement = Tabs.create(tabBar, pages, "Movement")
+    local esp = Tabs.create(tabBar, pages, "ESP")
+    local combat = Tabs.create(tabBar, pages, "Combat")
+    local visuals = Tabs.create(tabBar, pages, "Visuals")
 
-	local moveTab = Tabs.create(tabBar, "Movement")
-	Tabs.activate(moveTab)
+    movement.page.Visible = true
+    Tabs.active = movement
 end
