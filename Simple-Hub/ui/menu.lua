@@ -74,7 +74,7 @@ return function(deps)
 	local Invisibility = loadModule("extra/invisibility.lua")
 	local WalkOnWater = loadModule("extra/walk-on-water.lua")
 	
-	-- ESP modules (placeholders - wire up if you have them)
+	-- ESP modules
 	local NameESP = loadModule("esp/name_esp.lua")
 	local BoxESP = loadModule("esp/box_esp.lua")
 	local HealthESP = loadModule("esp/health_esp.lua")
@@ -86,6 +86,10 @@ return function(deps)
 	if FOV and FOV.create then
 		FOV.create()
 	end
+	
+	-- Local state for walkspeed/jumppower values
+	local walkSpeedValue = 16
+	local jumpPowerValue = 50
 	
 	-- ============================================
 	-- MAIN UPDATE LOOP
@@ -126,39 +130,27 @@ return function(deps)
 	end)
 	
 	-- ============================================
-	-- COLORS
+	-- COLORS - NO GRAY!
 	-- ============================================
 	local Colors = {
-		Background = Color3.fromRGB(12, 12, 16),
-		Panel = Color3.fromRGB(18, 18, 24),
-		Surface = Color3.fromRGB(24, 24, 32),
-		Accent = Color3.fromRGB(60, 120, 255),
+		Background = Color3.fromRGB(15, 15, 20),      -- Dark blue-black
+		Panel = Color3.fromRGB(20, 20, 28),           -- Slightly lighter
+		Surface = Color3.fromRGB(25, 25, 35),         -- Tab bar
+		Accent = Color3.fromRGB(60, 120, 255),        -- Blue accent
 		Text = Color3.fromRGB(220, 220, 240),
-		Border = Color3.fromRGB(40, 40, 52),
-		ScreenBg = Color3.fromRGB(12, 14, 18)
+		Border = Color3.fromRGB(45, 45, 60)
 	}
 	
 	-- ============================================
-	-- CREATE GUI
+	-- CREATE GUI - TRANSPARENT BACKGROUND
 	-- ============================================
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "SimpleHub"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.IgnoreGuiInset = true
 	gui.Parent = player:WaitForChild("PlayerGui")
 	
-	-- Full screen dark background
-	local screenBg = Instance.new("Frame")
-	screenBg.Name = "ScreenBackground"
-	screenBg.Size = UDim2.new(1, 0, 1, 0)
-	screenBg.Position = UDim2.new(0, 0, 0, 0)
-	screenBg.BackgroundColor3 = Colors.ScreenBg
-	screenBg.BackgroundTransparency = 0
-	screenBg.BorderSizePixel = 0
-	screenBg.ZIndex = 0
-	screenBg.Visible = false
-	screenBg.Parent = gui
+	-- NO SCREEN BACKGROUND - fully transparent, see game behind
 	
 	-- Main container
 	local main = Instance.new("Frame")
@@ -167,8 +159,9 @@ return function(deps)
 	main.Position = UDim2.new(0.5, 0, 0.5, 0)
 	main.AnchorPoint = Vector2.new(0.5, 0.5)
 	main.BackgroundColor3 = Colors.Background
+	main.BackgroundTransparency = 0  -- Solid menu panel
 	main.BorderSizePixel = 0
-	main.ZIndex = 1
+	main.ClipsDescendants = true  -- IMPORTANT: Clips content to rounded corners
 	main.Visible = false
 	main.Parent = gui
 	
@@ -180,61 +173,61 @@ return function(deps)
 	-- Border stroke
 	local mainStroke = Instance.new("UIStroke")
 	mainStroke.Color = Colors.Border
-	mainStroke.Thickness = 1.5
-	mainStroke.Transparency = 0.4
+	mainStroke.Thickness = 2
+	mainStroke.Transparency = 0.3
 	mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	mainStroke.Parent = main
 	
-	-- Glow effect
+	-- Glow effect (OUTSIDE main, positioned behind)
 	local mainGlow = Instance.new("ImageLabel")
 	mainGlow.Name = "Glow"
-	mainGlow.Size = UDim2.new(1, 40, 1, 40)
+	mainGlow.Size = UDim2.new(0, 860, 0, 580)
 	mainGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
 	mainGlow.AnchorPoint = Vector2.new(0.5, 0.5)
 	mainGlow.BackgroundTransparency = 1
 	mainGlow.Image = "rbxassetid://5028857472"
 	mainGlow.ImageColor3 = Colors.Accent
-	mainGlow.ImageTransparency = 0.7
+	mainGlow.ImageTransparency = 0.85
 	mainGlow.ScaleType = Enum.ScaleType.Slice
 	mainGlow.SliceCenter = Rect.new(24, 24, 276, 276)
 	mainGlow.ZIndex = 0
-	mainGlow.Parent = main
+	mainGlow.Visible = false
+	mainGlow.Parent = gui
 	
 	-- Header
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, 60)
+	header.Size = UDim2.new(1, 0, 0, 50)
+	header.Position = UDim2.new(0, 0, 0, 0)
 	header.BackgroundColor3 = Colors.Panel
 	header.BorderSizePixel = 0
 	header.Parent = main
 	
-	local headerCorner = Instance.new("UICorner")
-	headerCorner.CornerRadius = UDim.new(0, 12)
-	headerCorner.Parent = header
-	
-	local headerMask = Instance.new("Frame")
-	headerMask.Size = UDim2.new(1, 0, 0, 12)
-	headerMask.Position = UDim2.new(0, 0, 1, -12)
-	headerMask.BackgroundColor3 = Colors.Panel
-	headerMask.BorderSizePixel = 0
-	headerMask.Parent = header
+	-- Header bottom border
+	local headerBorder = Instance.new("Frame")
+	headerBorder.Size = UDim2.new(1, 0, 0, 1)
+	headerBorder.Position = UDim2.new(0, 0, 1, 0)
+	headerBorder.BackgroundColor3 = Colors.Border
+	headerBorder.BorderSizePixel = 0
+	headerBorder.Parent = header
 	
 	-- Title
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
 	title.Size = UDim2.new(0, 300, 1, 0)
-	title.Position = UDim2.new(0, 24, 0, 0)
+	title.Position = UDim2.new(0, 20, 0, 0)
 	title.BackgroundTransparency = 1
 	title.Text = "SIMPLE HUB"
 	title.TextColor3 = Colors.Text
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Font = Enum.Font.GothamBold
-	title.TextSize = 20
+	title.TextSize = 18
 	title.Parent = header
 	
+	-- Accent bar under title
 	local titleAccent = Instance.new("Frame")
-	titleAccent.Size = UDim2.new(0, 60, 0, 3)
-	titleAccent.Position = UDim2.new(0, 24, 1, -8)
+	titleAccent.Size = UDim2.new(0, 50, 0, 3)
+	titleAccent.Position = UDim2.new(0, 20, 1, -3)
 	titleAccent.BackgroundColor3 = Colors.Accent
 	titleAccent.BorderSizePixel = 0
 	titleAccent.Parent = header
@@ -245,8 +238,8 @@ return function(deps)
 	
 	-- Version label
 	local version = Instance.new("TextLabel")
-	version.Size = UDim2.new(0, 100, 0, 20)
-	version.Position = UDim2.new(1, -120, 0.5, 0)
+	version.Size = UDim2.new(0, 80, 0, 20)
+	version.Position = UDim2.new(1, -130, 0.5, 0)
 	version.AnchorPoint = Vector2.new(0, 0.5)
 	version.BackgroundTransparency = 1
 	version.Text = "v1.0"
@@ -259,15 +252,15 @@ return function(deps)
 	-- Close button
 	local closeBtn = Instance.new("TextButton")
 	closeBtn.Name = "CloseButton"
-	closeBtn.Size = UDim2.new(0, 36, 0, 36)
-	closeBtn.Position = UDim2.new(1, -48, 0.5, 0)
+	closeBtn.Size = UDim2.new(0, 32, 0, 32)
+	closeBtn.Position = UDim2.new(1, -42, 0.5, 0)
 	closeBtn.AnchorPoint = Vector2.new(0, 0.5)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 	closeBtn.BorderSizePixel = 0
 	closeBtn.Text = "×"
 	closeBtn.TextColor3 = Colors.Text
 	closeBtn.Font = Enum.Font.GothamBold
-	closeBtn.TextSize = 24
+	closeBtn.TextSize = 20
 	closeBtn.AutoButtonColor = false
 	closeBtn.Parent = header
 	
@@ -277,37 +270,45 @@ return function(deps)
 	
 	closeBtn.MouseButton1Click:Connect(function()
 		main.Visible = false
-		screenBg.Visible = false
+		mainGlow.Visible = false
 	end)
 	
 	closeBtn.MouseEnter:Connect(function()
 		Animations.tween(closeBtn, {
-			BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+			BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
 	closeBtn.MouseLeave:Connect(function()
 		Animations.tween(closeBtn, {
-			BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+			BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
 	-- Tab bar
 	local tabBar = Instance.new("Frame")
 	tabBar.Name = "TabBar"
-	tabBar.Size = UDim2.new(1, 0, 0, 68)
-	tabBar.Position = UDim2.new(0, 0, 0, 60)
+	tabBar.Size = UDim2.new(1, 0, 0, 50)
+	tabBar.Position = UDim2.new(0, 0, 0, 50)
 	tabBar.BackgroundColor3 = Colors.Surface
 	tabBar.BorderSizePixel = 0
 	tabBar.Parent = main
 	
+	-- Tab bar bottom border
+	local tabBarBorder = Instance.new("Frame")
+	tabBarBorder.Size = UDim2.new(1, 0, 0, 1)
+	tabBarBorder.Position = UDim2.new(0, 0, 1, 0)
+	tabBarBorder.BackgroundColor3 = Colors.Border
+	tabBarBorder.BorderSizePixel = 0
+	tabBarBorder.Parent = tabBar
+	
 	Tabs.setupTabBar(tabBar)
 	
-	-- Content container
+	-- Content container - FILLS THE REST
 	local contentContainer = Instance.new("Frame")
 	contentContainer.Name = "ContentContainer"
-	contentContainer.Size = UDim2.new(1, -32, 1, -160)
-	contentContainer.Position = UDim2.new(0, 16, 0, 144)
+	contentContainer.Size = UDim2.new(1, -24, 1, -115)
+	contentContainer.Position = UDim2.new(0, 12, 0, 108)
 	contentContainer.BackgroundTransparency = 1
 	contentContainer.Parent = main
 	
@@ -320,21 +321,22 @@ return function(deps)
 		scroll.BorderSizePixel = 0
 		scroll.ScrollBarThickness = 4
 		scroll.ScrollBarImageColor3 = Colors.Accent
+		scroll.ScrollBarImageTransparency = 0.3
 		scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 		scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 		scroll.Visible = false
 		scroll.Parent = contentContainer
 		
 		local layout = Instance.new("UIListLayout")
-		layout.Padding = UDim.new(0, 10)
+		layout.Padding = UDim.new(0, 8)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.Parent = scroll
 		
 		local padding = Instance.new("UIPadding")
-		padding.PaddingTop = UDim.new(0, 8)
+		padding.PaddingTop = UDim.new(0, 4)
 		padding.PaddingBottom = UDim.new(0, 8)
-		padding.PaddingLeft = UDim.new(0, 8)
-		padding.PaddingRight = UDim.new(0, 12)
+		padding.PaddingLeft = UDim.new(0, 4)
+		padding.PaddingRight = UDim.new(0, 8)
 		padding.Parent = scroll
 		
 		return scroll
@@ -360,7 +362,7 @@ return function(deps)
 	-- ============================================
 	-- MOVEMENT TAB - WIRED UP
 	-- ============================================
-	Components.createSection(movementContent, "Basic Movement")
+	Components.createSection(movementContent, "Flight")
 	
 	Components.createToggle(movementContent, "Fly", function(state)
 		if Fly then
@@ -375,36 +377,71 @@ return function(deps)
 		end
 	end)
 	
-	Components.createToggle(movementContent, "Noclip", function(state)
-		if Noclip then
-			Noclip.enabled = state
+	Components.createSlider(movementContent, "Fly Speed", 10, 200, 50, function(value)
+		if Fly then
+			Fly.speed = value
 		end
 	end)
 	
-	Components.createSlider(movementContent, "Walk Speed", 16, 200, 16, function(value)
+	Components.createDivider(movementContent)
+	Components.createSection(movementContent, "Speed & Jump")
+	
+	Components.createToggle(movementContent, "Walk Speed", function(state)
 		if WalkSpeed then
-			WalkSpeed.value = value
-			WalkSpeed.enabled = value > 16
+			WalkSpeed.enabled = state
 			local humanoid = getHumanoid()
 			if humanoid then
-				WalkSpeed.apply(humanoid)
+				if state then
+					humanoid.WalkSpeed = walkSpeedValue
+				else
+					humanoid.WalkSpeed = 16
+				end
 			end
 		end
 	end)
 	
-	Components.createSlider(movementContent, "Jump Power", 50, 200, 50, function(value)
-		if JumpPower then
-			JumpPower.value = value
-			JumpPower.enabled = value > 50
+	Components.createSlider(movementContent, "Speed Value", 16, 200, 16, function(value)
+		walkSpeedValue = value
+		if WalkSpeed and WalkSpeed.enabled then
 			local humanoid = getHumanoid()
 			if humanoid then
-				JumpPower.apply(humanoid)
+				humanoid.WalkSpeed = value
+			end
+		end
+	end)
+	
+	Components.createToggle(movementContent, "Jump Power", function(state)
+		if JumpPower then
+			JumpPower.enabled = state
+			local humanoid = getHumanoid()
+			if humanoid then
+				if state then
+					humanoid.JumpPower = jumpPowerValue
+				else
+					humanoid.JumpPower = 50
+				end
+			end
+		end
+	end)
+	
+	Components.createSlider(movementContent, "Jump Value", 50, 300, 50, function(value)
+		jumpPowerValue = value
+		if JumpPower and JumpPower.enabled then
+			local humanoid = getHumanoid()
+			if humanoid then
+				humanoid.JumpPower = value
 			end
 		end
 	end)
 	
 	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Advanced")
+	Components.createSection(movementContent, "Other")
+	
+	Components.createToggle(movementContent, "Noclip", function(state)
+		if Noclip then
+			Noclip.enabled = state
+		end
+	end)
 	
 	Components.createToggle(movementContent, "Bunny Hop", function(state)
 		if BunnyHop then
@@ -412,7 +449,7 @@ return function(deps)
 		end
 	end)
 	
-	Components.createToggle(movementContent, "Dash", function(state)
+	Components.createToggle(movementContent, "Dash (Press F)", function(state)
 		if Dash then
 			Dash.enabled = state
 		end
@@ -435,10 +472,9 @@ return function(deps)
 		end
 	end)
 	
-	Components.createSlider(combatContent, "Smoothness", 0, 100, 50, function(value)
+	Components.createSlider(combatContent, "Smoothness", 1, 100, 50, function(value)
 		if AimAssist then
-			-- Convert 0-100 to smoothness (lower = stronger, so invert)
-			AimAssist.smoothness = 0.01 + (value / 100) * 0.29 -- Range: 0.01 to 0.30
+			AimAssist.smoothness = 0.01 + (value / 100) * 0.29
 		end
 	end)
 	
@@ -576,20 +612,22 @@ return function(deps)
 	-- ============================================
 	-- KEYBINDS
 	-- ============================================
-	
-	-- Toggle menu (M)
 	UIS.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
 		
 		if input.KeyCode == Enum.KeyCode.M then
 			local isVisible = not main.Visible
 			main.Visible = isVisible
-			screenBg.Visible = isVisible
+			mainGlow.Visible = isVisible
 			
 			if isVisible then
 				main.Size = UDim2.new(0, 0, 0, 0)
+				mainGlow.Size = UDim2.new(0, 0, 0, 0)
 				Animations.tween(main, {
 					Size = UDim2.new(0, 820, 0, 540)
+				}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+				Animations.tween(mainGlow, {
+					Size = UDim2.new(0, 860, 0, 580)
 				}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
 			end
 		end
@@ -613,9 +651,9 @@ return function(deps)
 	
 	local function update(input)
 		local delta = input.Position - dragStart
-		Animations.tween(main, {
-			Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		}, {Time = 0.1, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+		local newPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		Animations.tween(main, {Position = newPos}, {Time = 0.1, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+		Animations.tween(mainGlow, {Position = newPos}, {Time = 0.1, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end
 	
 	header.InputBegan:Connect(function(input)
@@ -646,16 +684,15 @@ return function(deps)
 	-- CHARACTER RESPAWN HANDLING
 	-- ============================================
 	player.CharacterAdded:Connect(function(char)
-		-- Re-apply settings on respawn
 		task.wait(0.5)
 		
 		local humanoid = char:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			if WalkSpeed and WalkSpeed.enabled then
-				WalkSpeed.apply(humanoid)
+				humanoid.WalkSpeed = walkSpeedValue
 			end
 			if JumpPower and JumpPower.enabled then
-				JumpPower.apply(humanoid)
+				humanoid.JumpPower = jumpPowerValue
 			end
 		end
 		
