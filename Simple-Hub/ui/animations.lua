@@ -1,11 +1,10 @@
 -- ui/animations.lua
--- Premium animation system (FIXED: no button shrinking)
+-- FIXED: Only color/transparency changes, NO size modifications
 
 local TweenService = game:GetService("TweenService")
 
 local Animations = {}
 
--- Core animation profiles
 local Profiles = {
 	Fast = {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out},
 	Medium = {Time = 0.25, Style = Enum.EasingStyle.Quint, Direction = Enum.EasingDirection.Out},
@@ -14,63 +13,28 @@ local Profiles = {
 	Elastic = {Time = 0.6, Style = Enum.EasingStyle.Elastic, Direction = Enum.EasingDirection.Out}
 }
 
--- Generic tween function
 function Animations.tween(obj, props, profile)
 	if not obj then return end
 	profile = profile or Profiles.Medium
 	
-	local info = TweenInfo.new(
-		profile.Time,
-		profile.Style,
-		profile.Direction
-	)
-	
+	local info = TweenInfo.new(profile.Time, profile.Style, profile.Direction)
 	local tween = TweenService:Create(obj, info, props)
 	tween:Play()
 	return tween
 end
 
--- Button hover: REMOVED size changes
 function Animations.buttonHover(button, entering)
-	local profile = Profiles.Fast
-	
-	if entering then
-		Animations.tween(button, {
-			BackgroundColor3 = Color3.fromRGB(45, 45, 58)
-		}, profile)
-		
-		local glow = button:FindFirstChild("Glow")
-		if glow then
-			Animations.tween(glow, {ImageTransparency = 0.3}, profile)
-		end
-	else
-		Animations.tween(button, {
-			BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-		}, profile)
-		
-		local glow = button:FindFirstChild("Glow")
-		if glow then
-			Animations.tween(glow, {ImageTransparency = 1}, profile)
-		end
-	end
 end
 
--- Button click: REMOVED (was causing shrinking)
 function Animations.buttonClick(button)
-	-- Removed to prevent size issues
 end
 
--- Toggle ON state
 function Animations.toggleOn(button)
-	Animations.tween(button, {
-		BackgroundColor3 = Color3.fromRGB(60, 120, 255)
-	}, Profiles.Medium)
+	Animations.tween(button, {BackgroundColor3 = Color3.fromRGB(60, 120, 255)}, Profiles.Medium)
 	
 	local label = button:FindFirstChild("Label")
 	if label then
-		Animations.tween(label, {
-			TextColor3 = Color3.fromRGB(255, 255, 255)
-		}, Profiles.Medium)
+		Animations.tween(label, {TextColor3 = Color3.fromRGB(255, 255, 255)}, Profiles.Medium)
 	end
 	
 	local indicator = button:FindFirstChild("Indicator")
@@ -81,26 +45,18 @@ function Animations.toggleOn(button)
 		}, Profiles.Medium)
 	end
 	
-	local glow = button:FindFirstChild("Glow")
-	if glow then
-		Animations.tween(glow, {
-			ImageColor3 = Color3.fromRGB(60, 120, 255),
-			ImageTransparency = 0.5
-		}, Profiles.Medium)
+	local innerGlow = button:FindFirstChild("InnerGlow")
+	if innerGlow then
+		Animations.tween(innerGlow, {BackgroundTransparency = 0.7}, Profiles.Medium)
 	end
 end
 
--- Toggle OFF state
 function Animations.toggleOff(button)
-	Animations.tween(button, {
-		BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-	}, Profiles.Medium)
+	Animations.tween(button, {BackgroundColor3 = Color3.fromRGB(35, 35, 45)}, Profiles.Medium)
 	
 	local label = button:FindFirstChild("Label")
 	if label then
-		Animations.tween(label, {
-			TextColor3 = Color3.fromRGB(180, 180, 200)
-		}, Profiles.Medium)
+		Animations.tween(label, {TextColor3 = Color3.fromRGB(180, 180, 200)}, Profiles.Medium)
 	end
 	
 	local indicator = button:FindFirstChild("Indicator")
@@ -111,15 +67,12 @@ function Animations.toggleOff(button)
 		}, Profiles.Medium)
 	end
 	
-	local glow = button:FindFirstChild("Glow")
-	if glow then
-		Animations.tween(glow, {
-			ImageTransparency = 1
-		}, Profiles.Medium)
+	local innerGlow = button:FindFirstChild("InnerGlow")
+	if innerGlow then
+		Animations.tween(innerGlow, {BackgroundTransparency = 1}, Profiles.Medium)
 	end
 end
 
--- Tab activation
 function Animations.activateTab(tab)
 	Animations.tween(tab, {
 		BackgroundColor3 = Color3.fromRGB(60, 120, 255),
@@ -135,7 +88,6 @@ function Animations.activateTab(tab)
 	end
 end
 
--- Tab deactivation
 function Animations.deactivateTab(tab)
 	Animations.tween(tab, {
 		BackgroundColor3 = Color3.fromRGB(28, 28, 35),
@@ -151,36 +103,25 @@ function Animations.deactivateTab(tab)
 	end
 end
 
--- Slider fill animation
 function Animations.updateSlider(slider, percentage)
 	local fill = slider:FindFirstChild("Fill")
 	if fill then
-		Animations.tween(fill, {
-			Size = UDim2.new(percentage, 0, 1, 0)
-		}, Profiles.Fast)
+		Animations.tween(fill, {Size = UDim2.new(percentage, 0, 1, 0)}, Profiles.Fast)
 	end
 	
 	local handle = slider:FindFirstChild("Handle")
 	if handle then
-		Animations.tween(handle, {
-			Position = UDim2.new(percentage, 0, 0.5, 0)
-		}, Profiles.Fast)
+		Animations.tween(handle, {Position = UDim2.new(percentage, 0, 0.5, 0)}, Profiles.Fast)
 	end
 end
 
--- Panel fade in
 function Animations.fadeIn(obj, delay)
 	delay = delay or 0
 	obj.BackgroundTransparency = 1
-	
 	task.wait(delay)
-	
-	Animations.tween(obj, {
-		BackgroundTransparency = 0
-	}, Profiles.Slow)
+	Animations.tween(obj, {BackgroundTransparency = 0}, Profiles.Slow)
 end
 
--- Slide content transition
 function Animations.slideContent(oldContent, newContent, direction)
 	direction = direction or "left"
 	
@@ -190,7 +131,6 @@ function Animations.slideContent(oldContent, newContent, direction)
 			Position = UDim2.new(0, offset, 0, 0),
 			GroupTransparency = 1
 		}, Profiles.Medium)
-		
 		task.wait(0.15)
 		oldContent.Visible = false
 	end
@@ -200,7 +140,6 @@ function Animations.slideContent(oldContent, newContent, direction)
 		local startOffset = direction == "left" and 50 or -50
 		newContent.Position = UDim2.new(0, startOffset, 0, 0)
 		newContent.GroupTransparency = 1
-		
 		Animations.tween(newContent, {
 			Position = UDim2.new(0, 0, 0, 0),
 			GroupTransparency = 0
@@ -208,10 +147,8 @@ function Animations.slideContent(oldContent, newContent, direction)
 	end
 end
 
--- Glow pulse effect
 function Animations.pulse(obj, color)
 	color = color or Color3.fromRGB(100, 200, 255)
-	
 	local glow = obj:FindFirstChild("Glow")
 	if not glow then return end
 	
@@ -220,12 +157,8 @@ function Animations.pulse(obj, color)
 			ImageTransparency = 0.3,
 			ImageColor3 = color
 		}, {Time = 0.8, Style = Enum.EasingStyle.Sine, Direction = Enum.EasingDirection.InOut})
-		
 		task.wait(0.8)
-		
-		Animations.tween(glow, {
-			ImageTransparency = 1
-		}, {Time = 0.8, Style = Enum.EasingStyle.Sine, Direction = Enum.EasingDirection.InOut})
+		Animations.tween(glow, {ImageTransparency = 1}, {Time = 0.8, Style = Enum.EasingStyle.Sine, Direction = Enum.EasingDirection.InOut})
 	end
 	
 	task.spawn(function()
