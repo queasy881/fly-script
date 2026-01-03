@@ -1,13 +1,12 @@
 -- ui/menu.lua
--- FIXED: Dark backgrounds, contained glow, no overflow
+-- Premium main menu interface
 
 return function(deps)
 	local Tabs = deps.Tabs
 	local Components = deps.Components
 	local Animations = deps.Animations
-	local Controller = deps.Controller
 	
-	if not Tabs or not Components or not Animations or not Controller then
+	if not Tabs or not Components or not Animations then
 		error("[Menu] Missing dependencies")
 	end
 	
@@ -15,23 +14,65 @@ return function(deps)
 	
 	local Players = game:GetService("Players")
 	local UIS = game:GetService("UserInputService")
+	local TweenService = game:GetService("TweenService")
 	local player = Players.LocalPlayer
 	
+	-- Colors
 	local Colors = {
 		Background = Color3.fromRGB(12, 12, 16),
 		Panel = Color3.fromRGB(18, 18, 24),
 		Surface = Color3.fromRGB(24, 24, 32),
 		Accent = Color3.fromRGB(60, 120, 255),
 		Text = Color3.fromRGB(220, 220, 240),
-		Border = Color3.fromRGB(40, 40, 52)
+		Border = Color3.fromRGB(40, 40, 52),
+		ScreenBackground = Color3.fromRGB(15, 15, 22) -- Dark blue-ish background for full screen
 	}
 	
+	-- Create ScreenGui
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "SimpleHub"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.IgnoreGuiInset = true -- Makes it cover the entire screen including top bar
 	gui.Parent = player:WaitForChild("PlayerGui")
 	
+	-- Full screen background overlay (solid dark blue, not transparent)
+	local screenBackground = Instance.new("Frame")
+	screenBackground.Name = "ScreenBackground"
+	screenBackground.Size = UDim2.new(1, 0, 1, 0)
+	screenBackground.Position = UDim2.new(0, 0, 0, 0)
+	screenBackground.BackgroundColor3 = Colors.ScreenBackground
+	screenBackground.BackgroundTransparency = 0 -- Fully opaque
+	screenBackground.BorderSizePixel = 0
+	screenBackground.ZIndex = 0
+	screenBackground.Visible = false
+	screenBackground.Parent = gui
+	
+	-- Optional: Add subtle pattern/texture to background
+	local bgPattern = Instance.new("ImageLabel")
+	bgPattern.Name = "Pattern"
+	bgPattern.Size = UDim2.new(1, 0, 1, 0)
+	bgPattern.BackgroundTransparency = 1
+	bgPattern.Image = "rbxassetid://5028857472" -- Subtle glow texture
+	bgPattern.ImageColor3 = Colors.Accent
+	bgPattern.ImageTransparency = 0.95
+	bgPattern.ScaleType = Enum.ScaleType.Tile
+	bgPattern.TileSize = UDim2.new(0, 200, 0, 200)
+	bgPattern.ZIndex = 1
+	bgPattern.Parent = screenBackground
+	
+	-- Vignette effect for depth
+	local vignette = Instance.new("ImageLabel")
+	vignette.Name = "Vignette"
+	vignette.Size = UDim2.new(1, 0, 1, 0)
+	vignette.BackgroundTransparency = 1
+	vignette.Image = "rbxassetid://1039797646" -- Radial gradient vignette
+	vignette.ImageColor3 = Color3.fromRGB(0, 0, 0)
+	vignette.ImageTransparency = 0.5
+	vignette.ZIndex = 2
+	vignette.Parent = screenBackground
+	
+	-- Main container
 	local main = Instance.new("Frame")
 	main.Name = "Main"
 	main.Size = UDim2.new(0, 820, 0, 540)
@@ -39,14 +80,16 @@ return function(deps)
 	main.AnchorPoint = Vector2.new(0.5, 0.5)
 	main.BackgroundColor3 = Colors.Background
 	main.BorderSizePixel = 0
-	main.ClipsDescendants = true
+	main.ZIndex = 10
 	main.Visible = false
 	main.Parent = gui
 	
+	-- Rounded corners
 	local mainCorner = Instance.new("UICorner")
 	mainCorner.CornerRadius = UDim.new(0, 12)
 	mainCorner.Parent = main
 	
+	-- Border stroke
 	local mainStroke = Instance.new("UIStroke")
 	mainStroke.Color = Colors.Border
 	mainStroke.Thickness = 1.5
@@ -54,39 +97,44 @@ return function(deps)
 	mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	mainStroke.Parent = main
 	
+	-- Glow effect
 	local mainGlow = Instance.new("ImageLabel")
 	mainGlow.Name = "Glow"
-	mainGlow.Size = UDim2.new(1, 30, 1, 30)
+	mainGlow.Size = UDim2.new(1, 40, 1, 40)
 	mainGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
 	mainGlow.AnchorPoint = Vector2.new(0.5, 0.5)
 	mainGlow.BackgroundTransparency = 1
 	mainGlow.Image = "rbxassetid://5028857472"
 	mainGlow.ImageColor3 = Colors.Accent
-	mainGlow.ImageTransparency = 0.85
+	mainGlow.ImageTransparency = 0.7
 	mainGlow.ScaleType = Enum.ScaleType.Slice
 	mainGlow.SliceCenter = Rect.new(24, 24, 276, 276)
-	mainGlow.ZIndex = 0
+	mainGlow.ZIndex = main.ZIndex - 1
 	mainGlow.Parent = main
 	
+	-- Header
 	local header = Instance.new("Frame")
 	header.Name = "Header"
 	header.Size = UDim2.new(1, 0, 0, 60)
 	header.BackgroundColor3 = Colors.Panel
 	header.BorderSizePixel = 0
-	header.ZIndex = 1
+	header.ZIndex = main.ZIndex + 1
 	header.Parent = main
 	
 	local headerCorner = Instance.new("UICorner")
 	headerCorner.CornerRadius = UDim.new(0, 12)
 	headerCorner.Parent = header
 	
+	-- Hide bottom corners of header
 	local headerMask = Instance.new("Frame")
 	headerMask.Size = UDim2.new(1, 0, 0, 12)
 	headerMask.Position = UDim2.new(0, 0, 1, -12)
 	headerMask.BackgroundColor3 = Colors.Panel
 	headerMask.BorderSizePixel = 0
+	headerMask.ZIndex = header.ZIndex
 	headerMask.Parent = header
 	
+	-- Title
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
 	title.Size = UDim2.new(0, 300, 1, 0)
@@ -97,19 +145,23 @@ return function(deps)
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	title.Font = Enum.Font.GothamBold
 	title.TextSize = 20
+	title.ZIndex = header.ZIndex + 1
 	title.Parent = header
 	
+	-- Accent bar under title
 	local titleAccent = Instance.new("Frame")
 	titleAccent.Size = UDim2.new(0, 60, 0, 3)
 	titleAccent.Position = UDim2.new(0, 24, 1, -8)
 	titleAccent.BackgroundColor3 = Colors.Accent
 	titleAccent.BorderSizePixel = 0
+	titleAccent.ZIndex = header.ZIndex + 1
 	titleAccent.Parent = header
 	
 	local accentCorner = Instance.new("UICorner")
 	accentCorner.CornerRadius = UDim.new(1, 0)
 	accentCorner.Parent = titleAccent
 	
+	-- Version label
 	local version = Instance.new("TextLabel")
 	version.Size = UDim2.new(0, 100, 0, 20)
 	version.Position = UDim2.new(1, -120, 0.5, 0)
@@ -120,8 +172,10 @@ return function(deps)
 	version.TextXAlignment = Enum.TextXAlignment.Right
 	version.Font = Enum.Font.GothamMedium
 	version.TextSize = 11
+	version.ZIndex = header.ZIndex + 1
 	version.Parent = header
 	
+	-- Close button
 	local closeBtn = Instance.new("TextButton")
 	closeBtn.Name = "CloseButton"
 	closeBtn.Size = UDim2.new(0, 36, 0, 36)
@@ -134,6 +188,7 @@ return function(deps)
 	closeBtn.Font = Enum.Font.GothamBold
 	closeBtn.TextSize = 24
 	closeBtn.AutoButtonColor = false
+	closeBtn.ZIndex = header.ZIndex + 1
 	closeBtn.Parent = header
 	
 	local closeBtnCorner = Instance.new("UICorner")
@@ -142,37 +197,43 @@ return function(deps)
 	
 	closeBtn.MouseButton1Click:Connect(function()
 		main.Visible = false
+		screenBackground.Visible = false
 	end)
 	
 	closeBtn.MouseEnter:Connect(function()
-		Animations.tween(closeBtn, {BackgroundColor3 = Color3.fromRGB(220, 50, 50)}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+		Animations.tween(closeBtn, {
+			BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
 	closeBtn.MouseLeave:Connect(function()
-		Animations.tween(closeBtn, {BackgroundColor3 = Color3.fromRGB(45, 45, 58)}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+		Animations.tween(closeBtn, {
+			BackgroundColor3 = Color3.fromRGB(45, 45, 58)
+		}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
+	-- Tab bar
 	local tabBar = Instance.new("Frame")
 	tabBar.Name = "TabBar"
 	tabBar.Size = UDim2.new(1, 0, 0, 68)
 	tabBar.Position = UDim2.new(0, 0, 0, 60)
 	tabBar.BackgroundColor3 = Colors.Surface
 	tabBar.BorderSizePixel = 0
-	tabBar.ZIndex = 1
+	tabBar.ZIndex = main.ZIndex + 1
 	tabBar.Parent = main
 	
 	Tabs.setupTabBar(tabBar)
 	
+	-- Content container
 	local contentContainer = Instance.new("Frame")
 	contentContainer.Name = "ContentContainer"
 	contentContainer.Size = UDim2.new(1, -32, 1, -160)
 	contentContainer.Position = UDim2.new(0, 16, 0, 144)
-	contentContainer.BackgroundColor3 = Colors.Background
-	contentContainer.BorderSizePixel = 0
-	contentContainer.ClipsDescendants = true
-	contentContainer.ZIndex = 1
+	contentContainer.BackgroundTransparency = 1
+	contentContainer.ZIndex = main.ZIndex + 1
 	contentContainer.Parent = main
 	
+	-- Create tab content frames
 	local function createTabContent(name)
 		local scroll = Instance.new("ScrollingFrame")
 		scroll.Name = name .. "Content"
@@ -184,6 +245,7 @@ return function(deps)
 		scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 		scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 		scroll.Visible = false
+		scroll.ZIndex = contentContainer.ZIndex + 1
 		scroll.Parent = contentContainer
 		
 		local layout = Instance.new("UIListLayout")
@@ -206,72 +268,136 @@ return function(deps)
 	local espContent = createTabContent("ESP")
 	local extraContent = createTabContent("Extra")
 	
+	-- Create tabs
 	local movementTab = Tabs.create(tabBar, "Movement", "⚡")
 	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
 	local espTab = Tabs.create(tabBar, "ESP", "👁")
 	local extraTab = Tabs.create(tabBar, "Extra", "⚙")
 	
+	-- Connect tabs to content
 	Tabs.connectTab(movementTab, movementContent)
 	Tabs.connectTab(combatTab, combatContent)
 	Tabs.connectTab(espTab, espContent)
 	Tabs.connectTab(extraTab, extraContent)
 	
+	-- Populate Movement tab (examples)
 	Components.createSection(movementContent, "Basic Movement")
-	Components.createToggle(movementContent, "Fly", Controller.toggleFly)
-	Components.createToggle(movementContent, "Noclip", Controller.toggleNoclip)
-	Components.createSlider(movementContent, "Walk Speed", 16, 200, 16, Controller.setWalkSpeed)
-	Components.createSlider(movementContent, "Jump Power", 50, 200, 50, Controller.setJumpPower)
+	Components.createToggle(movementContent, "Fly", function(state)
+		print("Fly:", state)
+	end)
+	Components.createToggle(movementContent, "Noclip", function(state)
+		print("Noclip:", state)
+	end)
+	Components.createSlider(movementContent, "Walk Speed", 16, 200, 16, function(value)
+		print("WalkSpeed:", value)
+	end)
+	Components.createSlider(movementContent, "Jump Power", 50, 200, 50, function(value)
+		print("JumpPower:", value)
+	end)
 	
 	Components.createDivider(movementContent)
 	Components.createSection(movementContent, "Advanced")
-	Components.createToggle(movementContent, "Bunny Hop", Controller.toggleBunnyHop)
-	Components.createToggle(movementContent, "Dash (Press F)", Controller.toggleDash)
-	Components.createSlider(movementContent, "Air Control", 0, 10, 0, Controller.setAirControl)
+	Components.createToggle(movementContent, "Bunny Hop", function(state)
+		print("BunnyHop:", state)
+	end)
+	Components.createToggle(movementContent, "Dash", function(state)
+		print("Dash:", state)
+	end)
+	Components.createSlider(movementContent, "Air Control", 0, 10, 0, function(value)
+		print("AirControl:", value)
+	end)
 	
+	-- Populate Combat tab (examples)
 	Components.createSection(combatContent, "Aim Assist")
-	Components.createToggle(combatContent, "Aim Assist (Hold RMB)", Controller.toggleAimAssist)
-	Components.createSlider(combatContent, "Smoothness", 0, 100, 15, Controller.setAimSmoothness)
-	Components.createSlider(combatContent, "FOV", 50, 500, 150, Controller.setFOV)
-	Components.createToggle(combatContent, "Show FOV Circle", Controller.toggleFOVCircle)
+	Components.createToggle(combatContent, "Aim Assist", function(state)
+		print("AimAssist:", state)
+	end)
+	Components.createSlider(combatContent, "Smoothness", 0, 100, 50, function(value)
+		print("Smoothness:", value)
+	end)
+	Components.createSlider(combatContent, "FOV", 50, 500, 100, function(value)
+		print("FOV:", value)
+	end)
+	Components.createToggle(combatContent, "Show FOV Circle", function(state)
+		print("ShowFOV:", state)
+	end)
 	
 	Components.createDivider(combatContent)
 	Components.createSection(combatContent, "Silent Aim")
-	Components.createToggle(combatContent, "Silent Aim", Controller.toggleSilentAim)
-	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, Controller.setHitChance)
+	Components.createToggle(combatContent, "Silent Aim", function(state)
+		print("SilentAim:", state)
+	end)
+	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value)
+		print("HitChance:", value)
+	end)
 	
+	-- Populate ESP tab (examples)
 	Components.createSection(espContent, "Player ESP")
-	Components.createToggle(espContent, "Name ESP", Controller.toggleNameESP)
-	Components.createToggle(espContent, "Box ESP", Controller.toggleBoxESP)
-	Components.createToggle(espContent, "Health ESP", Controller.toggleHealthESP)
-	Components.createToggle(espContent, "Distance ESP", Controller.toggleDistanceESP)
-	Components.createToggle(espContent, "Tracers", Controller.toggleTracers)
+	Components.createToggle(espContent, "Name ESP", function(state)
+		print("NameESP:", state)
+	end)
+	Components.createToggle(espContent, "Box ESP", function(state)
+		print("BoxESP:", state)
+	end)
+	Components.createToggle(espContent, "Health ESP", function(state)
+		print("HealthESP:", state)
+	end)
+	Components.createToggle(espContent, "Distance ESP", function(state)
+		print("DistanceESP:", state)
+	end)
+	Components.createToggle(espContent, "Tracers", function(state)
+		print("Tracers:", state)
+	end)
 	
 	Components.createDivider(espContent)
 	Components.createSection(espContent, "Visuals")
-	Components.createToggle(espContent, "Chams", Controller.toggleChams)
+	Components.createToggle(espContent, "Chams", function(state)
+		print("Chams:", state)
+	end)
 	
+	-- Populate Extra tab (examples)
 	Components.createSection(extraContent, "Visual Tweaks")
-	Components.createToggle(extraContent, "Fullbright", Controller.toggleFullbright)
-	Components.createToggle(extraContent, "Remove Grass", Controller.toggleRemoveGrass)
-	Components.createToggle(extraContent, "Third Person", Controller.toggleThirdPerson)
+	Components.createToggle(extraContent, "Fullbright", function(state)
+		print("Fullbright:", state)
+	end)
+	Components.createToggle(extraContent, "Remove Grass", function(state)
+		print("RemoveGrass:", state)
+	end)
+	Components.createToggle(extraContent, "Third Person", function(state)
+		print("ThirdPerson:", state)
+	end)
 	
 	Components.createDivider(extraContent)
 	Components.createSection(extraContent, "Misc")
-	Components.createToggle(extraContent, "Anti AFK", Controller.toggleAntiAFK)
-	Components.createToggle(extraContent, "Invisibility", Controller.toggleInvisibility)
-	Components.createToggle(extraContent, "Walk on Water", Controller.toggleWalkOnWater)
-	Components.createToggle(extraContent, "Spin Bot", Controller.toggleSpinBot)
-	Components.createToggle(extraContent, "Fake Lag", Controller.toggleFakeLag)
-	Components.createToggle(extraContent, "Fake Death", Controller.toggleFakeDeath)
+	Components.createToggle(extraContent, "Anti AFK", function(state)
+		print("AntiAFK:", state)
+	end)
+	Components.createToggle(extraContent, "Invisibility", function(state)
+		print("Invisibility:", state)
+	end)
+	Components.createToggle(extraContent, "Walk on Water", function(state)
+		print("WalkOnWater:", state)
+	end)
 	
+	-- Activate first tab
 	Tabs.activate(movementTab, movementContent)
 	
+	-- Toggle keybind (M)
 	UIS.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
 		if input.KeyCode == Enum.KeyCode.M then
-			main.Visible = not main.Visible
+			local isVisible = not main.Visible
+			main.Visible = isVisible
+			screenBackground.Visible = isVisible
 			
-			if main.Visible then
+			if isVisible then
+				-- Animate background fade in
+				screenBackground.BackgroundTransparency = 1
+				Animations.tween(screenBackground, {
+					BackgroundTransparency = 0
+				}, {Time = 0.3, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+				
+				-- Animate main panel
 				main.Size = UDim2.new(0, 0, 0, 0)
 				Animations.tween(main, {
 					Size = UDim2.new(0, 820, 0, 540)
@@ -280,6 +406,7 @@ return function(deps)
 		end
 	end)
 	
+	-- Dragging functionality
 	local dragging = false
 	local dragInput, dragStart, startPos
 	
