@@ -1,9 +1,8 @@
 -- ui/components.lua
--- Premium component library (FIXED: sizing, hover bugs, backgrounds)
+-- FIXED: No grey backgrounds, no hover overflow
 
 local Components = {}
 
--- Color palette
 local Colors = {
 	Background = Color3.fromRGB(12, 12, 16),
 	Panel = Color3.fromRGB(18, 18, 24),
@@ -19,7 +18,6 @@ local Colors = {
 	Accent = Color3.fromRGB(88, 166, 255)
 }
 
--- Utility: Create rounded corner
 local function addCorner(obj, radius)
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, radius or 8)
@@ -27,25 +25,6 @@ local function addCorner(obj, radius)
 	return corner
 end
 
--- Utility: Create glow effect
-local function addGlow(obj)
-	local glow = Instance.new("ImageLabel")
-	glow.Name = "Glow"
-	glow.Size = UDim2.new(1, 20, 1, 20)
-	glow.Position = UDim2.new(0.5, 0, 0.5, 0)
-	glow.AnchorPoint = Vector2.new(0.5, 0.5)
-	glow.BackgroundTransparency = 1
-	glow.Image = "rbxassetid://5028857472"
-	glow.ImageColor3 = Colors.Active
-	glow.ImageTransparency = 1
-	glow.ScaleType = Enum.ScaleType.Slice
-	glow.SliceCenter = Rect.new(24, 24, 276, 276)
-	glow.ZIndex = obj.ZIndex - 1
-	glow.Parent = obj
-	return glow
-end
-
--- Utility: Create stroke
 local function addStroke(obj, color, thickness)
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = color or Colors.Border
@@ -56,12 +35,11 @@ local function addStroke(obj, color, thickness)
 	return stroke
 end
 
--- Get Animations safely
 local function getAnimations()
 	return _G.Animations
 end
 
--- Toggle Button (FIXED: no size changes on hover/click)
+-- Toggle Button - FIXED: no size changes, only color/glow
 function Components.createToggle(parent, text, callback)
 	local Animations = getAnimations()
 	
@@ -72,11 +50,21 @@ function Components.createToggle(parent, text, callback)
 	button.BorderSizePixel = 0
 	button.AutoButtonColor = false
 	button.Text = ""
+	button.ClipsDescendants = true
 	button.Parent = parent
 	
 	addCorner(button, 6)
 	addStroke(button)
-	local glow = addGlow(button)
+	
+	local innerGlow = Instance.new("Frame")
+	innerGlow.Name = "InnerGlow"
+	innerGlow.Size = UDim2.new(1, 0, 1, 0)
+	innerGlow.BackgroundColor3 = Colors.Active
+	innerGlow.BackgroundTransparency = 1
+	innerGlow.BorderSizePixel = 0
+	innerGlow.ZIndex = button.ZIndex + 1
+	innerGlow.Parent = button
+	addCorner(innerGlow, 6)
 	
 	local label = Instance.new("TextLabel")
 	label.Name = "Label"
@@ -88,6 +76,7 @@ function Components.createToggle(parent, text, callback)
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Font = Enum.Font.GothamMedium
 	label.TextSize = 14
+	label.ZIndex = button.ZIndex + 2
 	label.Parent = button
 	
 	local indicator = Instance.new("Frame")
@@ -96,23 +85,17 @@ function Components.createToggle(parent, text, callback)
 	indicator.Position = UDim2.new(0, 0, 1, -3)
 	indicator.BackgroundColor3 = Colors.ActiveGlow
 	indicator.BorderSizePixel = 0
+	indicator.ZIndex = button.ZIndex + 2
 	indicator.Parent = button
-	
 	addCorner(indicator, 2)
 	
 	local state = false
 	
 	button.MouseEnter:Connect(function()
 		if Animations then
-			-- Only change color, no size change
-			Animations.tween(button, {
-				BackgroundColor3 = Colors.ButtonHover
-			}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
-			
+			Animations.tween(button, {BackgroundColor3 = Colors.ButtonHover}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 			if not state then
-				Animations.tween(glow, {
-					ImageTransparency = 0.7
-				}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+				Animations.tween(innerGlow, {BackgroundTransparency = 0.9}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 			end
 		end
 	end)
@@ -120,13 +103,8 @@ function Components.createToggle(parent, text, callback)
 	button.MouseLeave:Connect(function()
 		if Animations then
 			if not state then
-				Animations.tween(button, {
-					BackgroundColor3 = Colors.Button
-				}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
-				
-				Animations.tween(glow, {
-					ImageTransparency = 1
-				}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+				Animations.tween(button, {BackgroundColor3 = Colors.Button}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+				Animations.tween(innerGlow, {BackgroundTransparency = 1}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 			end
 		end
 	end)
@@ -150,7 +128,7 @@ function Components.createToggle(parent, text, callback)
 	return button
 end
 
--- Slider (FIXED: proper sizing)
+-- Slider - FIXED: proper sizing, no overflow
 function Components.createSlider(parent, text, min, max, default, callback)
 	local Animations = getAnimations()
 	
@@ -159,6 +137,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
 	container.Size = UDim2.new(1, -20, 0, 64)
 	container.BackgroundColor3 = Colors.Button
 	container.BorderSizePixel = 0
+	container.ClipsDescendants = true
 	container.Parent = parent
 	
 	addCorner(container, 6)
@@ -193,7 +172,6 @@ function Components.createSlider(parent, text, min, max, default, callback)
 	sliderBg.BackgroundColor3 = Colors.Surface
 	sliderBg.BorderSizePixel = 0
 	sliderBg.Parent = container
-	
 	addCorner(sliderBg, 3)
 	
 	local fill = Instance.new("Frame")
@@ -202,7 +180,6 @@ function Components.createSlider(parent, text, min, max, default, callback)
 	fill.BackgroundColor3 = Colors.Active
 	fill.BorderSizePixel = 0
 	fill.Parent = sliderBg
-	
 	addCorner(fill, 3)
 	
 	local handle = Instance.new("Frame")
@@ -214,9 +191,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
 	handle.BorderSizePixel = 0
 	handle.ZIndex = 2
 	handle.Parent = sliderBg
-	
 	addCorner(handle, 7)
-	addGlow(handle)
 	
 	local dragging = false
 	local value = default
@@ -264,7 +239,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
 	return container
 end
 
--- Section Header
+-- Section Header - FIXED: no grey background, accent line only
 function Components.createSection(parent, text)
 	local section = Instance.new("Frame")
 	section.Name = "Section_" .. text
@@ -272,8 +247,18 @@ function Components.createSection(parent, text)
 	section.BackgroundTransparency = 1
 	section.Parent = parent
 	
+	local accentLine = Instance.new("Frame")
+	accentLine.Size = UDim2.new(0, 3, 0, 18)
+	accentLine.Position = UDim2.new(0, 0, 0.5, 0)
+	accentLine.AnchorPoint = Vector2.new(0, 0.5)
+	accentLine.BackgroundColor3 = Colors.Accent
+	accentLine.BorderSizePixel = 0
+	accentLine.Parent = section
+	addCorner(accentLine, 2)
+	
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 1, 0)
+	label.Size = UDim2.new(1, -16, 1, 0)
+	label.Position = UDim2.new(0, 16, 0, 0)
 	label.BackgroundTransparency = 1
 	label.Text = text:upper()
 	label.TextColor3 = Colors.Text
@@ -282,20 +267,10 @@ function Components.createSection(parent, text)
 	label.TextSize = 12
 	label.Parent = section
 	
-	local line = Instance.new("Frame")
-	line.Size = UDim2.new(0, 3, 0, 18)
-	line.Position = UDim2.new(0, 0, 0.5, 0)
-	line.AnchorPoint = Vector2.new(0, 0.5)
-	line.BackgroundColor3 = Colors.Accent
-	line.BorderSizePixel = 0
-	line.Parent = section
-	
-	addCorner(line, 2)
-	
 	return section
 end
 
--- Divider
+-- Divider - subtle line separator
 function Components.createDivider(parent)
 	local divider = Instance.new("Frame")
 	divider.Name = "Divider"
