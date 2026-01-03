@@ -1,107 +1,151 @@
 -- ui/menu.lua
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-
-local Tabs = require(script.Parent.tabs)
-local Components = require(script.Parent.components)
+-- LOADSTRING SAFE MENU BOOTSTRAP
 
 return function()
-    print("[UI] Menu init")
+	print("[UI] menu.lua init")
 
-    local player = Players.LocalPlayer
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
 
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "SimpleHub"
-    gui.ResetOnSpawn = false
-    gui.Parent = player:WaitForChild("PlayerGui")
+	local player = Players.LocalPlayer
 
-    local main = Instance.new("Frame", gui)
-    main.Size = UDim2.fromOffset(780, 520)
-    main.Position = UDim2.fromScale(0.5, 0.5)
-    main.AnchorPoint = Vector2.new(0.5, 0.5)
-    main.BackgroundColor3 = Color3.fromRGB(18,18,22)
-    main.Visible = false
-    Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
+	-- sanity check
+	assert(_G.Tabs, "Tabs not loaded")
+	assert(_G.Components, "Components not loaded")
+	assert(_G.Animations, "Animations not loaded")
 
-    -- Title
-    local title = Instance.new("TextLabel", main)
-    title.Size = UDim2.new(1,0,0,48)
-    title.Text = "SIMPLE HUB"
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 16
-    title.TextColor3 = Color3.new(1,1,1)
-    title.BackgroundTransparency = 1
+	--------------------------------------------------
+	-- GUI ROOT
+	--------------------------------------------------
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "SimpleHub"
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
 
-    -- Tab bar
-    local tabBar = Instance.new("Frame", main)
-    tabBar.Position = UDim2.new(0,0,0,48)
-    tabBar.Size = UDim2.new(1,0,0,48)
-    tabBar.BackgroundColor3 = Color3.fromRGB(20,20,26)
+	local main = Instance.new("Frame")
+	main.Size = UDim2.new(0, 780, 0, 520)
+	main.Position = UDim2.fromScale(0.5, 0.5)
+	main.AnchorPoint = Vector2.new(0.5, 0.5)
+	main.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+	main.BorderSizePixel = 0
+	main.Visible = false
+	main.Parent = gui
+	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
 
-    Instance.new("UIListLayout", tabBar).Padding = UDim.new(0,8)
+	--------------------------------------------------
+	-- TITLE
+	--------------------------------------------------
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, 0, 0, 40)
+	title.BackgroundTransparency = 1
+	title.Text = "SIMPLE HUB"
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 18
+	title.TextColor3 = Color3.new(1,1,1)
+	title.Parent = main
 
-    -- Content
-    local content = Instance.new("Frame", main)
-    content.Position = UDim2.new(0,0,0,96)
-    content.Size = UDim2.new(1,0,1,-96)
-    content.BackgroundTransparency = 1
+	--------------------------------------------------
+	-- TAB BAR
+	--------------------------------------------------
+	local tabBar = Instance.new("Frame")
+	tabBar.Position = UDim2.new(0, 0, 0, 40)
+	tabBar.Size = UDim2.new(1, 0, 0, 40)
+	tabBar.BackgroundTransparency = 1
+	tabBar.Parent = main
 
-    -- Frames
-    local movement = Instance.new("ScrollingFrame", content)
-    local combat   = Instance.new("ScrollingFrame", content)
-    local esp      = Instance.new("ScrollingFrame", content)
-    local extra    = Instance.new("ScrollingFrame", content)
+	local tabLayout = Instance.new("UIListLayout", tabBar)
+	tabLayout.FillDirection = Enum.FillDirection.Horizontal
+	tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	tabLayout.Padding = UDim.new(0, 8)
 
-    for _,f in ipairs({movement, combat, esp, extra}) do
-        f.Size = UDim2.new(1,0,1,0)
-        f.ScrollBarThickness = 6
-        f.Visible = false
-        Instance.new("UIListLayout", f).Padding = UDim.new(0,8)
-    end
+	--------------------------------------------------
+	-- CONTENT HOLDER
+	--------------------------------------------------
+	local content = Instance.new("Frame")
+	content.Position = UDim2.new(0, 0, 0, 80)
+	content.Size = UDim2.new(1, 0, 1, -80)
+	content.BackgroundTransparency = 1
+	content.Parent = main
 
-    movement.Visible = true
+	--------------------------------------------------
+	-- CONTENT FRAMES
+	--------------------------------------------------
+	local function newPage()
+		local f = Instance.new("Frame")
+		f.Size = UDim2.new(1, 0, 1, 0)
+		f.Visible = false
+		f.BackgroundTransparency = 1
+		f.Parent = content
 
-    -- Tabs
-    local tMove   = Tabs.create(tabBar, "Movement")
-    local tCombat = Tabs.create(tabBar, "Combat")
-    local tESP    = Tabs.create(tabBar, "ESP")
-    local tExtra  = Tabs.create(tabBar, "Extra")
+		local pad = Instance.new("UIPadding", f)
+		pad.PaddingTop = UDim.new(0, 10)
+		pad.PaddingLeft = UDim.new(0, 20)
+		pad.PaddingRight = UDim.new(0, 20)
 
-    Tabs.activate(tMove)
+		local list = Instance.new("UIListLayout", f)
+		list.Padding = UDim.new(0, 8)
 
-    tMove.MouseButton1Click:Connect(function()
-        Tabs.activate(tMove)
-        movement.Visible, combat.Visible, esp.Visible, extra.Visible = true,false,false,false
-    end)
+		return f
+	end
 
-    tCombat.MouseButton1Click:Connect(function()
-        Tabs.activate(tCombat)
-        movement.Visible, combat.Visible, esp.Visible, extra.Visible = false,true,false,false
-    end)
+	local Pages = {
+		Movement = newPage(),
+		ESP      = newPage(),
+		Combat   = newPage(),
+		Extra    = newPage()
+	}
 
-    tESP.MouseButton1Click:Connect(function()
-        Tabs.activate(tESP)
-        movement.Visible, combat.Visible, esp.Visible, extra.Visible = false,false,true,false
-    end)
+	--------------------------------------------------
+	-- TABS
+	--------------------------------------------------
+	local function activate(page)
+		for _,p in pairs(Pages) do
+			p.Visible = false
+		end
+		page.Visible = true
+	end
 
-    tExtra.MouseButton1Click:Connect(function()
-        Tabs.activate(tExtra)
-        movement.Visible, combat.Visible, esp.Visible, extra.Visible = false,false,false,true
-    end)
+	local moveTab = _G.Tabs.create(tabBar, "Movement")
+	moveTab.MouseButton1Click:Connect(function()
+		_G.Tabs.activate(moveTab)
+		activate(Pages.Movement)
+	end)
 
-    -- KEY TOGGLE
-    UIS.InputBegan:Connect(function(i,gp)
-        if gp then return end
-        if i.KeyCode == Enum.KeyCode.M then
-            main.Visible = not main.Visible
-        end
-    end)
+	local espTab = _G.Tabs.create(tabBar, "ESP")
+	espTab.MouseButton1Click:Connect(function()
+		_G.Tabs.activate(espTab)
+		activate(Pages.ESP)
+	end)
 
-    -- EXPOSE FRAMES FOR FEATURES
-    return {
-        Movement = movement,
-        Combat = combat,
-        ESP = esp,
-        Extra = extra
-    }
+	local combatTab = _G.Tabs.create(tabBar, "Combat")
+	combatTab.MouseButton1Click:Connect(function()
+		_G.Tabs.activate(combatTab)
+		activate(Pages.Combat)
+	end)
+
+	local extraTab = _G.Tabs.create(tabBar, "Extra")
+	extraTab.MouseButton1Click:Connect(function()
+		_G.Tabs.activate(extraTab)
+		activate(Pages.Extra)
+	end)
+
+	-- default tab
+	_G.Tabs.activate(moveTab)
+	activate(Pages.Movement)
+
+	--------------------------------------------------
+	-- TOGGLE KEY
+	--------------------------------------------------
+	UIS.InputBegan:Connect(function(i, gp)
+		if gp then return end
+		if i.KeyCode == Enum.KeyCode.M then
+			main.Visible = not main.Visible
+			print("[UI] Visible:", main.Visible)
+		end
+	end)
+
+	--------------------------------------------------
+	-- RETURN PAGES FOR FEATURES
+	--------------------------------------------------
+	return Pages
 end
