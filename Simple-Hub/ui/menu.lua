@@ -1,5 +1,5 @@
 -- ui/menu.lua
--- Premium main menu interface (FIXED: backgrounds, glow clipping)
+-- FIXED: Dark backgrounds, contained glow, no overflow
 
 return function(deps)
 	local Tabs = deps.Tabs
@@ -17,7 +17,6 @@ return function(deps)
 	local UIS = game:GetService("UserInputService")
 	local player = Players.LocalPlayer
 	
-	-- Colors
 	local Colors = {
 		Background = Color3.fromRGB(12, 12, 16),
 		Panel = Color3.fromRGB(18, 18, 24),
@@ -27,14 +26,12 @@ return function(deps)
 		Border = Color3.fromRGB(40, 40, 52)
 	}
 	
-	-- Create ScreenGui
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "SimpleHub"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
 	
-	-- Main container (FIXED: ClipsDescendants to contain glow)
 	local main = Instance.new("Frame")
 	main.Name = "Main"
 	main.Size = UDim2.new(0, 820, 0, 540)
@@ -57,7 +54,6 @@ return function(deps)
 	mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	mainStroke.Parent = main
 	
-	-- Glow effect (CONTAINED within main frame)
 	local mainGlow = Instance.new("ImageLabel")
 	mainGlow.Name = "Glow"
 	mainGlow.Size = UDim2.new(1, 30, 1, 30)
@@ -66,13 +62,12 @@ return function(deps)
 	mainGlow.BackgroundTransparency = 1
 	mainGlow.Image = "rbxassetid://5028857472"
 	mainGlow.ImageColor3 = Colors.Accent
-	mainGlow.ImageTransparency = 0.8
+	mainGlow.ImageTransparency = 0.85
 	mainGlow.ScaleType = Enum.ScaleType.Slice
 	mainGlow.SliceCenter = Rect.new(24, 24, 276, 276)
 	mainGlow.ZIndex = 0
 	mainGlow.Parent = main
 	
-	-- Header
 	local header = Instance.new("Frame")
 	header.Name = "Header"
 	header.Size = UDim2.new(1, 0, 0, 60)
@@ -157,7 +152,6 @@ return function(deps)
 		Animations.tween(closeBtn, {BackgroundColor3 = Color3.fromRGB(45, 45, 58)}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 	end)
 	
-	-- Tab bar (FIXED: solid background)
 	local tabBar = Instance.new("Frame")
 	tabBar.Name = "TabBar"
 	tabBar.Size = UDim2.new(1, 0, 0, 68)
@@ -169,17 +163,16 @@ return function(deps)
 	
 	Tabs.setupTabBar(tabBar)
 	
-	-- Content container (FIXED: solid background)
 	local contentContainer = Instance.new("Frame")
 	contentContainer.Name = "ContentContainer"
 	contentContainer.Size = UDim2.new(1, -32, 1, -160)
 	contentContainer.Position = UDim2.new(0, 16, 0, 144)
 	contentContainer.BackgroundColor3 = Colors.Background
 	contentContainer.BorderSizePixel = 0
+	contentContainer.ClipsDescendants = true
 	contentContainer.ZIndex = 1
 	contentContainer.Parent = main
 	
-	-- Create tab content frames
 	local function createTabContent(name)
 		local scroll = Instance.new("ScrollingFrame")
 		scroll.Name = name .. "Content"
@@ -213,21 +206,16 @@ return function(deps)
 	local espContent = createTabContent("ESP")
 	local extraContent = createTabContent("Extra")
 	
-	-- Create tabs
 	local movementTab = Tabs.create(tabBar, "Movement", "⚡")
 	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
 	local espTab = Tabs.create(tabBar, "ESP", "👁")
 	local extraTab = Tabs.create(tabBar, "Extra", "⚙")
 	
-	-- Connect tabs to content
 	Tabs.connectTab(movementTab, movementContent)
 	Tabs.connectTab(combatTab, combatContent)
 	Tabs.connectTab(espTab, espContent)
 	Tabs.connectTab(extraTab, extraContent)
 	
-	-- ============================================
-	-- MOVEMENT TAB
-	-- ============================================
 	Components.createSection(movementContent, "Basic Movement")
 	Components.createToggle(movementContent, "Fly", Controller.toggleFly)
 	Components.createToggle(movementContent, "Noclip", Controller.toggleNoclip)
@@ -240,9 +228,6 @@ return function(deps)
 	Components.createToggle(movementContent, "Dash (Press F)", Controller.toggleDash)
 	Components.createSlider(movementContent, "Air Control", 0, 10, 0, Controller.setAirControl)
 	
-	-- ============================================
-	-- COMBAT TAB
-	-- ============================================
 	Components.createSection(combatContent, "Aim Assist")
 	Components.createToggle(combatContent, "Aim Assist (Hold RMB)", Controller.toggleAimAssist)
 	Components.createSlider(combatContent, "Smoothness", 0, 100, 15, Controller.setAimSmoothness)
@@ -254,9 +239,6 @@ return function(deps)
 	Components.createToggle(combatContent, "Silent Aim", Controller.toggleSilentAim)
 	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, Controller.setHitChance)
 	
-	-- ============================================
-	-- ESP TAB
-	-- ============================================
 	Components.createSection(espContent, "Player ESP")
 	Components.createToggle(espContent, "Name ESP", Controller.toggleNameESP)
 	Components.createToggle(espContent, "Box ESP", Controller.toggleBoxESP)
@@ -268,9 +250,6 @@ return function(deps)
 	Components.createSection(espContent, "Visuals")
 	Components.createToggle(espContent, "Chams", Controller.toggleChams)
 	
-	-- ============================================
-	-- EXTRA TAB
-	-- ============================================
 	Components.createSection(extraContent, "Visual Tweaks")
 	Components.createToggle(extraContent, "Fullbright", Controller.toggleFullbright)
 	Components.createToggle(extraContent, "Remove Grass", Controller.toggleRemoveGrass)
@@ -285,10 +264,8 @@ return function(deps)
 	Components.createToggle(extraContent, "Fake Lag", Controller.toggleFakeLag)
 	Components.createToggle(extraContent, "Fake Death", Controller.toggleFakeDeath)
 	
-	-- Activate first tab
 	Tabs.activate(movementTab, movementContent)
 	
-	-- Toggle keybind (M)
 	UIS.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
 		if input.KeyCode == Enum.KeyCode.M then
@@ -303,7 +280,6 @@ return function(deps)
 		end
 	end)
 	
-	-- Dragging functionality
 	local dragging = false
 	local dragInput, dragStart, startPos
 	
