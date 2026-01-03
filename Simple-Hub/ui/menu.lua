@@ -4,7 +4,13 @@ return function(deps)
 
     local Players = game:GetService("Players")
     local UIS = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
+
     local player = Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hum = char:WaitForChild("Humanoid")
+    local root = char:WaitForChild("HumanoidRootPart")
+    local cam = workspace.CurrentCamera
 
     local gui = Instance.new("ScreenGui", player.PlayerGui)
     gui.ResetOnSpawn = false
@@ -30,12 +36,94 @@ return function(deps)
     pages.Size = UDim2.new(1,0,1,-50)
     pages.BackgroundTransparency = 1
 
-    -- Tabs
-    local movement = Tabs.create(tabBar, pages, "Movement")
-    local esp = Tabs.create(tabBar, pages, "ESP")
-    local combat = Tabs.create(tabBar, pages, "Combat")
-    local visuals = Tabs.create(tabBar, pages, "Visuals")
+    -- TABS
+    local Movement = Tabs.create(tabBar, pages, "Movement")
+    local Combat   = Tabs.create(tabBar, pages, "Combat")
+    local ESP      = Tabs.create(tabBar, pages, "ESP")
+    local Extra    = Tabs.create(tabBar, pages, "Extra")
 
-    movement.page.Visible = true
-    Tabs.active = movement
+    Movement.page.Visible = true
+    Tabs.active = Movement
+
+    ----------------------------------------------------------------
+    -- MOVEMENT
+    ----------------------------------------------------------------
+    Components.Toggle(Movement.page, "Fly", false, function(v)
+        Fly.enabled = v
+        if not v then Fly.disable() else Fly.enable(root, cam) end
+    end)
+
+    Components.Toggle(Movement.page, "Noclip", false, function(v)
+        Noclip.enabled = v
+    end)
+
+    Components.Toggle(Movement.page, "Bunny Hop", false, function(v)
+        BunnyHop.enabled = v
+    end)
+
+    Components.Toggle(Movement.page, "Dash", false, function(v)
+        Dash.enabled = v
+    end)
+
+    ----------------------------------------------------------------
+    -- COMBAT
+    ----------------------------------------------------------------
+    Components.Toggle(Combat.page, "Aim Assist", false, function(v)
+        AimAssist.enabled = v
+    end)
+
+    Components.Toggle(Combat.page, "Silent Aim", false, function(v)
+        SilentAim.enabled = v
+    end)
+
+    Components.Toggle(Combat.page, "FOV Circle", false, function(v)
+        FOV.enabled = v
+        if v then FOV.create() end
+    end)
+
+    ----------------------------------------------------------------
+    -- ESP
+    ----------------------------------------------------------------
+    Components.Toggle(ESP.page, "Name ESP", false, function(v)
+        if v then NameESP.enable(player, gui) else NameESP.disable() end
+    end)
+
+    Components.Toggle(ESP.page, "Box ESP", false, function(v)
+        if v then BoxESP.enable(player, gui) else BoxESP.disable() end
+    end)
+
+    Components.Toggle(ESP.page, "Health ESP", false, function(v)
+        if v then HealthESP.enable(player, gui) else HealthESP.disable() end
+    end)
+
+    Components.Toggle(ESP.page, "Distance ESP", false, function(v)
+        if v then DistanceESP.enable(player, gui, root) else DistanceESP.disable() end
+    end)
+
+    Components.Toggle(ESP.page, "Chams", false, function(v)
+        if v then Chams.enable(player) else Chams.disable() end
+    end)
+
+    ----------------------------------------------------------------
+    -- EXTRA
+    ----------------------------------------------------------------
+    Components.Toggle(Extra.page, "Invisibility", false, function(v)
+        Invisibility.enabled = v
+    end)
+
+    Components.Toggle(Extra.page, "Anti AFK", false, function(v)
+        AntiAFK.enabled = v
+    end)
+
+    Components.Toggle(Extra.page, "Spinbot", false, function(v)
+        SpinBot.enabled = v
+    end)
+
+    Components.Toggle(Extra.page, "Fake Lag", false, function(v)
+        FakeLag.enabled = v
+    end)
+
+    Components.Toggle(Extra.page, "Walk on Water", false, function(v)
+        WalkOnWater.enabled = v
+    end)
 end
