@@ -17,6 +17,8 @@ load("utils/raycast.lua")
 load("ui/animations.lua")
 load("ui/components.lua")
 load("ui/tabs.lua")
+load("ui/menu.lua") -- ✅ REQUIRED
+
 
 -- settings
 load("settings/ui_settings.lua")
