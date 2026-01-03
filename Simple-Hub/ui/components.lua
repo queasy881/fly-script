@@ -1,70 +1,152 @@
--- ui/animations.lua
-local TweenService = game:GetService("TweenService")
+-- utils/helpers.lua
+-- General helpers: player/character helpers, safe-finds, debounce, table utils.
 
-local Animations = {}
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
-function Animations.tween(obj, props, time, style, direction)
-	if not obj then return end
-	local tween = TweenService:Create(
-		obj,
-		TweenInfo.new(time or 0.25, style or Enum.EasingStyle.Quint, direction or Enum.EasingDirection.Out),
-		props
-	)
-	tween:Play()
-	return tween
+local Helpers = {}
+
+-- ========================
+-- PLAYER / CHARACTER
+-- ========================
+
+function Helpers.getLocalPlayer()
+	return Players.LocalPlayer
 end
 
-function Animations.toggle(button, enabled)
-	if enabled then
-		Animations.tween(button, {
-			BackgroundColor3 = Color3.fromRGB(70,140,220),
-			TextColor3 = Color3.fromRGB(255,255,255)
-		})
-	else
-		Animations.tween(button, {
-			BackgroundColor3 = Color3.fromRGB(26,26,34),
-			TextColor3 = Color3.fromRGB(200,200,220)
-		})
+function Helpers.waitForCharacter(player)
+	player = player or Players.LocalPlayer
+	if not player then return nil end
+
+	local char = player.Character
+	if char and char.Parent then
+		return char
+	end
+
+	return player.CharacterAdded:Wait()
+end
+
+function Helpers.getHumanoid(player)
+	local char = Helpers.waitForCharacter(player)
+	if not char then return nil end
+	return char:FindFirstChildOfClass("Humanoid")
+end
+
+function Helpers.getRoot(player)
+	local char = Helpers.waitForCharacter(player)
+	if not char then return nil end
+	return char:FindFirstChild("HumanoidRootPart")
+		or char:WaitForChild("HumanoidRootPart")
+end
+
+function Helpers.isAlive(player)
+	local humanoid = Helpers.getHumanoid(player)
+	return humanoid and humanoid.Health > 0
+end
+
+function Helpers.getOtherPlayers()
+	local localP = Players.LocalPlayer
+	local out = {}
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= localP then
+			table.insert(out, p)
+		end
+	end
+
+	return out
+end
+
+function Helpers.forEachOtherPlayer(cb)
+	for _, p in ipairs(Helpers.getOtherPlayers()) do
+		task.spawn(cb, p)
 	end
 end
 
-function Animations.hover(button, hoverProps, normalProps)
-	button.MouseEnter:Connect(function()
-		Animations.tween(button, hoverProps, 0.2)
-	end)
-	button.MouseLeave:Connect(function()
-		Animations.tween(button, normalProps, 0.2)
-	end)
+-- ========================
+-- SAFE FINDS / UTILS
+-- ========================
+
+function Helpers.safeFindFirstChild(parent, name, timeout)
+	if not parent then return nil end
+
+	local found = parent:FindFirstChild(name)
+	if found then return found end
+
+	if timeout and timeout > 0 then
+		local start = tick()
+		repeat
+			found = parent:FindFirstChild(name)
+			if found then return found end
+			RunService.Heartbeat:Wait()
+		until tick() - start >= timeout
+	end
+
+	return nil
 end
 
-function Animations.press(button, pressedProps, normalProps)
-	button.MouseButton1Down:Connect(function()
-		Animations.tween(button, pressedProps, 0.1)
-	end)
-	button.MouseButton1Up:Connect(function()
-		Animations.tween(button, normalProps, 0.1)
-	end)
+function Helpers.debounceWrap(fn, delay)
+	delay = delay or 0.2
+	local last = 0
+
+	return function(...)
+		local now = tick()
+		if now - last >= delay then
+			last = now
+			return fn(...)
+		end
+	end
 end
 
-function Animations.pulse(button)
-	local pulse = Instance.new("Frame")
-	pulse.Size = UDim2.fromScale(1,1)
-	pulse.BackgroundColor3 = Color3.fromRGB(70,140,220)
-	pulse.BackgroundTransparency = 0.7
-	pulse.BorderSizePixel = 0
-	pulse.ZIndex = button.ZIndex - 1
-	pulse.Parent = button
-
-	local corner = Instance.new("UICorner", pulse)
-	corner.CornerRadius = UDim.new(0,8)
-
-	Animations.tween(pulse, {
-		BackgroundTransparency = 1,
-		Size = UDim2.fromScale(1.2,1.2)
-	}, 0.5)
-
-	game:GetService("Debris"):AddItem(pulse, 0.5)
+function Helpers.shallowCopy(t)
+	if type(t) ~= "table" then return t end
+	local out = {}
+	for k, v in pairs(t) do
+		out[k] = v
+	end
+	return out
 end
 
-return Animations
+function Helpers.mergeTables(t1, t2)
+	if type(t1) ~= "table" or type(t2) ~= "table" then
+		return t1
+	end
 
+	for k, v in pairs(t2) do
+		t1[k] = v
+	end
+
+	return t1
+end
+
+function Helpers.safeSpawn(fn, ...)
+	task.spawn(function(...)
+		local ok, err = pcall(fn, ...)
+		if not ok then
+			warn("Helpers.safeSpawn error:", err)
+		end
+	end, ...)
+end
+
+-- ========================
+-- REMOTE REQUIRE (LOADSTRING)
+-- ========================
+
+function Helpers.requireRemote(path)
+	local url =
+		"https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
+		.. path
+		.. "?nocache="
+		.. tostring(os.clock())
+
+	local source = game:HttpGet(url)
+	local fn = loadstring(source)
+
+	if not fn then
+		error("Failed to load remote module: " .. path)
+	end
+
+	return fn()
+end
+
+return Helpers
