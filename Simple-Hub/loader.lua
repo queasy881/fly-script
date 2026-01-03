@@ -1,11 +1,26 @@
--- Simple Hub Loader (ONLY entry point)
+-- loader.lua (CORRECT, SAFE, FINAL)
 
-local url = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/main.client.lua"
+local BASE =
+    "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
 
-local source = game:HttpGet(url)
-assert(type(source) == "string", "Failed to fetch main.client.lua")
+local Loader = {}
+local cache = {}
 
-local fn, err = loadstring(source)
-assert(fn, err)
+function Loader.load(path)
+    if cache[path] then
+        return cache[path]
+    end
 
-return fn()
+    print("[LOADING]", path)
+
+    local src = game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
+    local fn, err = loadstring(src)
+
+    assert(fn, "Loadstring failed for " .. path .. ": " .. tostring(err))
+
+    local result = fn(Loader)
+    cache[path] = result
+    return result
+end
+
+return Loader
