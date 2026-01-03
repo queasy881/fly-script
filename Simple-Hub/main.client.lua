@@ -3,8 +3,9 @@
 local BASE = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
 
 local function load(path)
-	local code = game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
-	return loadstring(code)()
+	print("[LOADING]", path)
+	local src = game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
+	return loadstring(src)()
 end
 
 -- utils (must load first)
