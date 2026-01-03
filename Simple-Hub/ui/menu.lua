@@ -2,9 +2,35 @@ return function(deps)
     local Tabs = deps.Tabs
     local Components = deps.Components
 
+    -- modules
+    local Fly = deps.Fly
+    local WalkSpeed = deps.WalkSpeed
+    local JumpPower = deps.JumpPower
+    local Noclip = deps.Noclip
+    local BunnyHop = deps.BunnyHop
+    local Dash = deps.Dash
+
+    local AimAssist = deps.AimAssist
+    local SilentAim = deps.SilentAim
+    local FOV = deps.FOV
+
+    local NameESP = deps.NameESP
+    local BoxESP = deps.BoxESP
+    local HealthESP = deps.HealthESP
+    local DistanceESP = deps.DistanceESP
+    local Chams = deps.Chams
+
+    local Invisibility = deps.Invisibility
+    local AntiAFK = deps.AntiAFK
+    local SpinBot = deps.SpinBot
+    local FakeLag = deps.FakeLag
+    local WalkOnWater = deps.WalkOnWater
+
+    ----------------------------------------------------------------
+    -- SERVICES / PLAYER
+    ----------------------------------------------------------------
     local Players = game:GetService("Players")
     local UIS = game:GetService("UserInputService")
-    local RunService = game:GetService("RunService")
 
     local player = Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
@@ -12,10 +38,13 @@ return function(deps)
     local root = character:WaitForChild("HumanoidRootPart")
     local camera = workspace.CurrentCamera
 
+    ----------------------------------------------------------------
     -- GUI
-    local gui = Instance.new("ScreenGui", player.PlayerGui)
+    ----------------------------------------------------------------
+    local gui = Instance.new("ScreenGui")
     gui.Name = "SimpleHub"
     gui.ResetOnSpawn = false
+    gui.Parent = player:WaitForChild("PlayerGui")
 
     local main = Instance.new("Frame", gui)
     main.Size = UDim2.new(0,780,0,520)
@@ -39,7 +68,9 @@ return function(deps)
     pages.Size = UDim2.new(1,0,1,-50)
     pages.BackgroundTransparency = 1
 
+    ----------------------------------------------------------------
     -- TABS
+    ----------------------------------------------------------------
     local Movement = Tabs.create(tabBar, pages, "Movement")
     local Combat   = Tabs.create(tabBar, pages, "Combat")
     local ESP      = Tabs.create(tabBar, pages, "ESP")
@@ -49,7 +80,7 @@ return function(deps)
     Tabs.active = Movement
 
     ----------------------------------------------------------------
-    -- MOVEMENT TAB
+    -- MOVEMENT
     ----------------------------------------------------------------
     Components.Toggle(Movement.page, "Fly", false, function(v)
         Fly.enabled = v
@@ -85,7 +116,7 @@ return function(deps)
     end)
 
     ----------------------------------------------------------------
-    -- COMBAT TAB
+    -- COMBAT
     ----------------------------------------------------------------
     Components.Toggle(Combat.page, "Aim Assist", false, function(v)
         AimAssist.enabled = v
@@ -113,7 +144,7 @@ return function(deps)
     end)
 
     ----------------------------------------------------------------
-    -- ESP TAB
+    -- ESP
     ----------------------------------------------------------------
     Components.Toggle(ESP.page, "Name ESP", false, function(v)
         if v then NameESP.enable(player, gui) else NameESP.disable() end
@@ -136,7 +167,7 @@ return function(deps)
     end)
 
     ----------------------------------------------------------------
-    -- EXTRA TAB
+    -- EXTRA
     ----------------------------------------------------------------
     Components.Toggle(Extra.page, "Invisibility", false, function(v)
         Invisibility.enabled = v
