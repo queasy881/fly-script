@@ -663,11 +663,9 @@ return function(deps)
 	-- ACTIVATE FIRST TAB
 	-- ============================================
 	Tabs.activate(movementTab, movementContent)
+
 	
-	-- ============================================
-	-- KEYBINDS
-	-- ============================================
-	-- ============================================
+-- ============================================
 -- KEYBINDS
 -- ============================================
 UIS.InputBegan:Connect(function(input, gameProcessed)
@@ -702,6 +700,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
 		end
 	end
 end)
+
 
 	
 	-- ============================================
