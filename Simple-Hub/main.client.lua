@@ -17,7 +17,9 @@ load("utils/raycast.lua")
 load("ui/animations.lua")
 load("ui/components.lua")
 load("ui/tabs.lua")
-load("ui/menu.lua") -- ✅ REQUIRED
+local startMenu = load("ui/menu.lua")
+startMenu()
+
 
 
 -- settings
