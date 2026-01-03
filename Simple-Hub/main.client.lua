@@ -8,6 +8,12 @@ local function load(path)
 	return loadstring(src)()
 end
 
+
+
+
+
+local startMenu = load("ui/menu.lua")
+startMenu()
 -- utils (must load first)
 load("utils/helpers.lua")
 load("utils/math.lua")
@@ -17,8 +23,7 @@ load("utils/raycast.lua")
 load("ui/animations.lua")
 load("ui/components.lua")
 load("ui/tabs.lua")
-local startMenu = load("ui/menu.lua")
-startMenu()
+
 
 
 
