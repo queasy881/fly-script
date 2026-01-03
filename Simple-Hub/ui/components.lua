@@ -1,119 +1,299 @@
-return function(Anim)
-    local Components = {}
+-- ui/components.lua
+-- Premium component library
 
-    local C = {
-        bg     = Color3.fromRGB(15,17,21),
-        panel  = Color3.fromRGB(21,25,35),
-        off    = Color3.fromRGB(30,35,48),
-        on     = Color3.fromRGB(59,130,246),
-        hover  = Color3.fromRGB(42,49,66),
-        text   = Color3.fromRGB(229,231,235),
-        muted  = Color3.fromRGB(156,163,175)
-    }
+local Components = {}
+local Animations = _G.Animations
 
-    ----------------------------------------------------------------
-    -- TOGGLE
-    ----------------------------------------------------------------
-    function Components.Toggle(parent, text, default, callback)
-        local btn = Instance.new("TextButton", parent)
-        btn.Size = UDim2.new(1, -12, 0, 42)
-        btn.Active = true
-        btn.AutoButtonColor = false
-        btn.BorderSizePixel = 0
-        btn.Font = Enum.Font.GothamSemibold
-        btn.TextSize = 14
-        btn.TextColor3 = C.text
+assert(Animations, "[Components] Animations must be loaded first")
 
-        local state = default
-        btn.BackgroundColor3 = state and C.on or C.off
-        btn.Text = text .. " — " .. (state and "ON" or "OFF")
+-- Color palette
+local Colors = {
+	Background = Color3.fromRGB(12, 12, 16),
+	Panel = Color3.fromRGB(18, 18, 24),
+	Surface = Color3.fromRGB(24, 24, 32),
+	Button = Color3.fromRGB(35, 35, 45),
+	ButtonHover = Color3.fromRGB(45, 45, 58),
+	Active = Color3.fromRGB(60, 120, 255),
+	ActiveGlow = Color3.fromRGB(100, 200, 255),
+	Text = Color3.fromRGB(220, 220, 240),
+	TextDim = Color3.fromRGB(140, 140, 160),
+	TextActive = Color3.fromRGB(255, 255, 255),
+	Border = Color3.fromRGB(40, 40, 52),
+	Accent = Color3.fromRGB(88, 166, 255)
+}
 
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
-
-        btn.MouseEnter:Connect(function()
-            Anim.tween(btn, 0.15, {
-                BackgroundColor3 = state and C.on or C.hover,
-                Size = UDim2.new(1, -8, 0, 44)
-            })
-        end)
-
-        btn.MouseLeave:Connect(function()
-            Anim.tween(btn, 0.15, {
-                BackgroundColor3 = state and C.on or C.off,
-                Size = UDim2.new(1, -12, 0, 42)
-            })
-        end)
-
-        btn.MouseButton1Click:Connect(function()
-            state = not state
-            btn.Text = text .. " — " .. (state and "ON" or "OFF")
-            Anim.tween(btn, 0.12, {
-                BackgroundColor3 = state and C.on or C.off,
-                Size = UDim2.new(1, -10, 0, 40)
-            })
-            callback(state)
-        end)
-    end
-
-    ----------------------------------------------------------------
-    -- SLIDER
-    ----------------------------------------------------------------
-    function Components.Slider(parent, text, min, max, value, callback)
-        local frame = Instance.new("Frame", parent)
-        frame.Size = UDim2.new(1, -12, 0, 52)
-        frame.BackgroundTransparency = 1
-
-        local label = Instance.new("TextLabel", frame)
-        label.Size = UDim2.new(1,0,0,20)
-        label.BackgroundTransparency = 1
-        label.Font = Enum.Font.GothamMedium
-        label.TextSize = 13
-        label.TextColor3 = C.muted
-        label.TextXAlignment = Enum.TextXAlignment.Left  -- ✅ FIX
-        label.Text = text .. ": " .. value
-
-        local bar = Instance.new("Frame", frame)
-        bar.Position = UDim2.new(0,0,0,28)
-        bar.Size = UDim2.new(1,0,0,10)
-        bar.BackgroundColor3 = C.off
-        bar.BorderSizePixel = 0
-        Instance.new("UICorner", bar).CornerRadius = UDim.new(1,0)
-
-        local fill = Instance.new("Frame", bar)
-        fill.Size = UDim2.fromScale((value-min)/(max-min),1)
-        fill.BackgroundColor3 = C.on
-        Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
-
-        local UIS = game:GetService("UserInputService")
-        local dragging = false
-
-        local function set(x)
-            local s = math.clamp((x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
-            local v = math.floor(min + (max-min)*s)
-            label.Text = text .. ": " .. v
-            Anim.tween(fill, 0.1, {Size = UDim2.fromScale(s,1)})
-            callback(v)
-        end
-
-        bar.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-                set(i.Position.X)
-            end
-        end)
-
-        UIS.InputChanged:Connect(function(i)
-            if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-                set(i.Position.X)
-            end
-        end)
-
-        UIS.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
-            end
-        end)
-    end
-
-    return Components
+-- Utility: Create rounded corner
+local function addCorner(obj, radius)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius or 8)
+	corner.Parent = obj
+	return corner
 end
+
+-- Utility: Create glow effect
+local function addGlow(obj)
+	local glow = Instance.new("ImageLabel")
+	glow.Name = "Glow"
+	glow.Size = UDim2.new(1, 20, 1, 20)
+	glow.Position = UDim2.new(0.5, 0, 0.5, 0)
+	glow.AnchorPoint = Vector2.new(0.5, 0.5)
+	glow.BackgroundTransparency = 1
+	glow.Image = "rbxassetid://5028857472"
+	glow.ImageColor3 = Colors.Active
+	glow.ImageTransparency = 1
+	glow.ScaleType = Enum.ScaleType.Slice
+	glow.SliceCenter = Rect.new(24, 24, 276, 276)
+	glow.ZIndex = obj.ZIndex - 1
+	glow.Parent = obj
+	return glow
+end
+
+-- Utility: Create stroke
+local function addStroke(obj, color, thickness)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color or Colors.Border
+	stroke.Thickness = thickness or 1
+	stroke.Transparency = 0.5
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Parent = obj
+	return stroke
+end
+
+-- Toggle Button
+function Components.createToggle(parent, text, callback)
+	local button = Instance.new("TextButton")
+	button.Name = "Toggle_" .. text
+	button.Size = UDim2.new(1, -20, 0, 38)
+	button.BackgroundColor3 = Colors.Button
+	button.BorderSizePixel = 0
+	button.AutoButtonColor = false
+	button.Text = ""
+	button.Parent = parent
+	
+	addCorner(button, 6)
+	addStroke(button)
+	local glow = addGlow(button)
+	
+	local label = Instance.new("TextLabel")
+	label.Name = "Label"
+	label.Size = UDim2.new(1, -16, 1, 0)
+	label.Position = UDim2.new(0, 16, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Colors.TextDim
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.GothamMedium
+	label.TextSize = 14
+	label.Parent = button
+	
+	local indicator = Instance.new("Frame")
+	indicator.Name = "Indicator"
+	indicator.Size = UDim2.new(0, 0, 0, 3)
+	indicator.Position = UDim2.new(0, 0, 1, -3)
+	indicator.BackgroundColor3 = Colors.ActiveGlow
+	indicator.BorderSizePixel = 0
+	indicator.Parent = button
+	
+	addCorner(indicator, 2)
+	
+	local state = false
+	
+	button.MouseEnter:Connect(function()
+		Animations.buttonHover(button, true)
+	end)
+	
+	button.MouseLeave:Connect(function()
+		Animations.buttonHover(button, false)
+	end)
+	
+	button.MouseButton1Click:Connect(function()
+		Animations.buttonClick(button)
+		state = not state
+		
+		if state then
+			Animations.toggleOn(button)
+		else
+			Animations.toggleOff(button)
+		end
+		
+		if callback then
+			task.spawn(callback, state)
+		end
+	end)
+	
+	return button
+end
+
+-- Slider
+function Components.createSlider(parent, text, min, max, default, callback)
+	local container = Instance.new("Frame")
+	container.Name = "Slider_" .. text
+	container.Size = UDim2.new(1, -20, 0, 60)
+	container.BackgroundColor3 = Colors.Button
+	container.BorderSizePixel = 0
+	container.Parent = parent
+	
+	addCorner(container, 6)
+	addStroke(container)
+	
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -16, 0, 20)
+	label.Position = UDim2.new(0, 16, 0, 8)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Colors.TextDim
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.GothamMedium
+	label.TextSize = 13
+	label.Parent = container
+	
+	local valueLabel = Instance.new("TextLabel")
+	valueLabel.Size = UDim2.new(0, 60, 0, 20)
+	valueLabel.Position = UDim2.new(1, -76, 0, 8)
+	valueLabel.BackgroundTransparency = 1
+	valueLabel.Text = tostring(default)
+	valueLabel.TextColor3 = Colors.Active
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+	valueLabel.Font = Enum.Font.GothamBold
+	valueLabel.TextSize = 13
+	valueLabel.Parent = container
+	
+	local sliderBg = Instance.new("Frame")
+	sliderBg.Name = "SliderBg"
+	sliderBg.Size = UDim2.new(1, -32, 0, 6)
+	sliderBg.Position = UDim2.new(0, 16, 1, -18)
+	sliderBg.BackgroundColor3 = Colors.Surface
+	sliderBg.BorderSizePixel = 0
+	sliderBg.Parent = container
+	
+	addCorner(sliderBg, 3)
+	
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+	fill.BackgroundColor3 = Colors.Active
+	fill.BorderSizePixel = 0
+	fill.Parent = sliderBg
+	
+	addCorner(fill, 3)
+	
+	local handle = Instance.new("Frame")
+	handle.Name = "Handle"
+	handle.Size = UDim2.new(0, 14, 0, 14)
+	handle.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
+	handle.AnchorPoint = Vector2.new(0.5, 0.5)
+	handle.BackgroundColor3 = Colors.ActiveGlow
+	handle.BorderSizePixel = 0
+	handle.ZIndex = 2
+	handle.Parent = sliderBg
+	
+	addCorner(handle, 7)
+	addGlow(handle)
+	
+	local dragging = false
+	local value = default
+	
+	local function updateValue(input)
+		local pos = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+		value = math.floor(min + (max - min) * pos)
+		valueLabel.Text = tostring(value)
+		
+		Animations.updateSlider(sliderBg, pos)
+		
+		if callback then
+			callback(value)
+		end
+	end
+	
+	handle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			updateValue(input)
+		end
+	end)
+	
+	handle.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+	
+	game:GetService("UserInputService").InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			updateValue(input)
+		end
+	end)
+	
+	sliderBg.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			updateValue(input)
+		end
+	end)
+	
+	return container
+end
+
+-- Section Header
+function Components.createSection(parent, text)
+	local section = Instance.new("Frame")
+	section.Name = "Section_" .. text
+	section.Size = UDim2.new(1, -20, 0, 32)
+	section.BackgroundTransparency = 1
+	section.Parent = parent
+	
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Text = text:upper()
+	label.TextColor3 = Colors.Text
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 12
+	label.Parent = section
+	
+	local line = Instance.new("Frame")
+	line.Size = UDim2.new(0, 3, 0, 16)
+	line.Position = UDim2.new(0, 0, 0.5, 0)
+	line.AnchorPoint = Vector2.new(0, 0.5)
+	line.BackgroundColor3 = Colors.Accent
+	line.BorderSizePixel = 0
+	line.Parent = section
+	
+	addCorner(line, 2)
+	
+	return section
+end
+
+-- Divider
+function Components.createDivider(parent)
+	local divider = Instance.new("Frame")
+	divider.Name = "Divider"
+	divider.Size = UDim2.new(1, -40, 0, 1)
+	divider.BackgroundColor3 = Colors.Border
+	divider.BorderSizePixel = 0
+	divider.BackgroundTransparency = 0.5
+	divider.Parent = parent
+	
+	return divider
+end
+
+-- Info Label
+function Components.createLabel(parent, text)
+	local label = Instance.new("TextLabel")
+	label.Name = "InfoLabel"
+	label.Size = UDim2.new(1, -20, 0, 28)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Colors.TextDim
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 12
+	label.TextWrapped = true
+	label.Parent = parent
+	
+	return label
+end
+
+_G.Components = Components
+return Components
