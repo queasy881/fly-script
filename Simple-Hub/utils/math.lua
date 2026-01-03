@@ -1,118 +1,52 @@
--- utils/helpers.lua
--- General helpers: player/character helpers, safe-finds, debounce, table utils.
+-- utils/math.lua
+-- Math utilities used across Simple Hub
+-- SAFE: no vararg misuse, no globals, no side effects
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local Math = {}
 
-local Helpers = {}
-
--- Returns the LocalPlayer
-function Helpers.getLocalPlayer()
-	return Players.LocalPlayer
+-- Clamp a number between min and max
+function Math.clamp(value, min, max)
+	if value < min then return min end
+	if value > max then return max end
+	return value
 end
 
--- Waits for and returns a character for the given player (or LocalPlayer)
-function Helpers.waitForCharacter(player)
-	player = player or Players.LocalPlayer
-	if not player then return nil end
-	local char = player.Character
-	if char and char.Parent then return char end
-	return player.CharacterAdded:Wait()
+-- Linear interpolation
+function Math.lerp(a, b, t)
+	return a + (b - a) * t
 end
 
--- Returns humanoid (or nil)
-function Helpers.getHumanoid(player)
-	local char = Helpers.waitForCharacter(player)
-	if not char then return nil end
-	return char:FindFirstChildOfClass("Humanoid")
+-- Vector3 linear interpolation
+function Math.lerpVector(a, b, t)
+	return a:Lerp(b, t)
 end
 
--- Returns HumanoidRootPart (or waits for it)
-function Helpers.getRoot(player)
-	local char = Helpers.waitForCharacter(player)
-	if not char then return nil end
-	return char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart")
+-- Distance between two Vector3 positions
+function Math.distance(a, b)
+	return (a - b).Magnitude
 end
 
--- Is player alive?
-function Helpers.isAlive(player)
-	local humanoid = Helpers.getHumanoid(player)
-	return humanoid and humanoid.Health and humanoid.Health > 0
+-- Round to N decimal places
+function Math.round(num, decimals)
+	decimals = decimals or 0
+	local mult = 10 ^ decimals
+	return math.floor(num * mult + 0.5) / mult
 end
 
--- Return array of other players (excluding local)
-function Helpers.getOtherPlayers()
-	local localP = Players.LocalPlayer
-	local out = {}
-	for _,p in ipairs(Players:GetPlayers()) do
-		if p ~= localP then
-			table.insert(out, p)
-		end
-	end
-	return out
+-- Map value from one range to another
+function Math.map(value, inMin, inMax, outMin, outMax)
+	if inMax - inMin == 0 then return outMin end
+	return outMin + (value - inMin) * (outMax - outMin) / (inMax - inMin)
 end
 
--- Iterate other players with callback(plr)
-function Helpers.forEachOtherPlayer(cb)
-	for _,p in ipairs(Helpers.getOtherPlayers()) do
-		task.spawn(cb, p)
-	end
+-- Check if a screen point is inside a circular FOV
+function Math.isInCircle(point, center, radius)
+	return (point - center).Magnitude <= radius
 end
 
--- Safe FindFirstChild with timeout (seconds). Returns object or nil.
-function Helpers.safeFindFirstChild(parent, name, timeout)
-	if not parent then return nil end
-	local found = parent:FindFirstChild(name)
-	if found then return found end
-	if timeout and timeout > 0 then
-		local start = tick()
-		repeat
-			found = parent:FindFirstChild(name)
-			if found then return found end
-			RunService.Heartbeat:Wait()
-		until tick() - start >= timeout
-		return nil
-	end
-	return nil
+-- Safe random float
+function Math.randomFloat(min, max)
+	return min + math.random() * (max - min)
 end
 
--- Simple debounce wrapper: returns a function that only runs fn once per `delay` seconds
-function Helpers.debounceWrap(fn, delay)
-	delay = delay or 0.2
-	local last = 0
-	return function(...)
-		local now = tick()
-		if now - last >= delay then
-			last = now
-			return fn(...)
-		end
-	end
-end
-
--- Returns shallow copy of table
-function Helpers.shallowCopy(t)
-	if type(t) ~= "table" then return t end
-	local out = {}
-	for k,v in pairs(t) do out[k] = v end
-	return out
-end
-
--- Merge t2 into t1 (shallow), returns t1
-function Helpers.mergeTables(t1, t2)
-	if type(t1) ~= "table" or type(t2) ~= "table" then return t1 end
-	for k,v in pairs(t2) do t1[k] = v end
-	return t1
-end
-
--- Safe task spawn (avoids erroring whole thread)
-function Helpers.safeSpawn(fn, ...)
-	task.spawn(function()
-		local ok, err = pcall(fn, ...)
-		if not ok then
-			warn("Helpers.safeSpawn error:", err)
-		end
-	end)
-end
-
-return Helpers
-
+return Math
