@@ -1,14 +1,13 @@
 local TweenService = game:GetService("TweenService")
 
-local Animations = {}
+local Anim = {}
 
-function Animations.tween(obj, time, props, style)
-    local info = TweenInfo.new(
-        time or 0.15,
-        style or Enum.EasingStyle.Quad,
-        Enum.EasingDirection.Out
-    )
-    TweenService:Create(obj, info, props):Play()
+function Anim.tween(obj, time, props, style)
+    TweenService:Create(
+        obj,
+        TweenInfo.new(time or 0.18, style or Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        props
+    ):Play()
 end
 
-return Animations
+return Anim
