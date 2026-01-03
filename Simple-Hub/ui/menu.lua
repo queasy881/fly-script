@@ -18,6 +18,11 @@ return function(deps)
 	local RunService = game:GetService("RunService")
 	local player = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
+
+	local Players = game:GetService("Players")
+	local player = Players.LocalPlayer
+	local mouse = player:GetMouse()
+
 	
 	-- Wait for character
 	local function getCharacter()
