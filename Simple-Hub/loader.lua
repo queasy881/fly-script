@@ -18,7 +18,8 @@ function Loader.load(path)
 
     assert(fn, "Loadstring failed for " .. path .. ": " .. tostring(err))
 
-    local result = fn(Loader)
+    local result = fn()
+
     cache[path] = result
     return result
 end
