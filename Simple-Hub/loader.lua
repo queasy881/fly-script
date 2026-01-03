@@ -1,24 +1,27 @@
--- SIMPLE HUB v3.7 Loader
--- This is the ONLY file users execute with loadstring
+-- Simple Hub Loader
+-- Single entry point (use this in loadstring)
 
-local BASE_URL = "https://raw.githubusercontent.com/queasy881/fly-script/main/"
+local BASE_URL = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
 
-local function load(file)
-	return loadstring(game:HttpGet(BASE_URL .. file, true))()
+local function loadFile(path)
+    local success, result = pcall(function()
+        return game:HttpGet(BASE_URL .. path)
+    end)
+
+    if not success then
+        warn("[Simple Hub] Failed to load:", path)
+        return nil
+    end
+
+    return result
 end
-
--- Basic exploit safety check
-if not game:IsLoaded() then
-	game.Loaded:Wait()
-end
-
--- Prevent double execution
-if _G.SIMPLE_HUB_LOADED then
-	warn("Simple Hub already loaded")
-	return
-end
-_G.SIMPLE_HUB_LOADED = true
 
 -- Load main client
-load("main.client.lua")
+local mainSource = loadFile("main.client.lua")
+if not mainSource then
+    error("[Simple Hub] main.client.lua could not be loaded")
+end
 
+-- Execute main
+local mainFunc = loadstring(mainSource)
+mainFunc()
