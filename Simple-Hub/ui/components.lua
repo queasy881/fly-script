@@ -1,5 +1,5 @@
 -- ui/components.lua
--- Premium component library
+-- Premium component library (FIXED: sizing, hover bugs, backgrounds)
 
 local Components = {}
 
@@ -61,13 +61,13 @@ local function getAnimations()
 	return _G.Animations
 end
 
--- Toggle Button
+-- Toggle Button (FIXED: no size changes on hover/click)
 function Components.createToggle(parent, text, callback)
 	local Animations = getAnimations()
 	
 	local button = Instance.new("TextButton")
 	button.Name = "Toggle_" .. text
-	button.Size = UDim2.new(1, -20, 0, 38)
+	button.Size = UDim2.new(1, -20, 0, 42)
 	button.BackgroundColor3 = Colors.Button
 	button.BorderSizePixel = 0
 	button.AutoButtonColor = false
@@ -104,20 +104,34 @@ function Components.createToggle(parent, text, callback)
 	
 	button.MouseEnter:Connect(function()
 		if Animations then
-			Animations.buttonHover(button, true)
+			-- Only change color, no size change
+			Animations.tween(button, {
+				BackgroundColor3 = Colors.ButtonHover
+			}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+			
+			if not state then
+				Animations.tween(glow, {
+					ImageTransparency = 0.7
+				}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+			end
 		end
 	end)
 	
 	button.MouseLeave:Connect(function()
 		if Animations then
-			Animations.buttonHover(button, false)
+			if not state then
+				Animations.tween(button, {
+					BackgroundColor3 = Colors.Button
+				}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+				
+				Animations.tween(glow, {
+					ImageTransparency = 1
+				}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+			end
 		end
 	end)
 	
 	button.MouseButton1Click:Connect(function()
-		if Animations then
-			Animations.buttonClick(button)
-		end
 		state = not state
 		
 		if Animations then
@@ -136,13 +150,13 @@ function Components.createToggle(parent, text, callback)
 	return button
 end
 
--- Slider
+-- Slider (FIXED: proper sizing)
 function Components.createSlider(parent, text, min, max, default, callback)
 	local Animations = getAnimations()
 	
 	local container = Instance.new("Frame")
 	container.Name = "Slider_" .. text
-	container.Size = UDim2.new(1, -20, 0, 60)
+	container.Size = UDim2.new(1, -20, 0, 64)
 	container.BackgroundColor3 = Colors.Button
 	container.BorderSizePixel = 0
 	container.Parent = parent
@@ -152,7 +166,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
 	
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(1, -16, 0, 20)
-	label.Position = UDim2.new(0, 16, 0, 8)
+	label.Position = UDim2.new(0, 16, 0, 10)
 	label.BackgroundTransparency = 1
 	label.Text = text
 	label.TextColor3 = Colors.TextDim
@@ -163,7 +177,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
 	
 	local valueLabel = Instance.new("TextLabel")
 	valueLabel.Size = UDim2.new(0, 60, 0, 20)
-	valueLabel.Position = UDim2.new(1, -76, 0, 8)
+	valueLabel.Position = UDim2.new(1, -76, 0, 10)
 	valueLabel.BackgroundTransparency = 1
 	valueLabel.Text = tostring(default)
 	valueLabel.TextColor3 = Colors.Active
@@ -175,7 +189,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
 	local sliderBg = Instance.new("Frame")
 	sliderBg.Name = "SliderBg"
 	sliderBg.Size = UDim2.new(1, -32, 0, 6)
-	sliderBg.Position = UDim2.new(0, 16, 1, -18)
+	sliderBg.Position = UDim2.new(0, 16, 1, -20)
 	sliderBg.BackgroundColor3 = Colors.Surface
 	sliderBg.BorderSizePixel = 0
 	sliderBg.Parent = container
@@ -254,7 +268,7 @@ end
 function Components.createSection(parent, text)
 	local section = Instance.new("Frame")
 	section.Name = "Section_" .. text
-	section.Size = UDim2.new(1, -20, 0, 32)
+	section.Size = UDim2.new(1, -20, 0, 36)
 	section.BackgroundTransparency = 1
 	section.Parent = parent
 	
@@ -269,7 +283,7 @@ function Components.createSection(parent, text)
 	label.Parent = section
 	
 	local line = Instance.new("Frame")
-	line.Size = UDim2.new(0, 3, 0, 16)
+	line.Size = UDim2.new(0, 3, 0, 18)
 	line.Position = UDim2.new(0, 0, 0.5, 0)
 	line.AnchorPoint = Vector2.new(0, 0.5)
 	line.BackgroundColor3 = Colors.Accent
