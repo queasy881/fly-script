@@ -6,7 +6,12 @@ local BASE = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple
 local function load(path)
 	print("[LOADING]", path)
 	local src = game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
-	return loadstring(src)()
+	local fn, err = loadstring(src)
+	if not fn then
+		warn("[LOAD ERROR]", path, err)
+		return nil
+	end
+	return fn()
 end
 
 -- ============================================
@@ -23,8 +28,10 @@ local Animations = load("ui/animations.lua")
 local Components = load("ui/components.lua")
 local Tabs = load("ui/tabs.lua")
 
-
-
+-- Store in _G for menu.lua to access
+_G.VertexAnimations = Animations
+_G.VertexComponents = Components
+_G.VertexTabs = Tabs
 
 -- ============================================
 -- 3. CONTROLLER (loads before menu)
@@ -81,8 +88,13 @@ load("settings/presets.lua")
 -- 6. START MENU (last, with all dependencies)
 -- ============================================
 local startMenu = load("ui/menu.lua")
-startMenu(Tabs, Components, Animations)
+if startMenu then
+	startMenu({
+		Tabs = Tabs,
+		Components = Components,
+		Animations = Animations
+	})
+end
 
-
-print("[Simple Hub] ✓ All features loaded and integrated")
-print("[Simple Hub] ✓ Press M to open menu")
+print("[Simple Hub] All features loaded and integrated")
+print("[Simple Hub] Press M to open menu")
