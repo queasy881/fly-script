@@ -81,7 +81,7 @@ load("settings/presets.lua")
 -- 6. START MENU (last, with all dependencies)
 -- ============================================
 local startMenu = load("ui/menu.lua")
-startMenu()
+startMenu(Tabs, Components, Animations)
 
 
 print("[Simple Hub] ✓ All features loaded and integrated")
