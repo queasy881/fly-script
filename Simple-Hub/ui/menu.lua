@@ -14,7 +14,7 @@
 -- VERTEX HUB ULTIMATE - ALL 100+ FEATURES
 -- ████████████████████████████████████████████████████████████████
 
-return function(deps)
+return function()
 	local Tabs = deps.Tabs
 	local Components = deps.Components
 	local Animations = deps.Animations
