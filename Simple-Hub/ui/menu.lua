@@ -1,28 +1,20 @@
--- ████████████████████████████████████████████████████████████████
--- █░░░░░░░░░░░░░░█░░░░░░░░░░░░░░█░░░░░░░░░░░░░░█░░░░░░░░░░░░░░░░█
--- █░░▄▀▄▀▄▀▄▀▄▀░░█░░▄▀▄▀▄▀▄▀▄▀░░█░░▄▀▄▀▄▀▄▀▄▀░░█░░▄▀▄▀▄▀▄▀▄▀▄▀░░█
--- █░░▄▀░░░░░░▄▀░░█░░▄▀░░░░░░░░░░█░░░░░░▄▀░░░░░░█░░▄▀░░░░░░░░▄▀░░█
--- █░░▄▀░░██░░▄▀░░█░░▄▀░░█████████████░░▄▀░░█████░░▄▀░░████░░▄▀░░█
--- █░░▄▀░░██░░▄▀░░█░░▄▀░░░░░░░░░░█████░░▄▀░░█████░░▄▀░░░░░░░░▄▀░░█
--- █░░▄▀░░██░░▄▀░░█░░▄▀▄▀▄▀▄▀▄▀░░█████░░▄▀░░█████░░▄▀▄▀▄▀▄▀▄▀▄▀░░█
--- █░░▄▀░░██░░▄▀░░█░░▄▀░░░░░░░░░░█████░░▄▀░░█████░░▄▀░░░░░░▄▀░░░░█
--- █░░▄▀░░██░░▄▀░░█░░▄▀░░█████████████░░▄▀░░█████░░▄▀░░██░░▄▀░░██
--- █░░▄▀░░░░░░▄▀░░█░░▄▀░░░░░░░░░░█████░░▄▀░░█████░░▄▀░░██░░▄▀░░██
--- █░░▄▀▄▀▄▀▄▀▄▀░░█░░▄▀▄▀▄▀▄▀▄▀░░█████░░▄▀░░█████░░▄▀░░██░░▄▀░░██
--- █░░░░░░░░░░░░░░█░░░░░░░░░░░░░░█████░░░░░░█████░░░░░░██░░░░░░██
--- ████████████████████████████████████████████████████████████████
--- VERTEX HUB ULTIMATE - ALL 100+ FEATURES
--- ████████████████████████████████████████████████████████████████
-print("[menu.lua] file executing")
-return function()
-	print("[menu.lua] returning menu function")
-	local Tabs = deps.Tabs
-	local Components = deps.Components
-	local Animations = deps.Animations
+-- ═══════════════════════════════════════════════════════════════════════════
+-- VERTEX HUB - FULLY LOADSTRING COMPATIBLE
+-- No require(), No script.Parent, No undefined dependencies
+-- ═══════════════════════════════════════════════════════════════════════════
+
+return function(deps)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- DEPENDENCY GUARD - Prevent nil errors
+	-- ═══════════════════════════════════════════════════════════════════════════
+	deps = deps or {}
+	local Tabs = deps.Tabs or _G.VertexTabs
+	local Components = deps.Components or _G.VertexComponents
+	local Animations = deps.Animations or _G.VertexAnimations
 	
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- SERVICES
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local Players = game:GetService("Players")
 	local UIS = game:GetService("UserInputService")
 	local RunService = game:GetService("RunService")
@@ -33,33 +25,47 @@ return function()
 	local Stats = game:GetService("Stats")
 	local HttpService = game:GetService("HttpService")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
-	local SoundService = game:GetService("SoundService")
-	local VirtualInputManager = game:GetService("VirtualInputManager")
 	
 	local player = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
 	local mouse = player:GetMouse()
 	
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- UTILITY FUNCTIONS
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local function getCharacter() return player.Character end
 	local function getRoot() local c = getCharacter() return c and c:FindFirstChild("HumanoidRootPart") end
 	local function getHumanoid() local c = getCharacter() return c and c:FindFirstChildOfClass("Humanoid") end
 	local function getHead() local c = getCharacter() return c and c:FindFirstChild("Head") end
 	local function getTool() local c = getCharacter() return c and c:FindFirstChildOfClass("Tool") end
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- ENTITY CACHE SYSTEM
-	-- ══════════════════════════════════════════════════════════════
-	local EntityCache = {
-		players = {},
-		npcs = {},
-		items = {}
-	}
+	-- Simple tween function (fallback if Animations not provided)
+	local function tween(obj, props, tweenInfo)
+		if not obj then return end
+		tweenInfo = tweenInfo or {}
+		local ti = TweenInfo.new(
+			tweenInfo.Time or 0.2,
+			tweenInfo.Style or Enum.EasingStyle.Quad,
+			tweenInfo.Direction or Enum.EasingDirection.Out
+		)
+		local t = TweenService:Create(obj, ti, props)
+		t:Play()
+		return t
+	end
+	
+	-- Use provided Animations or fallback
+	if not Animations then
+		Animations = { tween = tween }
+	end
+	_G.VertexAnimations = Animations
+	
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ENTITY CACHE (Updated every 0.5s, not every frame)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	local EntityCache = { players = {}, npcs = {}, items = {} }
 	
 	local function updateEntityCache()
-		-- Clean dead entries
+		-- Clean dead player entries
 		for name, data in pairs(EntityCache.players) do
 			if not data.Player or not data.Player.Parent then
 				EntityCache.players[name] = nil
@@ -77,16 +83,10 @@ return function()
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= player then
 				if not EntityCache.players[plr.Name] then
-					EntityCache.players[plr.Name] = {
-						Player = plr,
-						IsPlayer = true,
-						Team = plr.Team
-					}
+					EntityCache.players[plr.Name] = { Player = plr, IsPlayer = true, Team = plr.Team }
 				end
-				
 				local data = EntityCache.players[plr.Name]
 				data.Team = plr.Team
-				
 				if plr.Character and not data.Character then
 					data.Character = plr.Character
 					data.Humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
@@ -99,20 +99,14 @@ return function()
 		-- Update NPCs
 		EntityCache.npcs = {}
 		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-				if not Players:GetPlayerFromCharacter(obj) then
-					local hum = obj:FindFirstChildOfClass("Humanoid")
-					local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChild("Head")
-					if hum and hum.Health > 0 and root then
-						table.insert(EntityCache.npcs, {
-							Model = obj,
-							Name = obj.Name,
-							Humanoid = hum,
-							RootPart = root,
-							Head = obj:FindFirstChild("Head"),
-							IsNPC = true
-						})
-					end
+			if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(obj) then
+				local hum = obj:FindFirstChildOfClass("Humanoid")
+				local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChild("Head")
+				if hum and hum.Health > 0 and root then
+					table.insert(EntityCache.npcs, {
+						Model = obj, Name = obj.Name, Humanoid = hum, RootPart = root,
+						Head = obj:FindFirstChild("Head"), IsNPC = true
+					})
 				end
 			end
 		end
@@ -123,36 +117,28 @@ return function()
 			if obj:IsA("Tool") then
 				local handle = obj:FindFirstChild("Handle")
 				if handle then
-					table.insert(EntityCache.items, {Object = obj, Position = handle.Position, Name = obj.Name, IsItem = true})
+					table.insert(EntityCache.items, {Object = obj, Position = handle.Position, Name = obj.Name})
 				end
 			elseif obj:IsA("BasePart") then
 				local n = obj.Name:lower()
-				if n:find("coin") or n:find("gem") or n:find("item") or n:find("pickup") or n:find("chest") or n:find("loot") or n:find("drop") then
-					table.insert(EntityCache.items, {Object = obj, Position = obj.Position, Name = obj.Name, IsItem = true})
+				if n:find("coin") or n:find("gem") or n:find("item") or n:find("pickup") or n:find("chest") then
+					table.insert(EntityCache.items, {Object = obj, Position = obj.Position, Name = obj.Name})
 				end
 			end
 		end
 	end
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- DRAWING OBJECT POOL (Optimized - No recreation)
-	-- ══════════════════════════════════════════════════════════════
-	local DrawingPool = {
-		text = {},
-		square = {},
-		line = {},
-		triangle = {},
-		circle = {},
-		quad = {}
-	}
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- DRAWING OBJECT POOL (Reuse drawings, don't recreate)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	local DrawingPool = { text = {}, square = {}, line = {}, triangle = {}, circle = {} }
 	local ActiveDrawings = {}
 	
 	local function getDrawing(drawType)
 		local pool = DrawingPool[drawType]
 		if not pool then return nil end
 		
-		-- Find unused drawing
-		for i, obj in ipairs(pool) do
+		for _, obj in ipairs(pool) do
 			if not obj._inUse then
 				obj._inUse = true
 				obj.Visible = true
@@ -161,15 +147,13 @@ return function()
 			end
 		end
 		
-		-- Create new drawing
 		local newDraw
-		local success = pcall(function()
+		local ok = pcall(function()
 			if drawType == "text" then
 				newDraw = Drawing.new("Text")
 				newDraw.Size = 14
 				newDraw.Center = true
 				newDraw.Outline = true
-				newDraw.Font = Drawing.Fonts.Gotham
 			elseif drawType == "square" then
 				newDraw = Drawing.new("Square")
 				newDraw.Thickness = 1
@@ -185,14 +169,10 @@ return function()
 				newDraw.Thickness = 2
 				newDraw.NumSides = 64
 				newDraw.Filled = false
-			elseif drawType == "quad" then
-				newDraw = Drawing.new("Quad")
-				newDraw.Thickness = 1
-				newDraw.Filled = false
 			end
 		end)
 		
-		if success and newDraw then
+		if ok and newDraw then
 			newDraw._inUse = true
 			newDraw.Visible = true
 			table.insert(pool, newDraw)
@@ -204,349 +184,115 @@ return function()
 	
 	local function releaseAllDrawings()
 		for _, obj in ipairs(ActiveDrawings) do
-			if obj then
-				obj.Visible = false
-				obj._inUse = false
-			end
+			if obj then obj.Visible = false obj._inUse = false end
 		end
 		ActiveDrawings = {}
 	end
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- STATIC HUD DRAWINGS (Persistent elements)
-	-- ══════════════════════════════════════════════════════════════
-	local HUDDrawings = {}
-	
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- STATIC HUD DRAWINGS (Created once, reused)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	local HUD = {}
 	pcall(function()
-		-- FOV Circle
-		HUDDrawings.FOVCircle = Drawing.new("Circle")
-		HUDDrawings.FOVCircle.Thickness = 2
-		HUDDrawings.FOVCircle.NumSides = 64
-		HUDDrawings.FOVCircle.Filled = false
-		HUDDrawings.FOVCircle.Visible = false
-		HUDDrawings.FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-		HUDDrawings.FOVCircle.Transparency = 0.7
+		HUD.FOVCircle = Drawing.new("Circle")
+		HUD.FOVCircle.Thickness = 2
+		HUD.FOVCircle.NumSides = 64
+		HUD.FOVCircle.Filled = false
+		HUD.FOVCircle.Visible = false
+		HUD.FOVCircle.Transparency = 0.7
 		
-		-- Crosshair (4 lines for gap style)
-		HUDDrawings.CrosshairLeft = Drawing.new("Line")
-		HUDDrawings.CrosshairLeft.Thickness = 2
-		HUDDrawings.CrosshairLeft.Visible = false
+		HUD.CrosshairL = Drawing.new("Line") HUD.CrosshairL.Thickness = 2 HUD.CrosshairL.Visible = false
+		HUD.CrosshairR = Drawing.new("Line") HUD.CrosshairR.Thickness = 2 HUD.CrosshairR.Visible = false
+		HUD.CrosshairT = Drawing.new("Line") HUD.CrosshairT.Thickness = 2 HUD.CrosshairT.Visible = false
+		HUD.CrosshairB = Drawing.new("Line") HUD.CrosshairB.Thickness = 2 HUD.CrosshairB.Visible = false
 		
-		HUDDrawings.CrosshairRight = Drawing.new("Line")
-		HUDDrawings.CrosshairRight.Thickness = 2
-		HUDDrawings.CrosshairRight.Visible = false
-		
-		HUDDrawings.CrosshairTop = Drawing.new("Line")
-		HUDDrawings.CrosshairTop.Thickness = 2
-		HUDDrawings.CrosshairTop.Visible = false
-		
-		HUDDrawings.CrosshairBottom = Drawing.new("Line")
-		HUDDrawings.CrosshairBottom.Thickness = 2
-		HUDDrawings.CrosshairBottom.Visible = false
-		
-		-- Watermark
-		HUDDrawings.Watermark = Drawing.new("Text")
-		HUDDrawings.Watermark.Size = 20
-		HUDDrawings.Watermark.Font = Drawing.Fonts.GothamBold
-		HUDDrawings.Watermark.Outline = true
-		HUDDrawings.Watermark.Position = Vector2.new(10, 10)
-		HUDDrawings.Watermark.Visible = false
-		HUDDrawings.Watermark.Color = Color3.fromRGB(60, 120, 255)
-		
-		-- FPS Counter
-		HUDDrawings.FPSCounter = Drawing.new("Text")
-		HUDDrawings.FPSCounter.Size = 16
-		HUDDrawings.FPSCounter.Font = Drawing.Fonts.Gotham
-		HUDDrawings.FPSCounter.Outline = true
-		HUDDrawings.FPSCounter.Position = Vector2.new(10, 35)
-		HUDDrawings.FPSCounter.Visible = false
-		HUDDrawings.FPSCounter.Color = Color3.fromRGB(255, 255, 255)
-		
-		-- Ping Display
-		HUDDrawings.PingDisplay = Drawing.new("Text")
-		HUDDrawings.PingDisplay.Size = 16
-		HUDDrawings.PingDisplay.Font = Drawing.Fonts.Gotham
-		HUDDrawings.PingDisplay.Outline = true
-		HUDDrawings.PingDisplay.Position = Vector2.new(10, 55)
-		HUDDrawings.PingDisplay.Visible = false
-		HUDDrawings.PingDisplay.Color = Color3.fromRGB(255, 255, 255)
-		
-		-- Player Count
-		HUDDrawings.PlayerCount = Drawing.new("Text")
-		HUDDrawings.PlayerCount.Size = 16
-		HUDDrawings.PlayerCount.Font = Drawing.Fonts.Gotham
-		HUDDrawings.PlayerCount.Outline = true
-		HUDDrawings.PlayerCount.Position = Vector2.new(10, 75)
-		HUDDrawings.PlayerCount.Visible = false
-		HUDDrawings.PlayerCount.Color = Color3.fromRGB(255, 255, 255)
-		
-		-- Velocity Display
-		HUDDrawings.VelocityDisplay = Drawing.new("Text")
-		HUDDrawings.VelocityDisplay.Size = 16
-		HUDDrawings.VelocityDisplay.Font = Drawing.Fonts.Gotham
-		HUDDrawings.VelocityDisplay.Outline = true
-		HUDDrawings.VelocityDisplay.Position = Vector2.new(10, 95)
-		HUDDrawings.VelocityDisplay.Visible = false
-		HUDDrawings.VelocityDisplay.Color = Color3.fromRGB(255, 255, 255)
-		
-		-- Target Info
-		HUDDrawings.TargetInfo = Drawing.new("Text")
-		HUDDrawings.TargetInfo.Size = 16
-		HUDDrawings.TargetInfo.Font = Drawing.Fonts.Gotham
-		HUDDrawings.TargetInfo.Outline = true
-		HUDDrawings.TargetInfo.Position = Vector2.new(10, 115)
-		HUDDrawings.TargetInfo.Visible = false
-		HUDDrawings.TargetInfo.Color = Color3.fromRGB(255, 255, 255)
-		
-		-- Keybinds Display
-		HUDDrawings.KeybindsDisplay = Drawing.new("Text")
-		HUDDrawings.KeybindsDisplay.Size = 14
-		HUDDrawings.KeybindsDisplay.Font = Drawing.Fonts.Gotham
-		HUDDrawings.KeybindsDisplay.Outline = true
-		HUDDrawings.KeybindsDisplay.Visible = false
-		HUDDrawings.KeybindsDisplay.Color = Color3.fromRGB(255, 255, 255)
+		HUD.Watermark = Drawing.new("Text") HUD.Watermark.Size = 20 HUD.Watermark.Outline = true HUD.Watermark.Position = Vector2.new(10, 10) HUD.Watermark.Visible = false
+		HUD.FPS = Drawing.new("Text") HUD.FPS.Size = 16 HUD.FPS.Outline = true HUD.FPS.Position = Vector2.new(10, 35) HUD.FPS.Visible = false
+		HUD.Ping = Drawing.new("Text") HUD.Ping.Size = 16 HUD.Ping.Outline = true HUD.Ping.Position = Vector2.new(10, 55) HUD.Ping.Visible = false
+		HUD.PlrCount = Drawing.new("Text") HUD.PlrCount.Size = 16 HUD.PlrCount.Outline = true HUD.PlrCount.Position = Vector2.new(10, 75) HUD.PlrCount.Visible = false
+		HUD.Velocity = Drawing.new("Text") HUD.Velocity.Size = 16 HUD.Velocity.Outline = true HUD.Velocity.Position = Vector2.new(10, 95) HUD.Velocity.Visible = false
+		HUD.TargetInfo = Drawing.new("Text") HUD.TargetInfo.Size = 16 HUD.TargetInfo.Outline = true HUD.TargetInfo.Position = Vector2.new(10, 115) HUD.TargetInfo.Visible = false
+		HUD.Keybinds = Drawing.new("Text") HUD.Keybinds.Size = 14 HUD.Keybinds.Outline = true HUD.Keybinds.Visible = false
 	end)
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- ALL STATE VARIABLES (100+ Features)
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ALL STATE VARIABLES
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local State = {
-		-- ═══════════ ESP STATE ═══════════
 		ESP = {
-			-- Player ESP
-			NameESP = false,
-			BoxESP = false,
-			HealthESP = false,
-			DistanceESP = false,
-			Tracers = false,
-			SkeletonESP = false,
-			OffscreenArrows = false,
-			Chams = false,
-			-- World ESP
-			ItemESP = false,
-			NPCESP = false,
-			-- Settings
-			MaxDistance = 1000,
-			TeamCheck = false,
-			FriendCheck = false,
-			-- Colors
-			BoxColor = Color3.fromRGB(255, 0, 0),
-			NameColor = Color3.fromRGB(255, 255, 255),
-			HealthColor = Color3.fromRGB(0, 255, 0),
-			TracerColor = Color3.fromRGB(255, 255, 0),
-			SkeletonColor = Color3.fromRGB(255, 255, 255),
-			ArrowColor = Color3.fromRGB(255, 0, 0),
-			ItemColor = Color3.fromRGB(255, 200, 0),
-			NPCColor = Color3.fromRGB(0, 200, 255)
+			NameESP = false, BoxESP = false, HealthESP = false, DistanceESP = false,
+			Tracers = false, SkeletonESP = false, OffscreenArrows = false, Chams = false,
+			ItemESP = false, NPCESP = false, MaxDistance = 1000, TeamCheck = false
 		},
-		
-		-- ═══════════ COMBAT STATE ═══════════
 		Combat = {
-			-- Aim Assist
-			AimAssist = false,
-			AimSmoothness = 0.15,
-			AimFOV = 150,
-			AimPrediction = false,
-			PredictionAmount = 0.1,
-			ShowFOVCircle = false,
-			AimTargetPart = "Head",
-			-- Silent Aim
-			SilentAim = false,
-			SilentAimHitChance = 100,
-			SilentAimTargetPart = "Head",
-			-- Kill Aura
-			KillAura = false,
-			KillAuraRange = 15,
-			KillAuraCPS = 10,
-			KillAuraTargetPlayers = true,
-			KillAuraTargetNPCs = false,
-			KillAuraWallCheck = true,
-			KillAuraLegitMode = false,
-			-- Reach
-			Reach = false,
-			ReachDistance = 18,
-			ReachLegitMode = false,
-			-- Triggerbot
-			Triggerbot = false,
-			TriggerbotDelay = 0.1,
-			-- Auto
-			AutoParry = false,
-			AutoCombo = false,
-			AutoBlock = false,
-			-- Exploits
-			HitboxExpander = false,
-			HitboxSize = 5,
-			Backtrack = false,
-			BacktrackTime = 0.2,
-			TargetStrafe = false,
-			TargetStrafeSpeed = 5,
-			TargetStrafeRadius = 10,
-			AntiAim = false
+			AimAssist = false, AimSmoothness = 0.15, AimFOV = 150, AimPrediction = false,
+			PredictionAmount = 0.1, ShowFOVCircle = false,
+			SilentAim = false, SilentAimHitChance = 100,
+			KillAura = false, KillAuraRange = 15, KillAuraCPS = 10, KillAuraLegit = false,
+			KillAuraPlayers = true, KillAuraNPCs = false, KillAuraWallCheck = true,
+			Reach = false, ReachDistance = 18, ReachLegit = false,
+			Triggerbot = false, TriggerbotDelay = 0.1,
+			AutoParry = false, HitboxExpander = false, HitboxSize = 5,
+			Backtrack = false, BacktrackTime = 0.2,
+			TargetStrafe = false, StrafeSpeed = 5, StrafeRadius = 10
 		},
-		
-		-- ═══════════ MOVEMENT STATE ═══════════
 		Movement = {
-			-- Fly
-			Fly = false,
-			FlySpeed = 50,
-			FlyLegitMode = false,
-			-- Noclip
-			Noclip = false,
-			-- Speed
-			Speed = false,
-			SpeedValue = 16,
-			SpeedLegitMode = false,
-			-- Jump
-			JumpPower = false,
-			JumpPowerValue = 50,
-			InfiniteJump = false,
-			-- Special Movement
-			BunnyHop = false,
-			LongJump = false,
-			LongJumpForce = 100,
-			SpeedGlide = false,
-			SpeedGlideValue = 10,
-			Dash = false,
-			DashForce = 100,
-			DashCooldown = 1,
-			AirControl = false,
-			-- Teleport
-			ClickTP = false,
-			-- Safety
-			AntiVoid = false,
-			AntiVoidHeight = -100,
-			Anchor = false,
-			-- Exploits
-			SpinBot = false,
-			SpinBotSpeed = 20,
-			FakeLag = false,
-			FakeLagIntensity = 5
+			Fly = false, FlySpeed = 50, FlyLegit = false, Noclip = false,
+			Speed = false, SpeedValue = 16, SpeedLegit = false,
+			JumpPower = false, JumpValue = 50, InfiniteJump = false,
+			BunnyHop = false, LongJump = false, LongJumpForce = 100,
+			SpeedGlide = false, GlideSpeed = 10,
+			Dash = false, DashForce = 100, DashCooldown = 1,
+			ClickTP = false, AntiVoid = false, VoidHeight = -100, Anchor = false,
+			SpinBot = false, SpinSpeed = 20, FakeLag = false, LagIntensity = 5, AirControl = false
 		},
-		
-		-- ═══════════ VISUALS STATE ═══════════
 		Visuals = {
-			-- Lighting
-			Fullbright = false,
-			NoFog = false,
-			NoShadows = false,
-			-- Crosshair
-			CustomCrosshair = false,
-			CrosshairSize = 10,
-			CrosshairGap = 5,
-			CrosshairColor = Color3.fromRGB(255, 0, 0),
-			-- Camera
-			CameraFOV = 70,
-			ThirdPerson = false,
-			Freecam = false,
-			FreecamSpeed = 1,
-			-- World
-			XRay = false,
-			XRayTransparency = 0.5,
-			Ambient = false,
-			AmbientColor = Color3.fromRGB(128, 128, 128)
+			Fullbright = false, NoFog = false, NoShadows = false,
+			Crosshair = false, CrosshairSize = 10, CrosshairGap = 5,
+			CameraFOV = 70, ThirdPerson = false, Freecam = false, FreecamSpeed = 1,
+			XRay = false, XRayTransparency = 0.5
 		},
-		
-		-- ═══════════ WORLD STATE ═══════════
-		World = {
-			TimeOfDay = 14,
-			Gravity = 196.2,
-			DeleteMode = false,
-			RemoveGrass = false,
-			RemoveFog = false,
-			NoClipParts = false
-		},
-		
-		-- ═══════════ PLAYER STATE ═══════════
+		World = { TimeOfDay = 14, Gravity = 196.2, DeleteMode = false, RemoveGrass = false },
 		Player = {
-			-- Character
-			GodMode = false,
-			NoRagdoll = false,
-			AutoRespawn = false,
-			CharacterScale = 1,
-			-- Invisibility
-			Invisibility = false,
-			InvisibilityMode = "Safe",
-			InvisibilityOffset = 100,
-			-- Weapon
-			NoRecoil = false,
-			NoSpread = false,
-			InfiniteStamina = false,
-			InfiniteAmmo = false,
-			RapidFire = false
+			GodMode = false, NoRagdoll = false, AutoRespawn = false, CharScale = 1,
+			Invisibility = false, InvisMode = "Safe", InvisOffset = 100,
+			NoRecoil = false, NoSpread = false, InfiniteStamina = false
 		},
-		
-		-- ═══════════ TROLL STATE ═══════════
 		Troll = {
-			AnnoyPlayer = false,
-			AnnoyTarget = "",
-			OrbitPlayer = false,
-			OrbitTarget = "",
-			OrbitRadius = 10,
-			OrbitSpeed = 2,
-			Fling = false,
-			FlingPower = 500,
-			Headless = false,
-			InvisibleBody = false,
-			SpinOthers = false
+			AnnoyPlayer = false, AnnoyTarget = "", OrbitPlayer = false, OrbitTarget = "",
+			OrbitRadius = 10, OrbitSpeed = 2, Fling = false, FlingPower = 500, Headless = false
 		},
-		
-		-- ═══════════ MISC STATE ═══════════
 		Misc = {
-			-- Anti Detection
-			AntiAFK = false,
-			-- Chat
-			ChatSpam = false,
-			ChatSpamMessage = "Vertex Hub on top!",
-			ChatSpamDelay = 2,
-			-- HUD
-			Watermark = false,
-			FPSCounter = false,
-			PingDisplay = false,
-			PlayerCount = false,
-			VelocityDisplay = false,
-			TargetInfo = false,
-			KeybindsDisplay = false
+			AntiAFK = false, ChatSpam = false, SpamMsg = "Vertex Hub!", SpamDelay = 2,
+			Watermark = false, FPSCounter = false, PingDisplay = false, PlayerCount = false,
+			VelocityDisplay = false, TargetInfo = false, KeybindsDisplay = false
 		},
-		
-		-- ═══════════ SETTINGS STATE ═══════════
-		Settings = {
-			MenuKey = Enum.KeyCode.M,
-			MenuScale = 1,
-			AccentColor = Color3.fromRGB(60, 120, 255)
-		}
+		Settings = { MenuKey = Enum.KeyCode.M, AccentColor = Color3.fromRGB(60, 120, 255) }
 	}
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- STORAGE FOR SPECIAL SYSTEMS
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- STORAGE
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local BacktrackPositions = {}
 	local CurrentTarget = nil
 	local LastAttackTime = 0
 	local LastTriggerbotTime = 0
 	local LastDashTime = 0
-	local FreecamPosition = Vector3.new(0, 50, 0)
+	local FreecamPos = Vector3.new(0, 50, 0)
 	local FreecamAngles = Vector2.new(0, 0)
-	local FPSCounter = {frames = 0, lastTime = tick(), fps = 60}
-	local PreviousMouseState = {behavior = nil, icon = nil}
-	
-	-- ══════════════════════════════════════════════════════════════
-	-- ORIGINAL VALUES STORAGE
-	-- ══════════════════════════════════════════════════════════════
-	local OriginalValues = {
-		Ambient = Lighting.Ambient,
-		Brightness = Lighting.Brightness,
-		FogEnd = Lighting.FogEnd,
-		FogStart = Lighting.FogStart,
-		GlobalShadows = Lighting.GlobalShadows,
-		OutdoorAmbient = Lighting.OutdoorAmbient,
-		ClockTime = Lighting.ClockTime,
-		Gravity = workspace.Gravity,
-		FieldOfView = camera.FieldOfView
+	local FPSData = { frames = 0, lastTime = tick(), fps = 60 }
+	local PrevMouseState = { behavior = nil, icon = nil }
+	local OriginalLighting = {
+		Ambient = Lighting.Ambient, Brightness = Lighting.Brightness,
+		FogEnd = Lighting.FogEnd, FogStart = Lighting.FogStart,
+		GlobalShadows = Lighting.GlobalShadows, OutdoorAmbient = Lighting.OutdoorAmbient,
+		ClockTime = Lighting.ClockTime
 	}
+	local OriginalGravity = workspace.Gravity
 	
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- TARGET ACQUISITION SYSTEM
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local function getBestTarget(options)
 		options = options or {}
 		local range = options.Range or 150
@@ -556,7 +302,6 @@ return function()
 		local useFOV = options.UseFOV or false
 		local fov = options.FOV or 150
 		local sortBy = options.Sort or "Distance"
-		local targetPart = options.TargetPart or "Head"
 		
 		local myRoot = getRoot()
 		if not myRoot then return nil end
@@ -565,45 +310,28 @@ return function()
 		local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 		local myTeam = player.Team
 		
-		-- Gather player targets
 		if targetPlayers then
 			for name, data in pairs(EntityCache.players) do
 				if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
-					-- Team check
-					if State.ESP.TeamCheck and data.Team and myTeam and data.Team == myTeam then
-						continue
-					end
+					if State.ESP.TeamCheck and data.Team and myTeam and data.Team == myTeam then continue end
 					
-					local targetPos = data[targetPart] and data[targetPart].Position or data.RootPart.Position
-					local distance = (myRoot.Position - data.RootPart.Position).Magnitude
-					
-					if distance <= range then
-						local screenPos, onScreen = camera:WorldToViewportPoint(targetPos)
-						local screenDistance = onScreen and (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude or math.huge
+					local dist = (myRoot.Position - data.RootPart.Position).Magnitude
+					if dist <= range then
+						local head = data.Head or data.RootPart
+						local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
+						local screenDist = onScreen and (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude or math.huge
 						
-						-- FOV check
-						if not useFOV or screenDistance <= fov then
-							-- Wall check
-							local passWallCheck = true
+						if not useFOV or screenDist <= fov then
+							local pass = true
 							if wallCheck then
-								local rayOrigin = myRoot.Position
-								local rayDirection = (data.RootPart.Position - myRoot.Position)
-								local raycastParams = RaycastParams.new()
-								raycastParams.FilterDescendantsInstances = {getCharacter(), data.Character}
-								raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-								local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-								passWallCheck = result == nil
+								local params = RaycastParams.new()
+								params.FilterDescendantsInstances = {getCharacter(), data.Character}
+								params.FilterType = Enum.RaycastFilterType.Blacklist
+								local result = workspace:Raycast(myRoot.Position, data.RootPart.Position - myRoot.Position, params)
+								pass = result == nil
 							end
-							
-							if passWallCheck then
-								table.insert(targets, {
-									Entity = data,
-									Distance = distance,
-									ScreenDistance = screenDistance,
-									Health = data.Humanoid.Health,
-									Position = targetPos,
-									IsPlayer = true
-								})
+							if pass then
+								table.insert(targets, { Entity = data, Distance = dist, ScreenDistance = screenDist, Health = data.Humanoid.Health })
 							end
 						end
 					end
@@ -611,26 +339,16 @@ return function()
 			end
 		end
 		
-		-- Gather NPC targets
 		if targetNPCs then
 			for _, data in ipairs(EntityCache.npcs) do
 				if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
-					local targetPos = data.Head and data.Head.Position or data.RootPart.Position
-					local distance = (myRoot.Position - data.RootPart.Position).Magnitude
-					
-					if distance <= range then
-						local screenPos, onScreen = camera:WorldToViewportPoint(targetPos)
-						local screenDistance = onScreen and (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude or math.huge
-						
-						if not useFOV or screenDistance <= fov then
-							table.insert(targets, {
-								Entity = data,
-								Distance = distance,
-								ScreenDistance = screenDistance,
-								Health = data.Humanoid.Health,
-								Position = targetPos,
-								IsNPC = true
-							})
+					local dist = (myRoot.Position - data.RootPart.Position).Magnitude
+					if dist <= range then
+						local head = data.Head or data.RootPart
+						local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
+						local screenDist = onScreen and (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude or math.huge
+						if not useFOV or screenDist <= fov then
+							table.insert(targets, { Entity = data, Distance = dist, ScreenDistance = screenDist, Health = data.Humanoid.Health })
 						end
 					end
 				end
@@ -639,239 +357,230 @@ return function()
 		
 		if #targets == 0 then return nil end
 		
-		-- Sort targets
 		table.sort(targets, function(a, b)
-			if sortBy == "Distance" then
-				return a.Distance < b.Distance
-			elseif sortBy == "Health" then
-				return a.Health < b.Health
-			elseif sortBy == "Angle" or sortBy == "FOV" then
-				return a.ScreenDistance < b.ScreenDistance
-			elseif sortBy == "Threat" then
-				return (a.Health / a.Distance) < (b.Health / b.Distance)
+			if sortBy == "Distance" then return a.Distance < b.Distance
+			elseif sortBy == "Health" then return a.Health < b.Health
+			elseif sortBy == "Angle" then return a.ScreenDistance < b.ScreenDistance
 			end
 			return a.Distance < b.Distance
 		end)
 		
 		CurrentTarget = targets[1].Entity
-		return targets[1].Entity, targets[1].Position
+		return targets[1].Entity
 	end
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- FLY SYSTEM (Stealth)
-	-- ══════════════════════════════════════════════════════════════
-	local FlySystem = {
-		enabled = false,
-		bodyGyro = nil,
-		bodyVelocity = nil,
-		currentVelocity = Vector3.new()
-	}
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- FLY SYSTEM
+	-- ═══════════════════════════════════════════════════════════════════════════
+	local FlySystem = { enabled = false, bodyGyro = nil, bodyVelocity = nil, currentVel = Vector3.new() }
 	
 	function FlySystem:Enable()
 		local root = getRoot()
-		local humanoid = getHumanoid()
-		if not root or not humanoid then return end
-		
+		local hum = getHumanoid()
+		if not root or not hum then return end
 		self.enabled = true
-		humanoid.PlatformStand = true
-		
-		-- Create BodyGyro for rotation
+		hum.PlatformStand = true
 		self.bodyGyro = Instance.new("BodyGyro")
 		self.bodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
 		self.bodyGyro.P = 1e4
-		self.bodyGyro.D = 100
 		self.bodyGyro.Parent = root
-		
-		-- Create BodyVelocity for movement
 		self.bodyVelocity = Instance.new("BodyVelocity")
 		self.bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-		self.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+		self.bodyVelocity.Velocity = Vector3.new()
 		self.bodyVelocity.Parent = root
-		
-		self.currentVelocity = Vector3.new()
 	end
 	
 	function FlySystem:Disable()
 		self.enabled = false
-		
-		local humanoid = getHumanoid()
-		if humanoid then
-			humanoid.PlatformStand = false
-		end
-		
-		if self.bodyGyro then
-			self.bodyGyro:Destroy()
-			self.bodyGyro = nil
-		end
-		
-		if self.bodyVelocity then
-			self.bodyVelocity:Destroy()
-			self.bodyVelocity = nil
-		end
-		
-		self.currentVelocity = Vector3.new()
+		local hum = getHumanoid()
+		if hum then hum.PlatformStand = false end
+		if self.bodyGyro then self.bodyGyro:Destroy() self.bodyGyro = nil end
+		if self.bodyVelocity then self.bodyVelocity:Destroy() self.bodyVelocity = nil end
 	end
 	
 	function FlySystem:Update()
 		if not self.enabled or not self.bodyVelocity or not self.bodyGyro then return end
-		
-		local root = getRoot()
-		if not root then return end
-		
-		-- Update rotation to face camera direction
 		self.bodyGyro.CFrame = camera.CFrame
-		
-		-- Calculate movement direction
-		local moveDirection = Vector3.new()
-		
-		if UIS:IsKeyDown(Enum.KeyCode.W) then
-			moveDirection = moveDirection + camera.CFrame.LookVector
-		end
-		if UIS:IsKeyDown(Enum.KeyCode.S) then
-			moveDirection = moveDirection - camera.CFrame.LookVector
-		end
-		if UIS:IsKeyDown(Enum.KeyCode.A) then
-			moveDirection = moveDirection - camera.CFrame.RightVector
-		end
-		if UIS:IsKeyDown(Enum.KeyCode.D) then
-			moveDirection = moveDirection + camera.CFrame.RightVector
-		end
-		if UIS:IsKeyDown(Enum.KeyCode.Space) then
-			moveDirection = moveDirection + Vector3.new(0, 1, 0)
-		end
-		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-			moveDirection = moveDirection - Vector3.new(0, 1, 0)
-		end
-		
-		-- Normalize direction
-		if moveDirection.Magnitude > 0 then
-			moveDirection = moveDirection.Unit
-		end
-		
-		-- Calculate target velocity
-		local targetVelocity = moveDirection * State.Movement.FlySpeed
-		
-		-- Apply smoothing for legit mode
-		if State.Movement.FlyLegitMode then
-			self.currentVelocity = self.currentVelocity:Lerp(targetVelocity, 0.08)
-			self.bodyVelocity.Velocity = self.currentVelocity
+		local dir = Vector3.new()
+		if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + camera.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - camera.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - camera.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + camera.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+		if dir.Magnitude > 0 then dir = dir.Unit end
+		local target = dir * State.Movement.FlySpeed
+		if State.Movement.FlyLegit then
+			self.currentVel = self.currentVel:Lerp(target, 0.08)
+			self.bodyVelocity.Velocity = self.currentVel
 		else
-			self.bodyVelocity.Velocity = targetVelocity
+			self.bodyVelocity.Velocity = target
 		end
 	end
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- INVISIBILITY SYSTEM (Hitbox-only, NO transparency)
-	-- ══════════════════════════════════════════════════════════════
-	local InvisibilitySystem = {
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- HITBOX-ONLY INVISIBILITY (NO TRANSPARENCY - per spec)
+	-- Model moves away, HumanoidRootPart stays at real position
+	-- Camera/movement/physics stay on hitbox
+	-- ═══════════════════════════════════════════════════════════════════════════
+	local InvisSystem = {
 		enabled = false,
-		originalCFrames = {},
+		movedParts = {},
 		connection = nil
 	}
 	
-	function InvisibilitySystem:Enable()
-		local character = getCharacter()
+	function InvisSystem:Enable()
+		local char = getCharacter()
 		local root = getRoot()
-		if not character or not root then return end
+		if not char or not root then return end
 		
 		self.enabled = true
-		self.originalCFrames = {}
+		self.movedParts = {}
 		
-		-- Calculate offset based on mode
-		local offset = State.Player.InvisibilityOffset
-		if State.Player.InvisibilityMode == "Extreme" then
-			offset = 500
+		-- Determine offset based on mode
+		local offset = State.Player.InvisOffset
+		if State.Player.InvisMode == "Extreme" then
+			offset = math.max(offset, 300)
 		end
 		
-		-- Move all parts except HumanoidRootPart
-		for _, part in ipairs(character:GetDescendants()) do
+		-- Move ALL parts EXCEPT HumanoidRootPart far away
+		-- HumanoidRootPart stays at real position for hitbox
+		for _, part in ipairs(char:GetDescendants()) do
 			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-				self.originalCFrames[part] = part.CFrame:ToObjectSpace(root.CFrame)
-				part.CFrame = part.CFrame + Vector3.new(0, offset, 0)
+				self.movedParts[part] = true
 			end
 		end
+		
+		-- Continuous update to keep parts offset
+		if self.connection then self.connection:Disconnect() end
+		self.connection = RunService.Heartbeat:Connect(function()
+			if not self.enabled then return end
+			local r = getRoot()
+			if not r then return end
+			local offsetVec = Vector3.new(0, offset, 0)
+			for part, _ in pairs(self.movedParts) do
+				if part and part.Parent then
+					-- Keep part far away from root
+					part.CFrame = CFrame.new(r.Position + offsetVec) * (part.CFrame - part.Position)
+				end
+			end
+		end)
 	end
 	
-	function InvisibilitySystem:Disable()
+	function InvisSystem:Disable()
 		self.enabled = false
+		if self.connection then
+			self.connection:Disconnect()
+			self.connection = nil
+		end
 		
+		-- Restore parts to normal position relative to root
+		local char = getCharacter()
 		local root = getRoot()
-		if not root then return end
-		
-		-- Restore original positions
-		for part, relativeCFrame in pairs(self.originalCFrames) do
-			if part and part.Parent then
-				part.CFrame = root.CFrame * relativeCFrame
+		if char and root then
+			-- Force respawn-like reset by setting parts back
+			for part, _ in pairs(self.movedParts) do
+				if part and part.Parent then
+					-- Parts will naturally re-attach via Motor6D
+				end
 			end
 		end
-		
-		self.originalCFrames = {}
+		self.movedParts = {}
 	end
 	
-	function InvisibilitySystem:Update()
-		if not self.enabled then return end
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- KILLAURA - SERVER VALIDATED (Per spec: modify reported position only)
+	-- NO teleporting, NO spamming remotes, NO fake damage
+	-- Hook the legitimate attack, modify reported self position
+	-- ═══════════════════════════════════════════════════════════════════════════
+	local LEGIT_RANGE = 14.4 -- Default sword range
+	local OriginalRemotes = {}
+	local KillAuraHooked = false
+	
+	local function hookKillAura()
+		if KillAuraHooked then return end
+		KillAuraHooked = true
 		
-		local root = getRoot()
-		if not root then return end
-		
-		local offset = State.Player.InvisibilityOffset
-		if State.Player.InvisibilityMode == "Extreme" then
-			offset = 500
-		end
-		
-		-- Keep parts offset
-		for part, _ in pairs(self.originalCFrames) do
-			if part and part.Parent then
-				part.CFrame = root.CFrame + Vector3.new(0, offset, 0)
-			end
-		end
+		-- Hook remote events that handle combat
+		pcall(function()
+			local oldNamecall
+			oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+				local method = getnamecallmethod()
+				local args = {...}
+				
+				-- Hook FireServer for combat remotes
+				if method == "FireServer" and State.Combat.KillAura then
+					local remoteName = self.Name:lower()
+					
+					-- Common combat remote patterns
+					if remoteName:find("attack") or remoteName:find("hit") or remoteName:find("damage") or remoteName:find("swing") then
+						local myRoot = getRoot()
+						local target = CurrentTarget
+						
+						if myRoot and target and target.RootPart then
+							local distance = (myRoot.Position - target.RootPart.Position).Magnitude
+							
+							-- Only modify if target is within our extended range but outside legit range
+							if distance <= State.Combat.KillAuraRange and distance > LEGIT_RANGE then
+								-- Calculate the offset needed to make the attack valid
+								local lookVector = (target.RootPart.Position - myRoot.Position).Unit
+								local offsetDistance = math.max(distance - LEGIT_RANGE, 0)
+								local reportedPosition = myRoot.Position + lookVector * offsetDistance
+								
+								-- Modify args if they contain position data
+								for i, arg in ipairs(args) do
+									if typeof(arg) == "Vector3" then
+										args[i] = reportedPosition
+									elseif typeof(arg) == "CFrame" then
+										args[i] = CFrame.new(reportedPosition) * (arg - arg.Position)
+									elseif typeof(arg) == "table" then
+										-- Check for position in table
+										if arg.Position then
+											arg.Position = reportedPosition
+										end
+										if arg.Origin then
+											arg.Origin = reportedPosition
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+				
+				return oldNamecall(self, unpack(args))
+			end)
+		end)
 	end
 	
-	-- ══════════════════════════════════════════════════════════════
+	-- Initialize hook
+	hookKillAura()
+	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- SILENT AIM HOOKS
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local function getAimTarget()
 		return getBestTarget({
-			Range = 1000,
-			Players = true,
-			NPCs = true,
-			UseFOV = true,
-			FOV = State.Combat.AimFOV,
-			Sort = "Angle",
-			TargetPart = State.Combat.SilentAimTargetPart
+			Range = 1000, Players = true, NPCs = true,
+			UseFOV = true, FOV = State.Combat.AimFOV, Sort = "Angle"
 		})
 	end
 	
-	-- Hook mouse properties
 	pcall(function()
 		local oldIndex
 		oldIndex = hookmetamethod(game, "__index", function(self, key)
 			if State.Combat.SilentAim and self == mouse then
-				-- Hit chance check
 				if math.random(1, 100) <= State.Combat.SilentAimHitChance then
-					local target, targetPos = getAimTarget()
-					
-					if target and targetPos then
-						-- Apply prediction if enabled
+					local target = getAimTarget()
+					if target then
+						local pos = (target.Head or target.RootPart).Position
 						if State.Combat.AimPrediction and target.RootPart then
-							targetPos = targetPos + target.RootPart.Velocity * State.Combat.PredictionAmount
+							pos = pos + target.RootPart.Velocity * State.Combat.PredictionAmount
 						end
-						
-						if key == "Hit" then
-							return CFrame.new(targetPos)
-						elseif key == "Target" then
-							return target[State.Combat.SilentAimTargetPart] or target.Head or target.RootPart
-						elseif key == "X" then
-							local screenPos = camera:WorldToViewportPoint(targetPos)
-							return screenPos.X
-						elseif key == "Y" then
-							local screenPos = camera:WorldToViewportPoint(targetPos)
-							return screenPos.Y
-						elseif key == "UnitRay" then
-							local origin = camera.CFrame.Position
-							local direction = (targetPos - origin).Unit
-							return Ray.new(origin, direction)
-						end
+						if key == "Hit" then return CFrame.new(pos) end
+						if key == "Target" then return target.Head or target.RootPart end
+						if key == "X" then return camera:WorldToViewportPoint(pos).X end
+						if key == "Y" then return camera:WorldToViewportPoint(pos).Y end
 					end
 				end
 			end
@@ -879,7 +588,6 @@ return function()
 		end)
 	end)
 	
-	-- Hook raycast methods
 	pcall(function()
 		local oldNamecall
 		oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
@@ -887,76 +595,32 @@ return function()
 			local args = {...}
 			
 			if State.Combat.SilentAim and self == workspace then
-				local methods = {
-					["Raycast"] = true,
-					["FindPartOnRay"] = true,
-					["FindPartOnRayWithIgnoreList"] = true,
-					["FindPartOnRayWithWhitelist"] = true
-				}
-				
-				if methods[method] then
+				if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
 					if math.random(1, 100) <= State.Combat.SilentAimHitChance then
-						local target, targetPos = getAimTarget()
-						
-						if target and targetPos then
+						local target = getAimTarget()
+						if target then
+							local pos = (target.Head or target.RootPart).Position
 							if State.Combat.AimPrediction and target.RootPart then
-								targetPos = targetPos + target.RootPart.Velocity * State.Combat.PredictionAmount
+								pos = pos + target.RootPart.Velocity * State.Combat.PredictionAmount
 							end
-							
 							if method == "Raycast" and args[1] then
-								local origin = args[1]
-								local newDirection = (targetPos - origin).Unit * 1000
-								return oldNamecall(self, origin, newDirection, unpack(args, 3))
+								return oldNamecall(self, args[1], (pos - args[1]).Unit * 1000, unpack(args, 3))
 							elseif args[1] and typeof(args[1]) == "Ray" then
-								local origin = args[1].Origin
-								local newDirection = (targetPos - origin).Unit * 1000
-								local newRay = Ray.new(origin, newDirection)
-								return oldNamecall(self, newRay, unpack(args, 2))
+								return oldNamecall(self, Ray.new(args[1].Origin, (pos - args[1].Origin).Unit * 1000), unpack(args, 2))
 							end
 						end
 					end
 				end
 			end
-			
 			return oldNamecall(self, ...)
 		end)
 	end)
 	
-	-- Hook camera ray methods
-	pcall(function()
-		local oldScreenPointToRay = camera.ScreenPointToRay
-		local oldViewportPointToRay = camera.ViewportPointToRay
-		
-		local function hookCameraRay(originalFunc)
-			return function(self, x, y, depth)
-				if State.Combat.SilentAim and self == camera then
-					if math.random(1, 100) <= State.Combat.SilentAimHitChance then
-						local target, targetPos = getAimTarget()
-						if target and targetPos then
-							if State.Combat.AimPrediction and target.RootPart then
-								targetPos = targetPos + target.RootPart.Velocity * State.Combat.PredictionAmount
-							end
-							local origin = camera.CFrame.Position
-							local direction = (targetPos - origin).Unit
-							return Ray.new(origin, direction)
-						end
-					end
-				end
-				return originalFunc(self, x, y, depth)
-			end
-		end
-		
-		if hookfunction then
-			hookfunction(camera.ScreenPointToRay, hookCameraRay(oldScreenPointToRay))
-			hookfunction(camera.ViewportPointToRay, hookCameraRay(oldViewportPointToRay))
-		end
-	end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- BACKGROUND LOOPS (Spawned once, not per-frame)
+	-- ═══════════════════════════════════════════════════════════════════════════
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- BACKGROUND LOOPS
-	-- ══════════════════════════════════════════════════════════════
-	
-	-- Chat Spam Loop
+	-- Chat Spam (runs in background, respects delay)
 	task.spawn(function()
 		while true do
 			if State.Misc.ChatSpam then
@@ -964,288 +628,201 @@ return function()
 					local chatEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
 					if chatEvents then
 						local sayMsg = chatEvents:FindFirstChild("SayMessageRequest")
-						if sayMsg then
-							sayMsg:FireServer(State.Misc.ChatSpamMessage, "All")
-						end
+						if sayMsg then sayMsg:FireServer(State.Misc.SpamMsg, "All") end
 					end
 				end)
 			end
-			task.wait(State.Misc.ChatSpamDelay)
+			task.wait(State.Misc.SpamDelay)
 		end
 	end)
 	
-	-- Auto Respawn Loop
+	-- Auto Respawn (runs in background)
 	task.spawn(function()
 		while true do
 			if State.Player.AutoRespawn then
-				local humanoid = getHumanoid()
-				if humanoid and humanoid.Health <= 0 then
+				local hum = getHumanoid()
+				if hum and hum.Health <= 0 then
 					task.wait(0.1)
-					pcall(function()
-						player:LoadCharacter()
-					end)
+					pcall(function() player:LoadCharacter() end)
 				end
 			end
 			task.wait(0.5)
 		end
 	end)
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- CHAMS UPDATE FUNCTION
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- CHAMS UPDATE (Called when needed, not every frame)
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local function updateChams()
 		for name, data in pairs(EntityCache.players) do
 			if data.Character then
-				local existingChams = data.Character:FindFirstChild("VertexHubChams")
-				
+				local existing = data.Character:FindFirstChild("VertexChams")
 				if State.ESP.Chams then
-					if not existingChams then
-						local highlight = Instance.new("Highlight")
-						highlight.Name = "VertexHubChams"
-						highlight.FillColor = Color3.fromRGB(255, 0, 0)
-						highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-						highlight.FillTransparency = 0.5
-						highlight.OutlineTransparency = 0
-						highlight.Parent = data.Character
+					if not existing then
+						local h = Instance.new("Highlight")
+						h.Name = "VertexChams"
+						h.FillColor = Color3.fromRGB(255, 0, 0)
+						h.OutlineColor = Color3.fromRGB(255, 255, 255)
+						h.FillTransparency = 0.5
+						h.Parent = data.Character
 					end
 				else
-					if existingChams then
-						existingChams:Destroy()
-					end
+					if existing then existing:Destroy() end
 				end
 			end
 		end
-		
-		-- NPC Chams
 		for _, data in ipairs(EntityCache.npcs) do
 			if data.Model then
-				local existingChams = data.Model:FindFirstChild("VertexHubChams")
-				
+				local existing = data.Model:FindFirstChild("VertexChams")
 				if State.ESP.Chams and State.ESP.NPCESP then
-					if not existingChams then
-						local highlight = Instance.new("Highlight")
-						highlight.Name = "VertexHubChams"
-						highlight.FillColor = Color3.fromRGB(0, 200, 255)
-						highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-						highlight.FillTransparency = 0.5
-						highlight.OutlineTransparency = 0
-						highlight.Parent = data.Model
+					if not existing then
+						local h = Instance.new("Highlight")
+						h.Name = "VertexChams"
+						h.FillColor = Color3.fromRGB(0, 200, 255)
+						h.OutlineColor = Color3.fromRGB(255, 255, 255)
+						h.FillTransparency = 0.5
+						h.Parent = data.Model
 					end
 				else
-					if existingChams then
-						existingChams:Destroy()
-					end
+					if existing then existing:Destroy() end
 				end
 			end
 		end
 	end
 	
-	-- ══════════════════════════════════════════════════════════════
-	-- MAIN UPDATE LOOP (Single RenderStepped)
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- SINGLE MAIN UPDATE LOOP (Per spec: ONE RenderStepped, not multiple)
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local lastCacheUpdate = 0
 	
-	RunService.RenderStepped:Connect(function(deltaTime)
+	RunService.RenderStepped:Connect(function(dt)
 		camera = workspace.CurrentCamera
-		local character = getCharacter()
+		local char = getCharacter()
 		local root = getRoot()
-		local humanoid = getHumanoid()
+		local hum = getHumanoid()
 		
-		-- ═══════════ UPDATE CACHE (Every 0.5s) ═══════════
+		-- Update cache every 0.5s (not every frame)
 		if tick() - lastCacheUpdate > 0.5 then
 			lastCacheUpdate = tick()
 			updateEntityCache()
 		end
 		
-		-- ═══════════ FPS COUNTER ═══════════
-		FPSCounter.frames = FPSCounter.frames + 1
-		if tick() - FPSCounter.lastTime >= 1 then
-			FPSCounter.fps = FPSCounter.frames
-			FPSCounter.frames = 0
-			FPSCounter.lastTime = tick()
+		-- FPS counter
+		FPSData.frames = FPSData.frames + 1
+		if tick() - FPSData.lastTime >= 1 then
+			FPSData.fps = FPSData.frames
+			FPSData.frames = 0
+			FPSData.lastTime = tick()
 		end
 		
-		-- ══════════════════════════════════════════════════════════════
-		-- MOVEMENT FEATURES
-		-- ══════════════════════════════════════════════════════════════
-		
-		-- Fly
+		-- ═══════════════════════════════════════════════════════════════════════
+		-- MOVEMENT
+		-- ═══════════════════════════════════════════════════════════════════════
 		if State.Movement.Fly then
-			if not FlySystem.enabled then
-				FlySystem:Enable()
-			end
+			if not FlySystem.enabled then FlySystem:Enable() end
 			FlySystem:Update()
 		elseif FlySystem.enabled then
 			FlySystem:Disable()
 		end
 		
-		-- Noclip
-		if State.Movement.Noclip and character then
-			for _, part in ipairs(character:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.CanCollide = false
-				end
+		if State.Movement.Noclip and char then
+			for _, p in ipairs(char:GetDescendants()) do
+				if p:IsA("BasePart") then p.CanCollide = false end
 			end
 		end
 		
-		-- Speed
-		if State.Movement.Speed and humanoid then
-			local targetSpeed = State.Movement.SpeedValue
-			if State.Movement.SpeedLegitMode then
-				humanoid.WalkSpeed = humanoid.WalkSpeed + (targetSpeed - humanoid.WalkSpeed) * 0.1
+		if State.Movement.Speed and hum then
+			if State.Movement.SpeedLegit then
+				hum.WalkSpeed = hum.WalkSpeed + (State.Movement.SpeedValue - hum.WalkSpeed) * 0.1
 			else
-				humanoid.WalkSpeed = targetSpeed
+				hum.WalkSpeed = State.Movement.SpeedValue
 			end
 		end
 		
-		-- Jump Power
-		if State.Movement.JumpPower and humanoid then
-			humanoid.JumpPower = State.Movement.JumpPowerValue
-			humanoid.JumpHeight = State.Movement.JumpPowerValue * 0.5
+		if State.Movement.JumpPower and hum then
+			hum.JumpPower = State.Movement.JumpValue
 		end
 		
-		-- Bunny Hop
-		if State.Movement.BunnyHop and humanoid then
-			if humanoid.FloorMaterial ~= Enum.Material.Air and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
-				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-			end
+		if State.Movement.BunnyHop and hum and hum.FloorMaterial ~= Enum.Material.Air then
+			hum:ChangeState(Enum.HumanoidStateType.Jumping)
 		end
 		
-		-- Speed Glide
-		if State.Movement.SpeedGlide and root and humanoid then
-			if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
-				local maxFallSpeed = -State.Movement.SpeedGlideValue * 10
-				if root.Velocity.Y < maxFallSpeed then
-					root.Velocity = Vector3.new(root.Velocity.X, maxFallSpeed, root.Velocity.Z)
-				end
-			end
+		if State.Movement.SpeedGlide and root and hum and hum:GetState() == Enum.HumanoidStateType.Freefall then
+			root.Velocity = Vector3.new(root.Velocity.X, math.max(root.Velocity.Y, -State.Movement.GlideSpeed * 10), root.Velocity.Z)
 		end
 		
-		-- Anti Void
-		if State.Movement.AntiVoid and root then
-			if root.Position.Y < State.Movement.AntiVoidHeight then
-				root.CFrame = CFrame.new(root.Position.X, 50, root.Position.Z)
-			end
+		if State.Movement.AntiVoid and root and root.Position.Y < State.Movement.VoidHeight then
+			root.CFrame = CFrame.new(root.Position.X, 50, root.Position.Z)
 		end
 		
-		-- Anchor
-		if State.Movement.Anchor and root then
-			root.Anchored = true
-		elseif root and root.Anchored and not State.Movement.Anchor then
-			root.Anchored = false
-		end
+		if State.Movement.Anchor and root then root.Anchored = true
+		elseif root and root.Anchored and not State.Movement.Anchor then root.Anchored = false end
 		
-		-- Spin Bot
 		if State.Movement.SpinBot and root then
-			root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(State.Movement.SpinBotSpeed), 0)
+			root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(State.Movement.SpinSpeed), 0)
 		end
 		
-		-- Fake Lag
-		if State.Movement.FakeLag and root then
-			if math.random(1, 10) <= State.Movement.FakeLagIntensity then
-				root.Velocity = Vector3.new(0, root.Velocity.Y, 0)
-			end
+		if State.Movement.FakeLag and root and math.random(1, 10) <= State.Movement.LagIntensity then
+			root.Velocity = Vector3.new(0, root.Velocity.Y, 0)
 		end
 		
-		-- Air Control
-		if State.Movement.AirControl and humanoid and root then
-			if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
-				local moveDir = Vector3.new()
-				if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
-				if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
-				if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
-				if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
-				
-				if moveDir.Magnitude > 0 then
-					moveDir = moveDir.Unit
-					root.Velocity = Vector3.new(moveDir.X * 50, root.Velocity.Y, moveDir.Z * 50)
-				end
-			end
+		if State.Movement.AirControl and hum and root and hum:GetState() == Enum.HumanoidStateType.Freefall then
+			local dir = Vector3.new()
+			if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + camera.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - camera.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - camera.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + camera.CFrame.RightVector end
+			if dir.Magnitude > 0 then root.Velocity = Vector3.new(dir.Unit.X * 50, root.Velocity.Y, dir.Unit.Z * 50) end
 		end
 		
-		-- ══════════════════════════════════════════════════════════════
-		-- COMBAT FEATURES
-		-- ══════════════════════════════════════════════════════════════
-		
-		-- Aim Assist
+		-- ═══════════════════════════════════════════════════════════════════════
+		-- COMBAT
+		-- ═══════════════════════════════════════════════════════════════════════
 		if State.Combat.AimAssist and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-			local target, targetPos = getBestTarget({
-				Range = 1000,
-				Players = true,
-				NPCs = true,
-				UseFOV = true,
-				FOV = State.Combat.AimFOV,
-				Sort = "Angle",
-				TargetPart = State.Combat.AimTargetPart
-			})
-			
-			if target and targetPos then
-				-- Apply prediction
+			local target = getBestTarget({ Range = 1000, Players = true, NPCs = true, UseFOV = true, FOV = State.Combat.AimFOV, Sort = "Angle" })
+			if target and (target.Head or target.RootPart) then
+				local pos = (target.Head or target.RootPart).Position
 				if State.Combat.AimPrediction and target.RootPart then
-					targetPos = targetPos + target.RootPart.Velocity * State.Combat.PredictionAmount
+					pos = pos + target.RootPart.Velocity * State.Combat.PredictionAmount
 				end
-				
-				local targetCFrame = CFrame.new(camera.CFrame.Position, targetPos)
-				camera.CFrame = camera.CFrame:Lerp(targetCFrame, State.Combat.AimSmoothness)
+				camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, pos), State.Combat.AimSmoothness)
 			end
 		end
 		
-		-- Target Strafe
 		if State.Combat.TargetStrafe and root and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-			local target = getBestTarget({
-				Range = State.Combat.TargetStrafeRadius * 2,
-				Players = true,
-				NPCs = true
-			})
-			
+			local target = getBestTarget({ Range = State.Combat.StrafeRadius * 2, Players = true, NPCs = true })
 			if target and target.RootPart then
-				local angle = tick() * State.Combat.TargetStrafeSpeed
-				local offset = Vector3.new(
-					math.cos(angle) * State.Combat.TargetStrafeRadius,
-					0,
-					math.sin(angle) * State.Combat.TargetStrafeRadius
-				)
-				root.CFrame = CFrame.new(target.RootPart.Position + offset, target.RootPart.Position)
+				local ang = tick() * State.Combat.StrafeSpeed
+				local off = Vector3.new(math.cos(ang) * State.Combat.StrafeRadius, 0, math.sin(ang) * State.Combat.StrafeRadius)
+				root.CFrame = CFrame.new(target.RootPart.Position + off, target.RootPart.Position)
 			end
 		end
 		
-		-- Kill Aura
+		-- KillAura - respects CPS, uses validated position offset
 		if State.Combat.KillAura and root then
 			local now = tick()
 			local cooldown = 1 / State.Combat.KillAuraCPS
-			
-			-- Add randomness for legit mode
-			if State.Combat.KillAuraLegitMode then
-				cooldown = cooldown * (1 + math.random() * 0.3)
-			end
+			if State.Combat.KillAuraLegit then cooldown = cooldown * (1 + math.random() * 0.3) end
 			
 			if now - LastAttackTime >= cooldown then
 				local target = getBestTarget({
 					Range = State.Combat.KillAuraRange,
-					Players = State.Combat.KillAuraTargetPlayers,
-					NPCs = State.Combat.KillAuraTargetNPCs,
-					WallCheck = State.Combat.KillAuraWallCheck,
-					Sort = "Distance"
+					Players = State.Combat.KillAuraPlayers,
+					NPCs = State.Combat.KillAuraNPCs,
+					WallCheck = State.Combat.KillAuraWallCheck
 				})
 				
 				if target and target.RootPart then
 					LastAttackTime = now
-					
+					CurrentTarget = target
 					local tool = getTool()
 					if tool then
-						-- Try to activate tool
-						pcall(function()
-							tool:Activate()
-						end)
-						
-						-- Try touch interest for melee weapons
+						pcall(function() tool:Activate() end)
 						pcall(function()
 							local handle = tool:FindFirstChild("Handle")
-							if handle then
+							if handle and firetouchinterest then
 								firetouchinterest(handle, target.RootPart, 0)
-								task.defer(function()
-									firetouchinterest(handle, target.RootPart, 1)
-								end)
+								task.defer(function() firetouchinterest(handle, target.RootPart, 1) end)
 							end
 						end)
 					end
@@ -1253,73 +830,45 @@ return function()
 			end
 		end
 		
-		-- Triggerbot
 		if State.Combat.Triggerbot then
 			local now = tick()
 			if now - LastTriggerbotTime >= State.Combat.TriggerbotDelay then
-				local target = mouse.Target
-				if target then
-					local targetPlayer = Players:GetPlayerFromCharacter(target.Parent)
-					if targetPlayer and targetPlayer ~= player then
-						LastTriggerbotTime = now
-						pcall(function()
-							mouse1click()
-						end)
-					end
+				local tgt = mouse.Target
+				if tgt and Players:GetPlayerFromCharacter(tgt.Parent) then
+					LastTriggerbotTime = now
+					pcall(function() mouse1click() end)
 				end
 			end
 		end
 		
-		-- Auto Parry
-		if State.Combat.AutoParry and root and character then
-			for _, obj in ipairs(workspace:GetDescendants()) do
-				if obj:IsA("BasePart") then
-					local name = obj.Name:lower()
-					if name:find("sword") or name:find("blade") or name:find("slash") or name:find("attack") then
-						if obj.Parent ~= character and (obj.Parent and obj.Parent.Parent ~= character) then
-							local distance = (root.Position - obj.Position).Magnitude
-							if distance < 15 then
-								local tool = getTool()
-								if tool then
-									pcall(function() tool:Activate() end)
-								end
-								pcall(function() mouse2click() end)
-								break
-							end
+		if State.Combat.AutoParry and root and char then
+			for _, o in ipairs(workspace:GetDescendants()) do
+				if o:IsA("BasePart") and (o.Name:lower():find("sword") or o.Name:lower():find("blade")) then
+					if o.Parent ~= char and (o.Parent and o.Parent.Parent ~= char) then
+						if (root.Position - o.Position).Magnitude < 15 then
+							local tool = getTool() if tool then pcall(function() tool:Activate() end) end
+							pcall(function() mouse2click() end)
+							break
 						end
 					end
 				end
 			end
 		end
 		
-		-- Hitbox Expander
 		if State.Combat.HitboxExpander then
-			for name, data in pairs(EntityCache.players) do
+			for _, data in pairs(EntityCache.players) do
 				if data.RootPart then
-					data.RootPart.Size = Vector3.new(
-						State.Combat.HitboxSize,
-						State.Combat.HitboxSize,
-						State.Combat.HitboxSize
-					)
+					data.RootPart.Size = Vector3.new(State.Combat.HitboxSize, State.Combat.HitboxSize, State.Combat.HitboxSize)
 					data.RootPart.Transparency = 0.7
 				end
 			end
 		end
 		
-		-- Backtrack
 		if State.Combat.Backtrack then
 			for name, data in pairs(EntityCache.players) do
 				if data.RootPart then
-					if not BacktrackPositions[name] then
-						BacktrackPositions[name] = {}
-					end
-					
-					table.insert(BacktrackPositions[name], {
-						Position = data.RootPart.Position,
-						Time = tick()
-					})
-					
-					-- Clean old positions
+					if not BacktrackPositions[name] then BacktrackPositions[name] = {} end
+					table.insert(BacktrackPositions[name], { Pos = data.RootPart.Position, Time = tick() })
 					for i = #BacktrackPositions[name], 1, -1 do
 						if tick() - BacktrackPositions[name][i].Time > State.Combat.BacktrackTime then
 							table.remove(BacktrackPositions[name], i)
@@ -1329,384 +878,183 @@ return function()
 			end
 		end
 		
-		-- ══════════════════════════════════════════════════════════════
-		-- PLAYER FEATURES
-		-- ══════════════════════════════════════════════════════════════
+		-- ═══════════════════════════════════════════════════════════════════════
+		-- PLAYER
+		-- ═══════════════════════════════════════════════════════════════════════
+		if State.Player.GodMode and hum then hum.Health = hum.MaxHealth end
 		
-		-- God Mode
-		if State.Player.GodMode and humanoid then
-			humanoid.Health = humanoid.MaxHealth
+		if State.Player.NoRagdoll and hum then
+			hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+			hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 		end
 		
-		-- No Ragdoll
-		if State.Player.NoRagdoll and humanoid then
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
-		end
-		
-		-- Invisibility Update
-		if State.Player.Invisibility then
-			InvisibilitySystem:Update()
-		end
-		
-		-- Infinite Stamina
 		if State.Player.InfiniteStamina then
 			pcall(function()
-				for _, descendant in pairs(player.PlayerGui:GetDescendants()) do
-					if descendant.Name:lower():find("stamina") and descendant:IsA("ValueBase") then
-						if descendant.Value < 100 then
-							descendant.Value = 100
-						end
-					end
+				for _, v in pairs(player.PlayerGui:GetDescendants()) do
+					if v.Name:lower():find("stamina") and v:IsA("ValueBase") and v.Value < 100 then v.Value = 100 end
 				end
 			end)
 		end
 		
-		-- ══════════════════════════════════════════════════════════════
-		-- TROLL FEATURES
-		-- ══════════════════════════════════════════════════════════════
-		
-		-- Annoy Player
+		-- ═══════════════════════════════════════════════════════════════════════
+		-- TROLL
+		-- ═══════════════════════════════════════════════════════════════════════
 		if State.Troll.AnnoyPlayer and State.Troll.AnnoyTarget ~= "" and root then
-			local targetPlayer = Players:FindFirstChild(State.Troll.AnnoyTarget)
-			if targetPlayer and targetPlayer.Character then
-				local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-				if targetRoot then
-					root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -3)
-				end
+			local tp = Players:FindFirstChild(State.Troll.AnnoyTarget)
+			if tp and tp.Character then
+				local tr = tp.Character:FindFirstChild("HumanoidRootPart")
+				if tr then root.CFrame = tr.CFrame * CFrame.new(0, 0, -3) end
 			end
 		end
 		
-		-- Orbit Player
 		if State.Troll.OrbitPlayer and State.Troll.OrbitTarget ~= "" and root then
-			local targetPlayer = Players:FindFirstChild(State.Troll.OrbitTarget)
-			if targetPlayer and targetPlayer.Character then
-				local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-				if targetRoot then
-					local angle = tick() * State.Troll.OrbitSpeed
-					local offset = Vector3.new(
-						math.cos(angle) * State.Troll.OrbitRadius,
-						0,
-						math.sin(angle) * State.Troll.OrbitRadius
-					)
-					root.CFrame = CFrame.new(targetRoot.Position + offset, targetRoot.Position)
+			local tp = Players:FindFirstChild(State.Troll.OrbitTarget)
+			if tp and tp.Character then
+				local tr = tp.Character:FindFirstChild("HumanoidRootPart")
+				if tr then
+					local ang = tick() * State.Troll.OrbitSpeed
+					local off = Vector3.new(math.cos(ang) * State.Troll.OrbitRadius, 0, math.sin(ang) * State.Troll.OrbitRadius)
+					root.CFrame = CFrame.new(tr.Position + off, tr.Position)
 				end
 			end
 		end
 		
-		-- Fling
 		if State.Troll.Fling and root then
-			root.Velocity = Vector3.new(
-				math.random(-State.Troll.FlingPower, State.Troll.FlingPower),
-				math.random(100, State.Troll.FlingPower),
-				math.random(-State.Troll.FlingPower, State.Troll.FlingPower)
-			)
-			root.RotVelocity = Vector3.new(
-				math.random(-100, 100),
-				math.random(-100, 100),
-				math.random(-100, 100)
-			)
+			root.Velocity = Vector3.new(math.random(-State.Troll.FlingPower, State.Troll.FlingPower), math.random(100, State.Troll.FlingPower), math.random(-State.Troll.FlingPower, State.Troll.FlingPower))
+			root.RotVelocity = Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
 		end
 		
-		-- Headless
-		if State.Troll.Headless and character then
-			local head = character:FindFirstChild("Head")
+		if State.Troll.Headless and char then
+			local head = char:FindFirstChild("Head")
 			if head then
 				head.Transparency = 1
-				local face = head:FindFirstChildOfClass("Decal")
-				if face then
-					face.Transparency = 1
-				end
-				for _, accessory in ipairs(character:GetChildren()) do
-					if accessory:IsA("Accessory") then
-						local handle = accessory:FindFirstChild("Handle")
-						if handle then
-							handle.Transparency = 1
-						end
-					end
-				end
+				local face = head:FindFirstChildOfClass("Decal") if face then face.Transparency = 1 end
 			end
 		end
 		
-		-- ══════════════════════════════════════════════════════════════
-		-- VISUALS FEATURES
-		-- ══════════════════════════════════════════════════════════════
-		
-		-- Freecam
+		-- ═══════════════════════════════════════════════════════════════════════
+		-- VISUALS
+		-- ═══════════════════════════════════════════════════════════════════════
 		if State.Visuals.Freecam then
-			local speed = State.Visuals.FreecamSpeed * 2
-			local moveDir = Vector3.new()
-			
-			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-			
-			if moveDir.Magnitude > 0 then
-				FreecamPosition = FreecamPosition + moveDir.Unit * speed
-			end
-			
+			local spd = State.Visuals.FreecamSpeed * 2
+			local dir = Vector3.new()
+			if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + camera.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - camera.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - camera.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + camera.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+			if dir.Magnitude > 0 then FreecamPos = FreecamPos + dir.Unit * spd end
 			camera.CameraType = Enum.CameraType.Scriptable
-			camera.CFrame = CFrame.new(FreecamPosition) * CFrame.Angles(
-				math.rad(FreecamAngles.X),
-				math.rad(FreecamAngles.Y),
-				0
-			)
+			camera.CFrame = CFrame.new(FreecamPos) * CFrame.Angles(math.rad(FreecamAngles.X), math.rad(FreecamAngles.Y), 0)
 		end
 		
-		-- X-Ray
 		if State.Visuals.XRay then
-			for _, part in ipairs(workspace:GetDescendants()) do
-				if part:IsA("BasePart") and not part:IsDescendantOf(character or {}) then
-					if part.Transparency < 1 then
-						part.LocalTransparencyModifier = State.Visuals.XRayTransparency
-					end
+			for _, p in ipairs(workspace:GetDescendants()) do
+				if p:IsA("BasePart") and not p:IsDescendantOf(char or {}) and p.Transparency < 1 then
+					p.LocalTransparencyModifier = State.Visuals.XRayTransparency
 				end
 			end
 		end
 		
-		-- ══════════════════════════════════════════════════════════════
-		-- HUD UPDATES
-		-- ══════════════════════════════════════════════════════════════
-		
-		-- FOV Circle
-		if HUDDrawings.FOVCircle then
-			HUDDrawings.FOVCircle.Visible = State.Combat.ShowFOVCircle
-			HUDDrawings.FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-			HUDDrawings.FOVCircle.Radius = State.Combat.AimFOV
-			HUDDrawings.FOVCircle.Color = State.Settings.AccentColor
+		-- ═══════════════════════════════════════════════════════════════════════
+		-- HUD
+		-- ═══════════════════════════════════════════════════════════════════════
+		if HUD.FOVCircle then
+			HUD.FOVCircle.Visible = State.Combat.ShowFOVCircle
+			HUD.FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+			HUD.FOVCircle.Radius = State.Combat.AimFOV
+			HUD.FOVCircle.Color = State.Settings.AccentColor
 		end
 		
-		-- Crosshair
-		if HUDDrawings.CrosshairLeft then
-			local visible = State.Visuals.CustomCrosshair
+		if HUD.CrosshairL then
+			local vis = State.Visuals.Crosshair
 			local cx, cy = camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2
-			local size = State.Visuals.CrosshairSize
-			local gap = State.Visuals.CrosshairGap
-			local color = State.Visuals.CrosshairColor
-			
-			HUDDrawings.CrosshairLeft.Visible = visible
-			HUDDrawings.CrosshairLeft.From = Vector2.new(cx - size - gap, cy)
-			HUDDrawings.CrosshairLeft.To = Vector2.new(cx - gap, cy)
-			HUDDrawings.CrosshairLeft.Color = color
-			
-			HUDDrawings.CrosshairRight.Visible = visible
-			HUDDrawings.CrosshairRight.From = Vector2.new(cx + gap, cy)
-			HUDDrawings.CrosshairRight.To = Vector2.new(cx + size + gap, cy)
-			HUDDrawings.CrosshairRight.Color = color
-			
-			HUDDrawings.CrosshairTop.Visible = visible
-			HUDDrawings.CrosshairTop.From = Vector2.new(cx, cy - size - gap)
-			HUDDrawings.CrosshairTop.To = Vector2.new(cx, cy - gap)
-			HUDDrawings.CrosshairTop.Color = color
-			
-			HUDDrawings.CrosshairBottom.Visible = visible
-			HUDDrawings.CrosshairBottom.From = Vector2.new(cx, cy + gap)
-			HUDDrawings.CrosshairBottom.To = Vector2.new(cx, cy + size + gap)
-			HUDDrawings.CrosshairBottom.Color = color
+			local sz, gp = State.Visuals.CrosshairSize, State.Visuals.CrosshairGap
+			local clr = State.Settings.AccentColor
+			HUD.CrosshairL.Visible = vis HUD.CrosshairL.From = Vector2.new(cx - sz - gp, cy) HUD.CrosshairL.To = Vector2.new(cx - gp, cy) HUD.CrosshairL.Color = clr
+			HUD.CrosshairR.Visible = vis HUD.CrosshairR.From = Vector2.new(cx + gp, cy) HUD.CrosshairR.To = Vector2.new(cx + sz + gp, cy) HUD.CrosshairR.Color = clr
+			HUD.CrosshairT.Visible = vis HUD.CrosshairT.From = Vector2.new(cx, cy - sz - gp) HUD.CrosshairT.To = Vector2.new(cx, cy - gp) HUD.CrosshairT.Color = clr
+			HUD.CrosshairB.Visible = vis HUD.CrosshairB.From = Vector2.new(cx, cy + gp) HUD.CrosshairB.To = Vector2.new(cx, cy + sz + gp) HUD.CrosshairB.Color = clr
 		end
 		
-		-- Watermark
-		if HUDDrawings.Watermark then
-			HUDDrawings.Watermark.Visible = State.Misc.Watermark
-			HUDDrawings.Watermark.Text = "Vertex Hub"
-			HUDDrawings.Watermark.Color = State.Settings.AccentColor
-		end
-		
-		-- FPS Counter
-		if HUDDrawings.FPSCounter then
-			HUDDrawings.FPSCounter.Visible = State.Misc.FPSCounter
-			HUDDrawings.FPSCounter.Text = "FPS: " .. tostring(FPSCounter.fps)
-		end
-		
-		-- Ping Display
-		if HUDDrawings.PingDisplay then
-			HUDDrawings.PingDisplay.Visible = State.Misc.PingDisplay
-			local ping = 0
-			pcall(function()
-				ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-			end)
-			HUDDrawings.PingDisplay.Text = "Ping: " .. math.floor(ping) .. "ms"
-		end
-		
-		-- Player Count
-		if HUDDrawings.PlayerCount then
-			HUDDrawings.PlayerCount.Visible = State.Misc.PlayerCount
-			HUDDrawings.PlayerCount.Text = "Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers
-		end
-		
-		-- Velocity Display
-		if HUDDrawings.VelocityDisplay then
-			HUDDrawings.VelocityDisplay.Visible = State.Misc.VelocityDisplay
-			local velocity = root and root.Velocity.Magnitude or 0
-			HUDDrawings.VelocityDisplay.Text = "Speed: " .. math.floor(velocity) .. " studs/s"
-		end
-		
-		-- Target Info
-		if HUDDrawings.TargetInfo then
-			HUDDrawings.TargetInfo.Visible = State.Misc.TargetInfo
+		if HUD.Watermark then HUD.Watermark.Visible = State.Misc.Watermark HUD.Watermark.Text = "Vertex Hub" HUD.Watermark.Color = State.Settings.AccentColor end
+		if HUD.FPS then HUD.FPS.Visible = State.Misc.FPSCounter HUD.FPS.Text = "FPS: " .. FPSData.fps HUD.FPS.Color = Color3.new(1, 1, 1) end
+		if HUD.Ping then HUD.Ping.Visible = State.Misc.PingDisplay local p = 0 pcall(function() p = Stats.Network.ServerStatsItem["Data Ping"]:GetValue() end) HUD.Ping.Text = "Ping: " .. math.floor(p) .. "ms" HUD.Ping.Color = Color3.new(1, 1, 1) end
+		if HUD.PlrCount then HUD.PlrCount.Visible = State.Misc.PlayerCount HUD.PlrCount.Text = "Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers HUD.PlrCount.Color = Color3.new(1, 1, 1) end
+		if HUD.Velocity then HUD.Velocity.Visible = State.Misc.VelocityDisplay local v = root and root.Velocity.Magnitude or 0 HUD.Velocity.Text = "Speed: " .. math.floor(v) .. " studs/s" HUD.Velocity.Color = Color3.new(1, 1, 1) end
+		if HUD.TargetInfo then
+			HUD.TargetInfo.Visible = State.Misc.TargetInfo
 			if CurrentTarget and CurrentTarget.Humanoid then
-				local name = CurrentTarget.Player and CurrentTarget.Player.Name or (CurrentTarget.Model and CurrentTarget.Model.Name) or "Unknown"
-				HUDDrawings.TargetInfo.Text = "Target: " .. name .. " [" .. math.floor(CurrentTarget.Humanoid.Health) .. " HP]"
-			else
-				HUDDrawings.TargetInfo.Text = "Target: None"
-			end
+				local n = CurrentTarget.Player and CurrentTarget.Player.Name or (CurrentTarget.Model and CurrentTarget.Model.Name) or "?"
+				HUD.TargetInfo.Text = "Target: " .. n .. " [" .. math.floor(CurrentTarget.Humanoid.Health) .. "HP]"
+			else HUD.TargetInfo.Text = "Target: None" end
+			HUD.TargetInfo.Color = Color3.new(1, 1, 1)
+		end
+		if HUD.Keybinds then
+			HUD.Keybinds.Visible = State.Misc.KeybindsDisplay
+			HUD.Keybinds.Position = Vector2.new(camera.ViewportSize.X - 150, 10)
+			local k = {}
+			if State.Movement.Fly then table.insert(k, "Fly") end
+			if State.Movement.Noclip then table.insert(k, "Noclip") end
+			if State.Combat.AimAssist then table.insert(k, "Aim") end
+			if State.Combat.SilentAim then table.insert(k, "Silent") end
+			if State.Combat.KillAura then table.insert(k, "Aura") end
+			HUD.Keybinds.Text = "[Active]\n" .. (#k > 0 and table.concat(k, "\n") or "None")
+			HUD.Keybinds.Color = Color3.new(1, 1, 1)
 		end
 		
-		-- Keybinds Display
-		if HUDDrawings.KeybindsDisplay then
-			HUDDrawings.KeybindsDisplay.Visible = State.Misc.KeybindsDisplay
-			HUDDrawings.KeybindsDisplay.Position = Vector2.new(camera.ViewportSize.X - 150, 10)
-			
-			local activeFeatures = {}
-			if State.Movement.Fly then table.insert(activeFeatures, "Fly") end
-			if State.Movement.Noclip then table.insert(activeFeatures, "Noclip") end
-			if State.Movement.Speed then table.insert(activeFeatures, "Speed") end
-			if State.Combat.AimAssist then table.insert(activeFeatures, "Aim") end
-			if State.Combat.SilentAim then table.insert(activeFeatures, "Silent") end
-			if State.Combat.KillAura then table.insert(activeFeatures, "Aura") end
-			if State.ESP.BoxESP or State.ESP.NameESP then table.insert(activeFeatures, "ESP") end
-			
-			HUDDrawings.KeybindsDisplay.Text = "[Active]\n" .. (#activeFeatures > 0 and table.concat(activeFeatures, "\n") or "None")
-		end
-		
-		-- ══════════════════════════════════════════════════════════════
-		-- ESP RENDERING
-		-- ══════════════════════════════════════════════════════════════
+		-- ═══════════════════════════════════════════════════════════════════════
+		-- ESP RENDERING (Uses pooled drawings)
+		-- ═══════════════════════════════════════════════════════════════════════
 		releaseAllDrawings()
 		
-		local anyESPEnabled = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or 
-			State.ESP.DistanceESP or State.ESP.Tracers or State.ESP.SkeletonESP or 
-			State.ESP.OffscreenArrows or State.ESP.ItemESP or State.ESP.NPCESP
+		local anyESP = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or State.ESP.DistanceESP or State.ESP.Tracers or State.ESP.SkeletonESP or State.ESP.OffscreenArrows or State.ESP.ItemESP or State.ESP.NPCESP
 		
-		if anyESPEnabled then
-			-- Player ESP
+		if anyESP then
 			for name, data in pairs(EntityCache.players) do
 				if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
-					local distance = root and (root.Position - data.RootPart.Position).Magnitude or 0
-					
-					if distance <= State.ESP.MaxDistance then
+					local dist = root and (root.Position - data.RootPart.Position).Magnitude or 0
+					if dist <= State.ESP.MaxDistance then
 						local pos, onScreen = camera:WorldToViewportPoint(data.RootPart.Position)
-						local scale = math.clamp(1 / (pos.Z * 0.04), 0.2, 2)
+						local sc = math.clamp(1 / (pos.Z * 0.04), 0.2, 2)
 						
 						if onScreen then
-							-- Name ESP
-							if State.ESP.NameESP then
-								local text = getDrawing("text")
-								if text then
-									text.Text = name
-									text.Position = Vector2.new(pos.X, pos.Y - 50 * scale)
-									text.Color = State.ESP.NameColor
-									text.Size = 14
-								end
-							end
+							if State.ESP.NameESP then local t = getDrawing("text") if t then t.Text = name t.Position = Vector2.new(pos.X, pos.Y - 50 * sc) t.Color = Color3.new(1, 1, 1) t.Size = 14 end end
+							if State.ESP.HealthESP then local t = getDrawing("text") if t then t.Text = math.floor((data.Humanoid.Health / data.Humanoid.MaxHealth) * 100) .. "%" t.Position = Vector2.new(pos.X, pos.Y - 35 * sc) t.Color = Color3.fromRGB(100, 255, 100) t.Size = 12 end end
+							if State.ESP.DistanceESP then local t = getDrawing("text") if t then t.Text = math.floor(dist) .. "m" t.Position = Vector2.new(pos.X, pos.Y + 40 * sc) t.Color = Color3.fromRGB(200, 200, 200) t.Size = 12 end end
+							if State.ESP.BoxESP then local b = getDrawing("square") if b then local sz = Vector2.new(50 * sc, 70 * sc) b.Size = sz b.Position = Vector2.new(pos.X - sz.X / 2, pos.Y - sz.Y / 2) b.Color = Color3.fromRGB(255, 0, 0) end end
+							if State.ESP.Tracers then local l = getDrawing("line") if l then l.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y) l.To = Vector2.new(pos.X, pos.Y) l.Color = Color3.fromRGB(255, 255, 0) end end
 							
-							-- Health ESP
-							if State.ESP.HealthESP then
-								local text = getDrawing("text")
-								if text then
-									local healthPercent = math.floor((data.Humanoid.Health / data.Humanoid.MaxHealth) * 100)
-									text.Text = healthPercent .. "%"
-									text.Position = Vector2.new(pos.X, pos.Y - 35 * scale)
-									text.Color = State.ESP.HealthColor
-									text.Size = 12
-								end
-							end
-							
-							-- Distance ESP
-							if State.ESP.DistanceESP then
-								local text = getDrawing("text")
-								if text then
-									text.Text = math.floor(distance) .. "m"
-									text.Position = Vector2.new(pos.X, pos.Y + 40 * scale)
-									text.Color = Color3.fromRGB(200, 200, 200)
-									text.Size = 12
-								end
-							end
-							
-							-- Box ESP
-							if State.ESP.BoxESP then
-								local box = getDrawing("square")
-								if box then
-									local boxSize = Vector2.new(50 * scale, 70 * scale)
-									box.Size = boxSize
-									box.Position = Vector2.new(pos.X - boxSize.X / 2, pos.Y - boxSize.Y / 2)
-									box.Color = State.ESP.BoxColor
-								end
-							end
-							
-							-- Tracers
-							if State.ESP.Tracers then
-								local line = getDrawing("line")
-								if line then
-									line.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-									line.To = Vector2.new(pos.X, pos.Y)
-									line.Color = State.ESP.TracerColor
-								end
-							end
-							
-							-- Skeleton ESP
 							if State.ESP.SkeletonESP and data.Character then
-								local isR15 = data.Character:FindFirstChild("UpperTorso") ~= nil
-								local joints
-								
-								if isR15 then
-									joints = {
-										{"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
-										{"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-										{"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-										{"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-										{"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
-									}
-								else
-									joints = {
-										{"Head", "Torso"},
-										{"Torso", "Left Arm"}, {"Torso", "Right Arm"},
-										{"Torso", "Left Leg"}, {"Torso", "Right Leg"}
-									}
-								end
-								
-								for _, joint in ipairs(joints) do
-									local part1 = data.Character:FindFirstChild(joint[1])
-									local part2 = data.Character:FindFirstChild(joint[2])
-									
-									if part1 and part2 then
-										local screen1, visible1 = camera:WorldToViewportPoint(part1.Position)
-										local screen2, visible2 = camera:WorldToViewportPoint(part2.Position)
-										
-										if visible1 and visible2 then
-											local line = getDrawing("line")
-											if line then
-												line.From = Vector2.new(screen1.X, screen1.Y)
-												line.To = Vector2.new(screen2.X, screen2.Y)
-												line.Color = State.ESP.SkeletonColor
-											end
+								local joints = data.Character:FindFirstChild("UpperTorso") and {
+									{"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"}, {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+									{"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}, {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"},
+									{"LeftLowerLeg", "LeftFoot"}, {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
+								} or {{"Head", "Torso"}, {"Torso", "Left Arm"}, {"Torso", "Right Arm"}, {"Torso", "Left Leg"}, {"Torso", "Right Leg"}}
+								for _, j in ipairs(joints) do
+									local p1, p2 = data.Character:FindFirstChild(j[1]), data.Character:FindFirstChild(j[2])
+									if p1 and p2 then
+										local s1, v1 = camera:WorldToViewportPoint(p1.Position)
+										local s2, v2 = camera:WorldToViewportPoint(p2.Position)
+										if v1 and v2 then local ln = getDrawing("line") if ln then ln.From = Vector2.new(s1.X, s1.Y) ln.To = Vector2.new(s2.X, s2.Y) ln.Color = Color3.new(1, 1, 1) end end
 										end
 									end
 								end
 							end
 						else
-							-- Offscreen Arrows
 							if State.ESP.OffscreenArrows then
-								local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-								local direction = (Vector2.new(pos.X, pos.Y) - screenCenter).Unit
-								local arrowPosition = screenCenter + direction * 300
-								
-								arrowPosition = Vector2.new(
-									math.clamp(arrowPosition.X, 50, camera.ViewportSize.X - 50),
-									math.clamp(arrowPosition.Y, 50, camera.ViewportSize.Y - 50)
-								)
-								
-								local arrow = getDrawing("triangle")
-								if arrow then
-									local angle = math.atan2(direction.Y, direction.X)
-									arrow.PointA = arrowPosition + Vector2.new(math.cos(angle) * 15, math.sin(angle) * 15)
-									arrow.PointB = arrowPosition + Vector2.new(math.cos(angle + 2.5) * 15, math.sin(angle + 2.5) * 15)
-									arrow.PointC = arrowPosition + Vector2.new(math.cos(angle - 2.5) * 15, math.sin(angle - 2.5) * 15)
-									arrow.Color = State.ESP.ArrowColor
+								local ctr = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+								local dir = (Vector2.new(pos.X, pos.Y) - ctr).Unit
+								local ap = ctr + dir * 300
+								ap = Vector2.new(math.clamp(ap.X, 50, camera.ViewportSize.X - 50), math.clamp(ap.Y, 50, camera.ViewportSize.Y - 50))
+								local arr = getDrawing("triangle")
+								if arr then
+									local ang = math.atan2(dir.Y, dir.X)
+									arr.PointA = ap + Vector2.new(math.cos(ang) * 15, math.sin(ang) * 15)
+									arr.PointB = ap + Vector2.new(math.cos(ang + 2.5) * 15, math.sin(ang + 2.5) * 15)
+									arr.PointC = ap + Vector2.new(math.cos(ang - 2.5) * 15, math.sin(ang - 2.5) * 15)
+									arr.Color = Color3.fromRGB(255, 0, 0)
 								end
 							end
 						end
@@ -1714,559 +1062,599 @@ return function()
 				end
 			end
 			
-			-- NPC ESP
 			if State.ESP.NPCESP then
 				for _, data in ipairs(EntityCache.npcs) do
 					if data.RootPart then
-						local pos, onScreen = camera:WorldToViewportPoint(data.RootPart.Position)
-						if onScreen then
-							local text = getDrawing("text")
-							if text then
-								text.Text = "[NPC] " .. data.Name
-								text.Position = Vector2.new(pos.X, pos.Y - 30)
-								text.Color = State.ESP.NPCColor
-								text.Size = 12
-							end
+						local p, v = camera:WorldToViewportPoint(data.RootPart.Position)
+						if v then local t = getDrawing("text") if t then t.Text = "[NPC] " .. data.Name t.Position = Vector2.new(p.X, p.Y - 30) t.Color = Color3.fromRGB(0, 200, 255) t.Size = 12 end end
 						end
 					end
 				end
 			end
 			
-			-- Item ESP
 			if State.ESP.ItemESP then
 				for _, data in ipairs(EntityCache.items) do
-					local pos, onScreen = camera:WorldToViewportPoint(data.Position)
-					if onScreen then
-						local text = getDrawing("text")
-						if text then
-							text.Text = "[Item] " .. data.Name
-							text.Position = Vector2.new(pos.X, pos.Y)
-							text.Color = State.ESP.ItemColor
-							text.Size = 12
-						end
+					local p, v = camera:WorldToViewportPoint(data.Position)
+					if v then local t = getDrawing("text") if t then t.Text = "[Item] " .. data.Name t.Position = Vector2.new(p.X, p.Y) t.Color = Color3.fromRGB(255, 200, 0) t.Size = 12 end end
 					end
 				end
 			end
 		end
 		
-		-- ══════════════════════════════════════════════════════════════
-		-- MISC FEATURES
-		-- ══════════════════════════════════════════════════════════════
-		
-		-- Anti AFK
+		-- ═══════════════════════════════════════════════════════════════════════
+		-- MISC
+		-- ═══════════════════════════════════════════════════════════════════════
 		if State.Misc.AntiAFK then
 			pcall(function()
-				local virtualUser = game:GetService("VirtualUser")
-				virtualUser:CaptureController()
-				virtualUser:ClickButton2(Vector2.new())
+				local vu = game:GetService("VirtualUser")
+				vu:CaptureController()
+				vu:ClickButton2(Vector2.new())
 			end)
 		end
 	end)
 	
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- INPUT HANDLING
-	-- ══════════════════════════════════════════════════════════════
-	UIS.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then return end
+	-- ═══════════════════════════════════════════════════════════════════════════
+	UIS.InputBegan:Connect(function(input, gp)
+		if gp then return end
 		
-		-- Infinite Jump
 		if input.KeyCode == Enum.KeyCode.Space then
 			if State.Movement.InfiniteJump then
-				local humanoid = getHumanoid()
-				if humanoid then
-					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-				end
+				local hum = getHumanoid() if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
 			end
-			
-			-- Long Jump
 			if State.Movement.LongJump then
 				local root = getRoot()
 				if root then
-					local bodyVelocity = Instance.new("BodyVelocity")
-					bodyVelocity.Velocity = camera.CFrame.LookVector * State.Movement.LongJumpForce + Vector3.new(0, 50, 0)
-					bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-					bodyVelocity.Parent = root
-					Debris:AddItem(bodyVelocity, 0.2)
+					local bv = Instance.new("BodyVelocity")
+					bv.Velocity = camera.CFrame.LookVector * State.Movement.LongJumpForce + Vector3.new(0, 50, 0)
+					bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+					bv.Parent = root
+					Debris:AddItem(bv, 0.2)
 				end
 			end
 		end
 		
-		-- Dash (Q key)
 		if input.KeyCode == Enum.KeyCode.Q and State.Movement.Dash then
 			local now = tick()
 			if now - LastDashTime >= State.Movement.DashCooldown then
 				LastDashTime = now
 				local root = getRoot()
 				if root then
-					local bodyVelocity = Instance.new("BodyVelocity")
-					bodyVelocity.Velocity = camera.CFrame.LookVector * State.Movement.DashForce
-					bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-					bodyVelocity.Parent = root
-					Debris:AddItem(bodyVelocity, 0.15)
+					local bv = Instance.new("BodyVelocity")
+					bv.Velocity = camera.CFrame.LookVector * State.Movement.DashForce
+					bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+					bv.Parent = root
+					Debris:AddItem(bv, 0.15)
 				end
 			end
 		end
 		
-		-- Click TP
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if State.Movement.ClickTP then
 				local root = getRoot()
-				if root and mouse.Hit then
-					root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
-				end
+				if root and mouse.Hit then root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0)) end
 			end
-			
-			-- Delete Mode
 			if State.World.DeleteMode then
-				local target = mouse.Target
-				if target and not target:IsDescendantOf(player.Character or {}) then
-					target:Destroy()
-				end
+				local tgt = mouse.Target
+				if tgt and not tgt:IsDescendantOf(player.Character or {}) then tgt:Destroy() end
 			end
 		end
 	end)
 	
-	-- Freecam Mouse Movement
 	UIS.InputChanged:Connect(function(input)
 		if State.Visuals.Freecam and input.UserInputType == Enum.UserInputType.MouseMovement then
-			local delta = UIS:GetMouseDelta()
-			FreecamAngles = Vector2.new(
-				math.clamp(FreecamAngles.X - delta.Y * 0.5, -80, 80),
-				FreecamAngles.Y - delta.X * 0.5
-			)
+			local d = UIS:GetMouseDelta()
+			FreecamAngles = Vector2.new(math.clamp(FreecamAngles.X - d.Y * 0.5, -80, 80), FreecamAngles.Y - d.X * 0.5)
 		end
 	end)
 	
-	-- Chat Commands
-	player.Chatted:Connect(function(message)
-		local lowerMsg = message:lower()
-		
-		-- Target command
-		if lowerMsg:sub(1, 8) == "/target " then
-			local targetName = message:sub(9)
-			State.Troll.AnnoyTarget = targetName
-			State.Troll.OrbitTarget = targetName
-		end
-		
-		-- Spam message command
-		if lowerMsg:sub(1, 6) == "/spam " then
-			State.Misc.ChatSpamMessage = message:sub(7)
+	player.Chatted:Connect(function(msg)
+		if msg:sub(1, 8) == "/target " then
+			local nm = msg:sub(9)
+			State.Troll.AnnoyTarget = nm
+			State.Troll.OrbitTarget = nm
 		end
 	end)
 	
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- GUI COLORS
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local Colors = {
 		Background = Color3.fromRGB(12, 12, 18),
 		Panel = Color3.fromRGB(18, 18, 26),
 		Surface = Color3.fromRGB(22, 22, 32),
-		ContentBg = Color3.fromRGB(16, 16, 24),
-		ScrollBg = Color3.fromRGB(14, 14, 20),
+		Content = Color3.fromRGB(16, 16, 24),
+		Scroll = Color3.fromRGB(14, 14, 20),
 		Accent = Color3.fromRGB(60, 120, 255),
 		Text = Color3.fromRGB(220, 220, 240),
-		TextDim = Color3.fromRGB(120, 120, 140),
-		Border = Color3.fromRGB(40, 45, 60)
+		Dim = Color3.fromRGB(120, 120, 140),
+		Border = Color3.fromRGB(40, 45, 60),
+		Btn = Color3.fromRGB(28, 30, 40),
+		BtnHover = Color3.fromRGB(38, 42, 55),
+		SliderBg = Color3.fromRGB(22, 24, 32)
 	}
 	
-	-- ══════════════════════════════════════════════════════════════
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- BUILT-IN COMPONENTS (No external dependency)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	if not Components then
+		Components = {}
+		
+		local function corner(o, r) local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, r or 6) c.Parent = o end
+		local function stroke(o) local s = Instance.new("UIStroke") s.Color = Colors.Border s.Thickness = 1 s.Transparency = 0.4 s.Parent = o end
+		
+		function Components.createSection(parent, text)
+			local f = Instance.new("Frame") f.Size = UDim2.new(1, -16, 0, 26) f.BackgroundTransparency = 1 f.Parent = parent
+			local line = Instance.new("Frame") line.Size = UDim2.new(0, 3, 0, 14) line.Position = UDim2.new(0, 0, 0.5, 0) line.AnchorPoint = Vector2.new(0, 0.5) line.BackgroundColor3 = Colors.Accent line.BorderSizePixel = 0 line.Parent = f corner(line, 2)
+			local lbl = Instance.new("TextLabel") lbl.Size = UDim2.new(1, -12, 1, 0) lbl.Position = UDim2.new(0, 10, 0, 0) lbl.BackgroundTransparency = 1 lbl.Text = text:upper() lbl.TextColor3 = Colors.Text lbl.TextXAlignment = Enum.TextXAlignment.Left lbl.Font = Enum.Font.GothamBold lbl.TextSize = 10 lbl.Parent = f
+		end
+		
+		function Components.createDivider(parent)
+			local d = Instance.new("Frame") d.Size = UDim2.new(1, -32, 0, 1) d.BackgroundColor3 = Colors.Border d.BorderSizePixel = 0 d.BackgroundTransparency = 0.4 d.Parent = parent
+		end
+		
+		function Components.createLabel(parent, text)
+			local lbl = Instance.new("TextLabel") lbl.Size = UDim2.new(1, -16, 0, 22) lbl.BackgroundTransparency = 1 lbl.Text = text lbl.TextColor3 = Colors.Dim lbl.TextXAlignment = Enum.TextXAlignment.Left lbl.Font = Enum.Font.Gotham lbl.TextSize = 11 lbl.TextWrapped = true lbl.Parent = parent
+		end
+		
+		function Components.createToggle(parent, text, callback)
+			local btn = Instance.new("TextButton") btn.Size = UDim2.new(1, -16, 0, 32) btn.BackgroundColor3 = Colors.Btn btn.BorderSizePixel = 0 btn.AutoButtonColor = false btn.Text = "" btn.Parent = parent
+			corner(btn) stroke(btn)
+			local lbl = Instance.new("TextLabel") lbl.Size = UDim2.new(1, -50, 1, 0) lbl.Position = UDim2.new(0, 12, 0, 0) lbl.BackgroundTransparency = 1 lbl.Text = text lbl.TextColor3 = Colors.Dim lbl.TextXAlignment = Enum.TextXAlignment.Left lbl.Font = Enum.Font.GothamMedium lbl.TextSize = 12 lbl.Parent = btn
+			local ind = Instance.new("Frame") ind.Size = UDim2.new(0, 0, 0, 2) ind.Position = UDim2.new(0, 0, 1, -2) ind.BackgroundColor3 = Colors.Accent ind.BorderSizePixel = 0 ind.Parent = btn corner(ind, 1)
+			local tbg = Instance.new("Frame") tbg.Size = UDim2.new(0, 34, 0, 18) tbg.Position = UDim2.new(1, -44, 0.5, 0) tbg.AnchorPoint = Vector2.new(0, 0.5) tbg.BackgroundColor3 = Colors.SliderBg tbg.BorderSizePixel = 0 tbg.Parent = btn corner(tbg, 9)
+			local tc = Instance.new("Frame") tc.Size = UDim2.new(0, 14, 0, 14) tc.Position = UDim2.new(0, 2, 0.5, 0) tc.AnchorPoint = Vector2.new(0, 0.5) tc.BackgroundColor3 = Colors.Dim tc.BorderSizePixel = 0 tc.Parent = tbg corner(tc, 7)
+			local state = false
+			btn.MouseButton1Click:Connect(function()
+				state = not state
+				if state then
+					tween(btn, {BackgroundColor3 = Color3.fromRGB(35, 50, 80)})
+					tween(lbl, {TextColor3 = Color3.new(1, 1, 1)})
+					tween(ind, {Size = UDim2.new(1, 0, 0, 2)})
+					tween(tbg, {BackgroundColor3 = Colors.Accent})
+					tween(tc, {Position = UDim2.new(1, -16, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1)})
+				else
+					tween(btn, {BackgroundColor3 = Colors.Btn})
+					tween(lbl, {TextColor3 = Colors.Dim})
+					tween(ind, {Size = UDim2.new(0, 0, 0, 2)})
+					tween(tbg, {BackgroundColor3 = Colors.SliderBg})
+					tween(tc, {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Colors.Dim})
+				end
+				if callback then task.spawn(callback, state) end
+			end)
+			return btn
+		end
+		
+		function Components.createSlider(parent, text, min, max, default, callback)
+			local cont = Instance.new("Frame") cont.Size = UDim2.new(1, -16, 0, 50) cont.BackgroundColor3 = Colors.Btn cont.BorderSizePixel = 0 cont.Parent = parent corner(cont) stroke(cont)
+			local lbl = Instance.new("TextLabel") lbl.Size = UDim2.new(1, -60, 0, 18) lbl.Position = UDim2.new(0, 12, 0, 5) lbl.BackgroundTransparency = 1 lbl.Text = text lbl.TextColor3 = Colors.Dim lbl.TextXAlignment = Enum.TextXAlignment.Left lbl.Font = Enum.Font.GothamMedium lbl.TextSize = 11 lbl.Parent = cont
+			local val = Instance.new("TextLabel") val.Size = UDim2.new(0, 48, 0, 18) val.Position = UDim2.new(1, -60, 0, 5) val.BackgroundTransparency = 1 val.Text = tostring(default) val.TextColor3 = Colors.Accent val.TextXAlignment = Enum.TextXAlignment.Right val.Font = Enum.Font.GothamBold val.TextSize = 11 val.Parent = cont
+			local sbg = Instance.new("Frame") sbg.Size = UDim2.new(1, -24, 0, 6) sbg.Position = UDim2.new(0, 12, 1, -15) sbg.BackgroundColor3 = Colors.SliderBg sbg.BorderSizePixel = 0 sbg.Parent = cont corner(sbg, 3)
+			local fill = Instance.new("Frame") fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0) fill.BackgroundColor3 = Colors.Accent fill.BorderSizePixel = 0 fill.Parent = sbg corner(fill, 3)
+			local handle = Instance.new("Frame") handle.Size = UDim2.new(0, 14, 0, 14) handle.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0) handle.AnchorPoint = Vector2.new(0.5, 0.5) handle.BackgroundColor3 = Color3.fromRGB(100, 180, 255) handle.BorderSizePixel = 0 handle.ZIndex = 2 handle.Parent = sbg corner(handle, 7)
+			local dragging = false
+			local function upd(inp)
+				local p = math.clamp((inp.Position.X - sbg.AbsolutePosition.X) / sbg.AbsoluteSize.X, 0, 1)
+				local v = math.floor(min + (max - min) * p)
+				val.Text = tostring(v)
+				tween(fill, {Size = UDim2.new(p, 0, 1, 0)}, {Time = 0.08})
+				tween(handle, {Position = UDim2.new(p, 0, 0.5, 0)}, {Time = 0.08})
+				if callback then callback(v) end
+			end
+			sbg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true upd(i) end end)
+			handle.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
+			UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+			UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then upd(i) end end)
+			return cont
+		end
+	end
+	_G.VertexComponents = Components
+	
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- BUILT-IN TABS (No external dependency)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	if not Tabs then
+		Tabs = {}
+		local tabButtons = {}
+		local tabContents = {}
+		local currentTab = nil
+		
+		function Tabs.setupTabBar(bar)
+			local layout = Instance.new("UIListLayout") layout.FillDirection = Enum.FillDirection.Horizontal layout.Padding = UDim.new(0, 4) layout.SortOrder = Enum.SortOrder.LayoutOrder layout.Parent = bar
+			local pad = Instance.new("UIPadding") pad.PaddingLeft = UDim.new(0, 10) pad.PaddingTop = UDim.new(0, 8) pad.Parent = bar
+		end
+		
+		function Tabs.create(bar, name, icon)
+			local btn = Instance.new("TextButton") btn.Size = UDim2.new(0, 90, 0, 30) btn.BackgroundColor3 = Colors.Surface btn.BorderSizePixel = 0 btn.AutoButtonColor = false btn.Text = (icon or "") .. " " .. name btn.TextColor3 = Colors.Dim btn.Font = Enum.Font.GothamMedium btn.TextSize = 11 btn.Parent = bar
+			local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, 6) c.Parent = btn
+			local ind = Instance.new("Frame") ind.Size = UDim2.new(0.6, 0, 0, 2) ind.Position = UDim2.new(0.2, 0, 1, -2) ind.BackgroundColor3 = Colors.Accent ind.BackgroundTransparency = 1 ind.BorderSizePixel = 0 ind.Parent = btn
+			btn._indicator = ind
+			table.insert(tabButtons, btn)
+			return btn
+		end
+		
+		function Tabs.connectTab(btn, content)
+			table.insert(tabContents, {btn = btn, content = content})
+			btn.MouseButton1Click:Connect(function()
+				for _, tc in ipairs(tabContents) do
+					tc.content.Visible = false
+					tc.btn.TextColor3 = Colors.Dim
+					tc.btn.BackgroundColor3 = Colors.Surface
+					if tc.btn._indicator then tc.btn._indicator.BackgroundTransparency = 1 end
+				end
+				content.Visible = true
+				btn.TextColor3 = Color3.new(1, 1, 1)
+				btn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+				if btn._indicator then btn._indicator.BackgroundTransparency = 0 end
+				currentTab = btn
+			end)
+		end
+		
+		function Tabs.activate(btn, content)
+			for _, tc in ipairs(tabContents) do
+				tc.content.Visible = false
+				tc.btn.TextColor3 = Colors.Dim
+				tc.btn.BackgroundColor3 = Colors.Surface
+				if tc.btn._indicator then tc.btn._indicator.BackgroundTransparency = 1 end
+			end
+			content.Visible = true
+			btn.TextColor3 = Color3.new(1, 1, 1)
+			btn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
+			if btn._indicator then btn._indicator.BackgroundTransparency = 0 end
+			currentTab = btn
+		end
+	end
+	_G.VertexTabs = Tabs
+	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- GUI CREATION
-	-- ══════════════════════════════════════════════════════════════
-	local screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "VertexHub"
-	screenGui.ResetOnSpawn = false
-	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	screenGui.Parent = player:WaitForChild("PlayerGui")
+	-- ═══════════════════════════════════════════════════════════════════════════
+	local gui = Instance.new("ScreenGui") gui.Name = "VertexHub" gui.ResetOnSpawn = false gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling gui.Parent = player:WaitForChild("PlayerGui")
 	
-	local mainFrame = Instance.new("Frame")
-	mainFrame.Name = "MainFrame"
-	mainFrame.Size = UDim2.new(0, 950, 0, 650)
-	mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-	mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-	mainFrame.BackgroundColor3 = Colors.Background
-	mainFrame.BorderSizePixel = 0
-	mainFrame.ClipsDescendants = true
-	mainFrame.Visible = false
-	mainFrame.Parent = screenGui
-	
-	local mainCorner = Instance.new("UICorner")
-	mainCorner.CornerRadius = UDim.new(0, 10)
-	mainCorner.Parent = mainFrame
-	
-	local mainStroke = Instance.new("UIStroke")
-	mainStroke.Color = Colors.Border
-	mainStroke.Thickness = 2
-	mainStroke.Parent = mainFrame
+	local main = Instance.new("Frame") main.Name = "Main" main.Size = UDim2.new(0, 950, 0, 650) main.Position = UDim2.new(0.5, 0, 0.5, 0) main.AnchorPoint = Vector2.new(0.5, 0.5) main.BackgroundColor3 = Colors.Background main.BorderSizePixel = 0 main.ClipsDescendants = true main.Visible = false main.Parent = gui
+	local mc = Instance.new("UICorner") mc.CornerRadius = UDim.new(0, 10) mc.Parent = main
+	local ms = Instance.new("UIStroke") ms.Color = Colors.Border ms.Thickness = 2 ms.Parent = main
 	
 	-- Header
-	local header = Instance.new("Frame")
-	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, 45)
-	header.BackgroundColor3 = Colors.Panel
-	header.BorderSizePixel = 0
-	header.Parent = mainFrame
+	local hdr = Instance.new("Frame") hdr.Size = UDim2.new(1, 0, 0, 45) hdr.BackgroundColor3 = Colors.Panel hdr.BorderSizePixel = 0 hdr.Parent = main
+	local ttl = Instance.new("TextLabel") ttl.Size = UDim2.new(0, 300, 1, 0) ttl.Position = UDim2.new(0, 15, 0, 0) ttl.BackgroundTransparency = 1 ttl.Text = "VERTEX HUB" ttl.TextColor3 = Colors.Text ttl.TextXAlignment = Enum.TextXAlignment.Left ttl.Font = Enum.Font.GothamBold ttl.TextSize = 18 ttl.Parent = hdr
+	local acc = Instance.new("Frame") acc.Size = UDim2.new(0, 60, 0, 3) acc.Position = UDim2.new(0, 15, 1, -3) acc.BackgroundColor3 = Colors.Accent acc.BorderSizePixel = 0 acc.Parent = hdr local ac = Instance.new("UICorner") ac.CornerRadius = UDim.new(1, 0) ac.Parent = acc
 	
-	local titleLabel = Instance.new("TextLabel")
-	titleLabel.Size = UDim2.new(0, 300, 1, 0)
-	titleLabel.Position = UDim2.new(0, 15, 0, 0)
-	titleLabel.BackgroundTransparency = 1
-	titleLabel.Text = "VERTEX HUB"
-	titleLabel.TextColor3 = Colors.Text
-	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-	titleLabel.Font = Enum.Font.GothamBold
-	titleLabel.TextSize = 18
-	titleLabel.Parent = header
-	
-	local accentLine = Instance.new("Frame")
-	accentLine.Size = UDim2.new(0, 60, 0, 3)
-	accentLine.Position = UDim2.new(0, 15, 1, -3)
-	accentLine.BackgroundColor3 = Colors.Accent
-	accentLine.BorderSizePixel = 0
-	accentLine.Parent = header
-	
-	local accentCorner = Instance.new("UICorner")
-	accentCorner.CornerRadius = UDim.new(1, 0)
-	accentCorner.Parent = accentLine
-	
-	-- Close Button
-	local closeButton = Instance.new("TextButton")
-	closeButton.Size = UDim2.new(0, 30, 0, 30)
-	closeButton.Position = UDim2.new(1, -40, 0.5, 0)
-	closeButton.AnchorPoint = Vector2.new(0, 0.5)
-	closeButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-	closeButton.Text = "×"
-	closeButton.TextColor3 = Colors.Text
-	closeButton.Font = Enum.Font.GothamBold
-	closeButton.TextSize = 20
-	closeButton.AutoButtonColor = false
-	closeButton.Parent = header
-	
-	local closeCorner = Instance.new("UICorner")
-	closeCorner.CornerRadius = UDim.new(0, 6)
-	closeCorner.Parent = closeButton
-	
-	closeButton.MouseButton1Click:Connect(function()
-		mainFrame.Visible = false
-		UIS.MouseBehavior = PreviousMouseState.behavior or Enum.MouseBehavior.Default
-		UIS.MouseIconEnabled = PreviousMouseState.icon ~= false
+	-- Close button
+	local cls = Instance.new("TextButton") cls.Size = UDim2.new(0, 30, 0, 30) cls.Position = UDim2.new(1, -40, 0.5, 0) cls.AnchorPoint = Vector2.new(0, 0.5) cls.BackgroundColor3 = Color3.fromRGB(30, 30, 40) cls.Text = "×" cls.TextColor3 = Colors.Text cls.Font = Enum.Font.GothamBold cls.TextSize = 20 cls.AutoButtonColor = false cls.Parent = hdr
+	local clc = Instance.new("UICorner") clc.CornerRadius = UDim.new(0, 6) clc.Parent = cls
+	cls.MouseButton1Click:Connect(function()
+		main.Visible = false
+		UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
+		UIS.MouseIconEnabled = PrevMouseState.icon ~= false
 	end)
+	cls.MouseEnter:Connect(function() cls.BackgroundColor3 = Color3.fromRGB(180, 50, 50) end)
+	cls.MouseLeave:Connect(function() cls.BackgroundColor3 = Color3.fromRGB(30, 30, 40) end)
 	
-	closeButton.MouseEnter:Connect(function()
-		closeButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-	end)
-	
-	closeButton.MouseLeave:Connect(function()
-		closeButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-	end)
-	
-	-- Tab Bar
-	local tabBar = Instance.new("Frame")
-	tabBar.Name = "TabBar"
-	tabBar.Size = UDim2.new(1, 0, 0, 45)
-	tabBar.Position = UDim2.new(0, 0, 0, 45)
-	tabBar.BackgroundColor3 = Colors.Surface
-	tabBar.BorderSizePixel = 0
-	tabBar.Parent = mainFrame
-	
+	-- Tab bar
+	local tabBar = Instance.new("Frame") tabBar.Size = UDim2.new(1, 0, 0, 45) tabBar.Position = UDim2.new(0, 0, 0, 45) tabBar.BackgroundColor3 = Colors.Surface tabBar.BorderSizePixel = 0 tabBar.Parent = main
 	Tabs.setupTabBar(tabBar)
 	
-	-- Content Area
-	local contentArea = Instance.new("Frame")
-	contentArea.Name = "ContentArea"
-	contentArea.Size = UDim2.new(1, 0, 1, -90)
-	contentArea.Position = UDim2.new(0, 0, 0, 90)
-	contentArea.BackgroundColor3 = Colors.ContentBg
-	contentArea.BorderSizePixel = 0
-	contentArea.Parent = mainFrame
+	-- Content
+	local cArea = Instance.new("Frame") cArea.Size = UDim2.new(1, 0, 1, -90) cArea.Position = UDim2.new(0, 0, 0, 90) cArea.BackgroundColor3 = Colors.Content cArea.BorderSizePixel = 0 cArea.Parent = main
+	local cCont = Instance.new("Frame") cCont.Size = UDim2.new(1, -20, 1, -12) cCont.Position = UDim2.new(0, 10, 0, 6) cCont.BackgroundTransparency = 1 cCont.Parent = cArea
 	
-	local contentContainer = Instance.new("Frame")
-	contentContainer.Name = "ContentContainer"
-	contentContainer.Size = UDim2.new(1, -20, 1, -12)
-	contentContainer.Position = UDim2.new(0, 10, 0, 6)
-	contentContainer.BackgroundTransparency = 1
-	contentContainer.Parent = contentArea
-Area
-	
-	-- Tab Content Creator Function
-	local function createTabContent(name)
-		local scrollFrame = Instance.new("ScrollingFrame")
-		scrollFrame.Name = name
-		scrollFrame.Size = UDim2.new(1, 0, 1, 0)
-		scrollFrame.BackgroundColor3 = Colors.ScrollBg
-		scrollFrame.BackgroundTransparency = 0
-		scrollFrame.BorderSizePixel = 0
-		scrollFrame.ScrollBarThickness = 4
-		scrollFrame.ScrollBarImageColor3 = Colors.Accent
-		scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-		scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-		scrollFrame.Visible = false
-		scrollFrame.Parent = contentContainer
-		
-		local listLayout = Instance.new("UIListLayout")
-		listLayout.Padding = UDim.new(0, 6)
-		listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-		listLayout.Parent = scrollFrame
-		
-		local padding = Instance.new("UIPadding")
-		padding.PaddingTop = UDim.new(0, 4)
-		padding.PaddingBottom = UDim.new(0, 8)
-		padding.PaddingLeft = UDim.new(0, 4)
-		padding.PaddingRight = UDim.new(0, 8)
-		padding.Parent = scrollFrame
-		
-		return scrollFrame
+	local function makeTab(nm)
+		local scr = Instance.new("ScrollingFrame") scr.Name = nm scr.Size = UDim2.new(1, 0, 1, 0) scr.BackgroundColor3 = Colors.Scroll scr.BackgroundTransparency = 0 scr.BorderSizePixel = 0 scr.ScrollBarThickness = 4 scr.ScrollBarImageColor3 = Colors.Accent scr.CanvasSize = UDim2.new(0, 0, 0, 0) scr.AutomaticCanvasSize = Enum.AutomaticSize.Y scr.Visible = false scr.Parent = cCont
+		local lay = Instance.new("UIListLayout") lay.Padding = UDim.new(0, 6) lay.SortOrder = Enum.SortOrder.LayoutOrder lay.Parent = scr
+		local pad = Instance.new("UIPadding") pad.PaddingTop = UDim.new(0, 4) pad.PaddingBottom = UDim.new(0, 8) pad.PaddingLeft = UDim.new(0, 4) pad.PaddingRight = UDim.new(0, 8) pad.Parent = scr
+		return scr
 	end
 	
-	-- Create All Tab Contents
-	local combatContent = createTabContent("Combat")
-	local movementContent = createTabContent("Movement")
-	local espContent = createTabContent("ESP")
-	local visualsContent = createTabContent("Visuals")
-	local worldContent = createTabContent("World")
-	local playerContent = createTabContent("Player")
-	local trollContent = createTabContent("Troll")
-	local miscContent = createTabContent("Misc")
+	local combatC = makeTab("Combat")
+	local moveC = makeTab("Movement")
+	local espC = makeTab("ESP")
+	local visC = makeTab("Visuals")
+	local worldC = makeTab("World")
+	local playerC = makeTab("Player")
+	local trollC = makeTab("Troll")
+	local miscC = makeTab("Misc")
 	
-	-- Create Tab Buttons
-	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
-	local movementTab = Tabs.create(tabBar, "Move", "🏃")
-	local espTab = Tabs.create(tabBar, "ESP", "👁")
-	local visualsTab = Tabs.create(tabBar, "Visual", "🎨")
-	local worldTab = Tabs.create(tabBar, "World", "🌍")
-	local playerTab = Tabs.create(tabBar, "Player", "👤")
-	local trollTab = Tabs.create(tabBar, "Troll", "🎭")
-	local miscTab = Tabs.create(tabBar, "Misc", "⚙")
+	local combatT = Tabs.create(tabBar, "Combat", "🎯")
+	local moveT = Tabs.create(tabBar, "Move", "🏃")
+	local espT = Tabs.create(tabBar, "ESP", "👁")
+	local visT = Tabs.create(tabBar, "Visual", "🎨")
+	local worldT = Tabs.create(tabBar, "World", "🌍")
+	local playerT = Tabs.create(tabBar, "Player", "👤")
+	local trollT = Tabs.create(tabBar, "Troll", "🎭")
+	local miscT = Tabs.create(tabBar, "Misc", "⚙")
 	
-	-- Connect Tabs
-	Tabs.connectTab(combatTab, combatContent)
-	Tabs.connectTab(movementTab, movementContent)
-	Tabs.connectTab(espTab, espContent)
-	Tabs.connectTab(visualsTab, visualsContent)
-	Tabs.connectTab(worldTab, worldContent)
-	Tabs.connectTab(playerTab, playerContent)
-	Tabs.connectTab(trollTab, trollContent)
-	Tabs.connectTab(miscTab, miscContent)
+	Tabs.connectTab(combatT, combatC)
+	Tabs.connectTab(moveT, moveC)
+	Tabs.connectTab(espT, espC)
+	Tabs.connectTab(visT, visC)
+	Tabs.connectTab(worldT, worldC)
+	Tabs.connectTab(playerT, playerC)
+	Tabs.connectTab(trollT, trollC)
+	Tabs.connectTab(miscT, miscC)
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- COMBAT TAB
-	Components.createSection(combatContent, "Aim Assist")
-	Components.createToggle(combatContent, "Aim Assist", function(state) State.Combat.AimAssist = state end)
-	Components.createSlider(combatContent, "Smoothness", 1, 100, 15, function(value) State.Combat.AimSmoothness = value / 200 end)
-	Components.createSlider(combatContent, "FOV", 50, 600, 150, function(value) State.Combat.AimFOV = value end)
-	Components.createToggle(combatContent, "Show FOV Circle", function(state) State.Combat.ShowFOVCircle = state end)
-	Components.createToggle(combatContent, "Prediction", function(state) State.Combat.AimPrediction = state end)
-	Components.createSlider(combatContent, "Prediction Amount", 1, 50, 10, function(value) State.Combat.PredictionAmount = value / 100 end)
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Silent Aim")
-	Components.createToggle(combatContent, "Silent Aim", function(state) State.Combat.SilentAim = state end)
-	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value) State.Combat.SilentAimHitChance = value end)
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Kill Aura")
-	Components.createToggle(combatContent, "Kill Aura", function(state) State.Combat.KillAura = state end)
-	Components.createSlider(combatContent, "Range", 5, 50, 15, function(value) State.Combat.KillAuraRange = value end)
-	Components.createSlider(combatContent, "CPS", 1, 20, 10, function(value) State.Combat.KillAuraCPS = value end)
-	Components.createToggle(combatContent, "Target Players", function(state) State.Combat.KillAuraTargetPlayers = state end)
-	Components.createToggle(combatContent, "Target NPCs", function(state) State.Combat.KillAuraTargetNPCs = state end)
-	Components.createToggle(combatContent, "Wall Check", function(state) State.Combat.KillAuraWallCheck = state end)
-	Components.createToggle(combatContent, "Legit Mode", function(state) State.Combat.KillAuraLegitMode = state end)
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Reach")
-	Components.createToggle(combatContent, "Reach", function(state) State.Combat.Reach = state end)
-	Components.createSlider(combatContent, "Reach Distance", 10, 30, 18, function(value) State.Combat.ReachDistance = value end)
-	Components.createToggle(combatContent, "Reach Legit Mode", function(state) State.Combat.ReachLegitMode = state end)
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Auto Features")
-	Components.createToggle(combatContent, "Triggerbot", function(state) State.Combat.Triggerbot = state end)
-	Components.createSlider(combatContent, "Trigger Delay", 1, 50, 10, function(value) State.Combat.TriggerbotDelay = value / 100 end)
-	Components.createToggle(combatContent, "Auto Parry", function(state) State.Combat.AutoParry = state end)
-	Components.createToggle(combatContent, "Auto Combo", function(state) State.Combat.AutoCombo = state end)
-	Components.createToggle(combatContent, "Auto Block", function(state) State.Combat.AutoBlock = state end)
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Exploits")
-	Components.createToggle(combatContent, "Hitbox Expander", function(state) State.Combat.HitboxExpander = state end)
-	Components.createSlider(combatContent, "Hitbox Size", 1, 20, 5, function(value) State.Combat.HitboxSize = value end)
-	Components.createToggle(combatContent, "Backtrack", function(state) State.Combat.Backtrack = state end)
-	Components.createSlider(combatContent, "Backtrack Time", 1, 50, 20, function(value) State.Combat.BacktrackTime = value / 100 end)
-	Components.createToggle(combatContent, "Target Strafe", function(state) State.Combat.TargetStrafe = state end)
-	Components.createSlider(combatContent, "Strafe Speed", 1, 20, 5, function(value) State.Combat.TargetStrafeSpeed = value end)
-	Components.createSlider(combatContent, "Strafe Radius", 5, 30, 10, function(value) State.Combat.TargetStrafeRadius = value end)
-	Components.createToggle(combatContent, "Anti Aim", function(state) State.Combat.AntiAim = state end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	Components.createSection(combatC, "Aim Assist")
+	Components.createToggle(combatC, "Aim Assist", function(v) State.Combat.AimAssist = v end)
+	Components.createSlider(combatC, "Smoothness", 1, 100, 15, function(v) State.Combat.AimSmoothness = v / 200 end)
+	Components.createSlider(combatC, "FOV", 50, 600, 150, function(v) State.Combat.AimFOV = v end)
+	Components.createToggle(combatC, "Show FOV Circle", function(v) State.Combat.ShowFOVCircle = v end)
+	Components.createToggle(combatC, "Prediction", function(v) State.Combat.AimPrediction = v end)
+	Components.createSlider(combatC, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
+	Components.createDivider(combatC)
+	Components.createSection(combatC, "Silent Aim")
+	Components.createToggle(combatC, "Silent Aim", function(v) State.Combat.SilentAim = v end)
+	Components.createSlider(combatC, "Hit Chance", 0, 100, 100, function(v) State.Combat.SilentAimHitChance = v end)
+	Components.createDivider(combatC)
+	Components.createSection(combatC, "Kill Aura")
+	Components.createToggle(combatC, "Kill Aura", function(v) State.Combat.KillAura = v end)
+	Components.createSlider(combatC, "Range", 5, 50, 15, function(v) State.Combat.KillAuraRange = v end)
+	Components.createSlider(combatC, "CPS", 1, 20, 10, function(v) State.Combat.KillAuraCPS = v end)
+	Components.createToggle(combatC, "Target Players", function(v) State.Combat.KillAuraPlayers = v end)
+	Components.createToggle(combatC, "Target NPCs", function(v) State.Combat.KillAuraNPCs = v end)
+	Components.createToggle(combatC, "Wall Check", function(v) State.Combat.KillAuraWallCheck = v end)
+	Components.createToggle(combatC, "Legit Mode", function(v) State.Combat.KillAuraLegit = v end)
+	Components.createDivider(combatC)
+	Components.createSection(combatC, "Reach")
+	Components.createToggle(combatC, "Reach", function(v) State.Combat.Reach = v end)
+	Components.createSlider(combatC, "Reach Distance", 10, 30, 18, function(v) State.Combat.ReachDistance = v end)
+	Components.createToggle(combatC, "Reach Legit", function(v) State.Combat.ReachLegit = v end)
+	Components.createDivider(combatC)
+	Components.createSection(combatC, "Auto Features")
+	Components.createToggle(combatC, "Triggerbot", function(v) State.Combat.Triggerbot = v end)
+	Components.createSlider(combatC, "Trigger Delay", 1, 50, 10, function(v) State.Combat.TriggerbotDelay = v / 100 end)
+	Components.createToggle(combatC, "Auto Parry", function(v) State.Combat.AutoParry = v end)
+	Components.createDivider(combatC)
+	Components.createSection(combatC, "Exploits")
+	Components.createToggle(combatC, "Hitbox Expander", function(v) State.Combat.HitboxExpander = v end)
+	Components.createSlider(combatC, "Hitbox Size", 1, 20, 5, function(v) State.Combat.HitboxSize = v end)
+	Components.createToggle(combatC, "Backtrack", function(v) State.Combat.Backtrack = v end)
+	Components.createSlider(combatC, "Backtrack Time", 1, 50, 20, function(v) State.Combat.BacktrackTime = v / 100 end)
+	Components.createToggle(combatC, "Target Strafe", function(v) State.Combat.TargetStrafe = v end)
+	Components.createSlider(combatC, "Strafe Speed", 1, 20, 5, function(v) State.Combat.StrafeSpeed = v end)
+	Components.createSlider(combatC, "Strafe Radius", 5, 30, 10, function(v) State.Combat.StrafeRadius = v end)
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- MOVEMENT TAB
-	Components.createSection(movementContent, "Flight")
-	Components.createToggle(movementContent, "Fly", function(state) State.Movement.Fly = state end)
-	Components.createSlider(movementContent, "Fly Speed", 10, 300, 50, function(value) State.Movement.FlySpeed = value end)
-	Components.createToggle(movementContent, "Fly Legit Mode", function(state) State.Movement.FlyLegitMode = state end)
-	Components.createToggle(movementContent, "Noclip", function(state) State.Movement.Noclip = state end)
-	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Speed & Jump")
-	Components.createToggle(movementContent, "Speed", function(state) State.Movement.Speed = state if not state then local h = getHumanoid() if h then h.WalkSpeed = 16 end end end)
-	Components.createSlider(movementContent, "Speed Value", 16, 500, 16, function(value) State.Movement.SpeedValue = value end)
-	Components.createToggle(movementContent, "Speed Legit Mode", function(state) State.Movement.SpeedLegitMode = state end)
-	Components.createToggle(movementContent, "Jump Power", function(state) State.Movement.JumpPower = state if not state then local h = getHumanoid() if h then h.JumpPower = 50 end end end)
-	Components.createSlider(movementContent, "Jump Value", 50, 500, 50, function(value) State.Movement.JumpPowerValue = value end)
-	Components.createToggle(movementContent, "Infinite Jump", function(state) State.Movement.InfiniteJump = state end)
-	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Special Movement")
-	Components.createToggle(movementContent, "Bunny Hop", function(state) State.Movement.BunnyHop = state end)
-	Components.createToggle(movementContent, "Long Jump (Space)", function(state) State.Movement.LongJump = state end)
-	Components.createSlider(movementContent, "Long Jump Force", 50, 400, 100, function(value) State.Movement.LongJumpForce = value end)
-	Components.createToggle(movementContent, "Speed Glide", function(state) State.Movement.SpeedGlide = state end)
-	Components.createSlider(movementContent, "Glide Speed", 1, 50, 10, function(value) State.Movement.SpeedGlideValue = value end)
-	Components.createToggle(movementContent, "Dash (Q)", function(state) State.Movement.Dash = state end)
-	Components.createSlider(movementContent, "Dash Force", 50, 300, 100, function(value) State.Movement.DashForce = value end)
-	Components.createSlider(movementContent, "Dash Cooldown", 1, 50, 10, function(value) State.Movement.DashCooldown = value / 10 end)
-	Components.createToggle(movementContent, "Air Control", function(state) State.Movement.AirControl = state end)
-	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Teleport & Safety")
-	Components.createToggle(movementContent, "Click TP", function(state) State.Movement.ClickTP = state end)
-	Components.createToggle(movementContent, "Anti Void", function(state) State.Movement.AntiVoid = state end)
-	Components.createSlider(movementContent, "Void Height", -500, 0, -100, function(value) State.Movement.AntiVoidHeight = value end)
-	Components.createToggle(movementContent, "Anchor", function(state) State.Movement.Anchor = state end)
-	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Exploits")
-	Components.createToggle(movementContent, "Spin Bot", function(state) State.Movement.SpinBot = state end)
-	Components.createSlider(movementContent, "Spin Speed", 1, 50, 20, function(value) State.Movement.SpinBotSpeed = value end)
-	Components.createToggle(movementContent, "Fake Lag", function(state) State.Movement.FakeLag = state end)
-	Components.createSlider(movementContent, "Lag Intensity", 1, 10, 5, function(value) State.Movement.FakeLagIntensity = value end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	Components.createSection(moveC, "Flight")
+	Components.createToggle(moveC, "Fly", function(v) State.Movement.Fly = v end)
+	Components.createSlider(moveC, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
+	Components.createToggle(moveC, "Fly Legit", function(v) State.Movement.FlyLegit = v end)
+	Components.createToggle(moveC, "Noclip", function(v) State.Movement.Noclip = v end)
+	Components.createDivider(moveC)
+	Components.createSection(moveC, "Speed & Jump")
+	Components.createToggle(moveC, "Speed", function(v) State.Movement.Speed = v if not v then local h = getHumanoid() if h then h.WalkSpeed = 16 end end end)
+	Components.createSlider(moveC, "Speed Value", 16, 500, 16, function(v) State.Movement.SpeedValue = v end)
+	Components.createToggle(moveC, "Speed Legit", function(v) State.Movement.SpeedLegit = v end)
+	Components.createToggle(moveC, "Jump Power", function(v) State.Movement.JumpPower = v if not v then local h = getHumanoid() if h then h.JumpPower = 50 end end end)
+	Components.createSlider(moveC, "Jump Value", 50, 500, 50, function(v) State.Movement.JumpValue = v end)
+	Components.createToggle(moveC, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
+	Components.createDivider(moveC)
+	Components.createSection(moveC, "Special Movement")
+	Components.createToggle(moveC, "Bunny Hop", function(v) State.Movement.BunnyHop = v end)
+	Components.createToggle(moveC, "Long Jump (Space)", function(v) State.Movement.LongJump = v end)
+	Components.createSlider(moveC, "Long Jump Force", 50, 400, 100, function(v) State.Movement.LongJumpForce = v end)
+	Components.createToggle(moveC, "Speed Glide", function(v) State.Movement.SpeedGlide = v end)
+	Components.createSlider(moveC, "Glide Speed", 1, 50, 10, function(v) State.Movement.GlideSpeed = v end)
+	Components.createToggle(moveC, "Dash (Q)", function(v) State.Movement.Dash = v end)
+	Components.createSlider(moveC, "Dash Force", 50, 300, 100, function(v) State.Movement.DashForce = v end)
+	Components.createSlider(moveC, "Dash Cooldown", 1, 50, 10, function(v) State.Movement.DashCooldown = v / 10 end)
+	Components.createToggle(moveC, "Air Control", function(v) State.Movement.AirControl = v end)
+	Components.createDivider(moveC)
+	Components.createSection(moveC, "Teleport & Safety")
+	Components.createToggle(moveC, "Click TP", function(v) State.Movement.ClickTP = v end)
+	Components.createToggle(moveC, "Anti Void", function(v) State.Movement.AntiVoid = v end)
+	Components.createSlider(moveC, "Void Height", -500, 0, -100, function(v) State.Movement.VoidHeight = v end)
+	Components.createToggle(moveC, "Anchor", function(v) State.Movement.Anchor = v end)
+	Components.createDivider(moveC)
+	Components.createSection(moveC, "Exploits")
+	Components.createToggle(moveC, "Spin Bot", function(v) State.Movement.SpinBot = v end)
+	Components.createSlider(moveC, "Spin Speed", 1, 50, 20, function(v) State.Movement.SpinSpeed = v end)
+	Components.createToggle(moveC, "Fake Lag", function(v) State.Movement.FakeLag = v end)
+	Components.createSlider(moveC, "Lag Intensity", 1, 10, 5, function(v) State.Movement.LagIntensity = v end)
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- ESP TAB
-	Components.createSection(espContent, "Player ESP")
-	Components.createToggle(espContent, "Name ESP", function(state) State.ESP.NameESP = state end)
-	Components.createToggle(espContent, "Box ESP", function(state) State.ESP.BoxESP = state end)
-	Components.createToggle(espContent, "Health ESP", function(state) State.ESP.HealthESP = state end)
-	Components.createToggle(espContent, "Distance ESP", function(state) State.ESP.DistanceESP = state end)
-	Components.createToggle(espContent, "Tracers", function(state) State.ESP.Tracers = state end)
-	Components.createToggle(espContent, "Skeleton ESP", function(state) State.ESP.SkeletonESP = state end)
-	Components.createToggle(espContent, "Offscreen Arrows", function(state) State.ESP.OffscreenArrows = state end)
-	Components.createDivider(espContent)
-	Components.createSection(espContent, "World ESP")
-	Components.createToggle(espContent, "NPC ESP", function(state) State.ESP.NPCESP = state end)
-	Components.createToggle(espContent, "Item ESP", function(state) State.ESP.ItemESP = state end)
-	Components.createDivider(espContent)
-	Components.createSection(espContent, "Highlights")
-	Components.createToggle(espContent, "Chams", function(state) State.ESP.Chams = state updateChams() end)
-	Components.createDivider(espContent)
-	Components.createSection(espContent, "Settings")
-	Components.createSlider(espContent, "Max Distance", 100, 2000, 1000, function(value) State.ESP.MaxDistance = value end)
-	Components.createToggle(espContent, "Team Check", function(state) State.ESP.TeamCheck = state end)
-	Components.createToggle(espContent, "Friend Check", function(state) State.ESP.FriendCheck = state end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	Components.createSection(espC, "Player ESP")
+	Components.createToggle(espC, "Name ESP", function(v) State.ESP.NameESP = v end)
+	Components.createToggle(espC, "Box ESP", function(v) State.ESP.BoxESP = v end)
+	Components.createToggle(espC, "Health ESP", function(v) State.ESP.HealthESP = v end)
+	Components.createToggle(espC, "Distance ESP", function(v) State.ESP.DistanceESP = v end)
+	Components.createToggle(espC, "Tracers", function(v) State.ESP.Tracers = v end)
+	Components.createToggle(espC, "Skeleton ESP", function(v) State.ESP.SkeletonESP = v end)
+	Components.createToggle(espC, "Offscreen Arrows", function(v) State.ESP.OffscreenArrows = v end)
+	Components.createDivider(espC)
+	Components.createSection(espC, "World ESP")
+	Components.createToggle(espC, "NPC ESP", function(v) State.ESP.NPCESP = v end)
+	Components.createToggle(espC, "Item ESP", function(v) State.ESP.ItemESP = v end)
+	Components.createDivider(espC)
+	Components.createSection(espC, "Highlights")
+	Components.createToggle(espC, "Chams", function(v) State.ESP.Chams = v updateChams() end)
+	Components.createDivider(espC)
+	Components.createSection(espC, "Settings")
+	Components.createSlider(espC, "Max Distance", 100, 2000, 1000, function(v) State.ESP.MaxDistance = v end)
+	Components.createToggle(espC, "Team Check", function(v) State.ESP.TeamCheck = v end)
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- VISUALS TAB
-	Components.createSection(visualsContent, "Lighting")
-	Components.createToggle(visualsContent, "Fullbright", function(state) State.Visuals.Fullbright = state if state then Lighting.Ambient = Color3.new(1,1,1) Lighting.Brightness = 2 Lighting.OutdoorAmbient = Color3.new(1,1,1) else Lighting.Ambient = OriginalValues.Ambient Lighting.Brightness = OriginalValues.Brightness Lighting.OutdoorAmbient = OriginalValues.OutdoorAmbient end end)
-	Components.createToggle(visualsContent, "No Fog", function(state) State.Visuals.NoFog = state if state then Lighting.FogEnd = 1e10 Lighting.FogStart = 1e10 else Lighting.FogEnd = OriginalValues.FogEnd Lighting.FogStart = OriginalValues.FogStart end end)
-	Components.createToggle(visualsContent, "No Shadows", function(state) State.Visuals.NoShadows = state Lighting.GlobalShadows = not state end)
-	Components.createDivider(visualsContent)
-	Components.createSection(visualsContent, "Crosshair")
-	Components.createToggle(visualsContent, "Custom Crosshair", function(state) State.Visuals.CustomCrosshair = state end)
-	Components.createSlider(visualsContent, "Crosshair Size", 5, 50, 10, function(value) State.Visuals.CrosshairSize = value end)
-	Components.createSlider(visualsContent, "Crosshair Gap", 0, 20, 5, function(value) State.Visuals.CrosshairGap = value end)
-	Components.createDivider(visualsContent)
-	Components.createSection(visualsContent, "Camera")
-	Components.createSlider(visualsContent, "Camera FOV", 30, 120, 70, function(value) State.Visuals.CameraFOV = value camera.FieldOfView = value end)
-	Components.createToggle(visualsContent, "Third Person", function(state) State.Visuals.ThirdPerson = state player.CameraMaxZoomDistance = state and 100 or 128 player.CameraMinZoomDistance = state and 15 or 0.5 end)
-	Components.createToggle(visualsContent, "Freecam", function(state) State.Visuals.Freecam = state if state then FreecamPosition = camera.CFrame.Position UIS.MouseBehavior = Enum.MouseBehavior.LockCenter else camera.CameraType = Enum.CameraType.Custom UIS.MouseBehavior = Enum.MouseBehavior.Default end end)
-	Components.createSlider(visualsContent, "Freecam Speed", 1, 20, 1, function(value) State.Visuals.FreecamSpeed = value end)
-	Components.createDivider(visualsContent)
-	Components.createSection(visualsContent, "World Visuals")
-	Components.createToggle(visualsContent, "X-Ray", function(state) State.Visuals.XRay = state end)
-	Components.createSlider(visualsContent, "X-Ray Transparency", 0, 100, 50, function(value) State.Visuals.XRayTransparency = value / 100 end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	Components.createSection(visC, "Lighting")
+	Components.createToggle(visC, "Fullbright", function(v) State.Visuals.Fullbright = v if v then Lighting.Ambient = Color3.new(1,1,1) Lighting.Brightness = 2 Lighting.OutdoorAmbient = Color3.new(1,1,1) else Lighting.Ambient = OriginalLighting.Ambient Lighting.Brightness = OriginalLighting.Brightness Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient end end)
+	Components.createToggle(visC, "No Fog", function(v) State.Visuals.NoFog = v if v then Lighting.FogEnd = 1e10 Lighting.FogStart = 1e10 else Lighting.FogEnd = OriginalLighting.FogEnd Lighting.FogStart = OriginalLighting.FogStart end end)
+	Components.createToggle(visC, "No Shadows", function(v) State.Visuals.NoShadows = v Lighting.GlobalShadows = not v end)
+	Components.createDivider(visC)
+	Components.createSection(visC, "Crosshair")
+	Components.createToggle(visC, "Custom Crosshair", function(v) State.Visuals.Crosshair = v end)
+	Components.createSlider(visC, "Crosshair Size", 5, 50, 10, function(v) State.Visuals.CrosshairSize = v end)
+	Components.createSlider(visC, "Crosshair Gap", 0, 20, 5, function(v) State.Visuals.CrosshairGap = v end)
+	Components.createDivider(visC)
+	Components.createSection(visC, "Camera")
+	Components.createSlider(visC, "Camera FOV", 30, 120, 70, function(v) State.Visuals.CameraFOV = v camera.FieldOfView = v end)
+	Components.createToggle(visC, "Third Person", function(v) State.Visuals.ThirdPerson = v player.CameraMaxZoomDistance = v and 100 or 128 player.CameraMinZoomDistance = v and 15 or 0.5 end)
+	Components.createToggle(visC, "Freecam", function(v) State.Visuals.Freecam = v if v then FreecamPos = camera.CFrame.Position UIS.MouseBehavior = Enum.MouseBehavior.LockCenter else camera.CameraType = Enum.CameraType.Custom UIS.MouseBehavior = Enum.MouseBehavior.Default end end)
+	Components.createSlider(visC, "Freecam Speed", 1, 20, 1, function(v) State.Visuals.FreecamSpeed = v end)
+	Components.createDivider(visC)
+	Components.createSection(visC, "World Visuals")
+	Components.createToggle(visC, "X-Ray", function(v) State.Visuals.XRay = v end)
+	Components.createSlider(visC, "X-Ray Transparency", 0, 100, 50, function(v) State.Visuals.XRayTransparency = v / 100 end)
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- WORLD TAB
-	Components.createSection(worldContent, "Environment")
-	Components.createSlider(worldContent, "Time of Day", 0, 24, 14, function(value) State.World.TimeOfDay = value Lighting.ClockTime = value end)
-	Components.createSlider(worldContent, "Gravity", 0, 500, 196, function(value) State.World.Gravity = value workspace.Gravity = value end)
-	Components.createDivider(worldContent)
-	Components.createSection(worldContent, "Terrain")
-	Components.createToggle(worldContent, "Remove Grass", function(state) State.World.RemoveGrass = state local t = workspace:FindFirstChildOfClass("Terrain") if t then t.Decoration = not state end for _, o in ipairs(workspace:GetDescendants()) do if o:IsA("BasePart") and (o.Name:lower():find("grass") or o.Name:lower():find("foliage")) then o.Transparency = state and 1 or 0 end end end)
-	Components.createDivider(worldContent)
-	Components.createSection(worldContent, "Tools")
-	Components.createToggle(worldContent, "Delete Mode (Click)", function(state) State.World.DeleteMode = state end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	Components.createSection(worldC, "Environment")
+	Components.createSlider(worldC, "Time of Day", 0, 24, 14, function(v) State.World.TimeOfDay = v Lighting.ClockTime = v end)
+	Components.createSlider(worldC, "Gravity", 0, 500, 196, function(v) State.World.Gravity = v workspace.Gravity = v end)
+	Components.createDivider(worldC)
+	Components.createSection(worldC, "Terrain")
+	Components.createToggle(worldC, "Remove Grass", function(v) State.World.RemoveGrass = v local t = workspace:FindFirstChildOfClass("Terrain") if t then t.Decoration = not v end for _, o in ipairs(workspace:GetDescendants()) do if o:IsA("BasePart") and (o.Name:lower():find("grass") or o.Name:lower():find("foliage")) then o.Transparency = v and 1 or 0 end end end)
+	Components.createDivider(worldC)
+	Components.createSection(worldC, "Tools")
+	Components.createToggle(worldC, "Delete Mode (Click)", function(v) State.World.DeleteMode = v end)
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- PLAYER TAB
-	Components.createSection(playerContent, "Character")
-	Components.createToggle(playerContent, "God Mode", function(state) State.Player.GodMode = state end)
-	Components.createToggle(playerContent, "No Ragdoll", function(state) State.Player.NoRagdoll = state end)
-	Components.createToggle(playerContent, "Auto Respawn", function(state) State.Player.AutoRespawn = state end)
-	Components.createSlider(playerContent, "Character Scale", 50, 200, 100, function(value) State.Player.CharacterScale = value / 100 end)
-	Components.createDivider(playerContent)
-	Components.createSection(playerContent, "Invisibility (Hitbox-Only)")
-	Components.createToggle(playerContent, "Invisibility", function(state) State.Player.Invisibility = state if state then InvisibilitySystem:Enable() else InvisibilitySystem:Disable() end end)
-	Components.createSlider(playerContent, "Invis Offset", 50, 500, 100, function(value) State.Player.InvisibilityOffset = value end)
-	Components.createDivider(playerContent)
-	Components.createSection(playerContent, "Weapon")
-	Components.createToggle(playerContent, "No Recoil", function(state) State.Player.NoRecoil = state end)
-	Components.createToggle(playerContent, "No Spread", function(state) State.Player.NoSpread = state end)
-	Components.createToggle(playerContent, "Infinite Stamina", function(state) State.Player.InfiniteStamina = state end)
-	Components.createToggle(playerContent, "Infinite Ammo", function(state) State.Player.InfiniteAmmo = state end)
-	Components.createToggle(playerContent, "Rapid Fire", function(state) State.Player.RapidFire = state end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	Components.createSection(playerC, "Character")
+	Components.createToggle(playerC, "God Mode", function(v) State.Player.GodMode = v end)
+	Components.createToggle(playerC, "No Ragdoll", function(v) State.Player.NoRagdoll = v end)
+	Components.createToggle(playerC, "Auto Respawn", function(v) State.Player.AutoRespawn = v end)
+	Components.createSlider(playerC, "Character Scale", 50, 200, 100, function(v) State.Player.CharScale = v / 100 end)
+	Components.createDivider(playerC)
+	Components.createSection(playerC, "Invisibility (Hitbox-Only)")
+	Components.createLabel(playerC, "Model moves away, hitbox stays. NO transparency.")
+	Components.createToggle(playerC, "Invisibility", function(v) State.Player.Invisibility = v if v then InvisSystem:Enable() else InvisSystem:Disable() end end)
+	Components.createSlider(playerC, "Invis Offset", 50, 500, 100, function(v) State.Player.InvisOffset = v end)
+	Components.createDivider(playerC)
+	Components.createSection(playerC, "Weapon")
+	Components.createToggle(playerC, "No Recoil", function(v) State.Player.NoRecoil = v end)
+	Components.createToggle(playerC, "No Spread", function(v) State.Player.NoSpread = v end)
+	Components.createToggle(playerC, "Infinite Stamina", function(v) State.Player.InfiniteStamina = v end)
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- TROLL TAB
-	Components.createSection(trollContent, "Follow / Orbit")
-	Components.createToggle(trollContent, "Annoy Player", function(state) State.Troll.AnnoyPlayer = state end)
-	Components.createToggle(trollContent, "Orbit Player", function(state) State.Troll.OrbitPlayer = state end)
-	Components.createSlider(trollContent, "Orbit Radius", 5, 30, 10, function(value) State.Troll.OrbitRadius = value end)
-	Components.createSlider(trollContent, "Orbit Speed", 1, 10, 2, function(value) State.Troll.OrbitSpeed = value end)
-	Components.createDivider(trollContent)
-	Components.createSection(trollContent, "Character Troll")
-	Components.createToggle(trollContent, "Fling", function(state) State.Troll.Fling = state end)
-	Components.createSlider(trollContent, "Fling Power", 100, 1000, 500, function(value) State.Troll.FlingPower = value end)
-	Components.createToggle(trollContent, "Headless", function(state) State.Troll.Headless = state end)
-	Components.createToggle(trollContent, "Invisible Body", function(state) State.Troll.InvisibleBody = state end)
-	Components.createDivider(trollContent)
-	Components.createSection(trollContent, "Info")
-	Components.createLabel(trollContent, "Type /target [name] in chat")
+	-- ═══════════════════════════════════════════════════════════════════════════
+	Components.createSection(trollC, "Follow / Orbit")
+	Components.createToggle(trollC, "Annoy Player", function(v) State.Troll.AnnoyPlayer = v end)
+	Components.createToggle(trollC, "Orbit Player", function(v) State.Troll.OrbitPlayer = v end)
+	Components.createSlider(trollC, "Orbit Radius", 5, 30, 10, function(v) State.Troll.OrbitRadius = v end)
+	Components.createSlider(trollC, "Orbit Speed", 1, 10, 2, function(v) State.Troll.OrbitSpeed = v end)
+	Components.createDivider(trollC)
+	Components.createSection(trollC, "Character Troll")
+	Components.createToggle(trollC, "Fling", function(v) State.Troll.Fling = v end)
+	Components.createSlider(trollC, "Fling Power", 100, 1000, 500, function(v) State.Troll.FlingPower = v end)
+	Components.createToggle(trollC, "Headless", function(v) State.Troll.Headless = v end)
+	Components.createDivider(trollC)
+	Components.createSection(trollC, "Info")
+	Components.createLabel(trollC, "Type /target [name] in chat to set target")
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- MISC TAB
-	Components.createSection(miscContent, "HUD Elements")
-	Components.createToggle(miscContent, "Watermark", function(state) State.Misc.Watermark = state end)
-	Components.createToggle(miscContent, "FPS Counter", function(state) State.Misc.FPSCounter = state end)
-	Components.createToggle(miscContent, "Ping Display", function(state) State.Misc.PingDisplay = state end)
-	Components.createToggle(miscContent, "Player Count", function(state) State.Misc.PlayerCount = state end)
-	Components.createToggle(miscContent, "Velocity Display", function(state) State.Misc.VelocityDisplay = state end)
-	Components.createToggle(miscContent, "Target Info", function(state) State.Misc.TargetInfo = state end)
-	Components.createToggle(miscContent, "Keybinds Display", function(state) State.Misc.KeybindsDisplay = state end)
-	Components.createDivider(miscContent)
-	Components.createSection(miscContent, "Utility")
-	Components.createToggle(miscContent, "Anti AFK", function(state) State.Misc.AntiAFK = state end)
-	Components.createToggle(miscContent, "Chat Spam", function(state) State.Misc.ChatSpam = state end)
-	Components.createSlider(miscContent, "Spam Delay", 1, 10, 2, function(value) State.Misc.ChatSpamDelay = value end)
-	Components.createDivider(miscContent)
-	Components.createSection(miscContent, "Server")
-	Components.createToggle(miscContent, "Server Hop", function(state) if state then pcall(function() local s = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")) for _, srv in ipairs(s.data) do if srv.id ~= game.JobId then TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id) break end end end) end end)
-	Components.createToggle(miscContent, "Rejoin", function(state) if state then TeleportService:Teleport(game.PlaceId) end end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	Components.createSection(miscC, "HUD Elements")
+	Components.createToggle(miscC, "Watermark", function(v) State.Misc.Watermark = v end)
+	Components.createToggle(miscC, "FPS Counter", function(v) State.Misc.FPSCounter = v end)
+	Components.createToggle(miscC, "Ping Display", function(v) State.Misc.PingDisplay = v end)
+	Components.createToggle(miscC, "Player Count", function(v) State.Misc.PlayerCount = v end)
+	Components.createToggle(miscC, "Velocity Display", function(v) State.Misc.VelocityDisplay = v end)
+	Components.createToggle(miscC, "Target Info", function(v) State.Misc.TargetInfo = v end)
+	Components.createToggle(miscC, "Keybinds Display", function(v) State.Misc.KeybindsDisplay = v end)
+	Components.createDivider(miscC)
+	Components.createSection(miscC, "Utility")
+	Components.createToggle(miscC, "Anti AFK", function(v) State.Misc.AntiAFK = v end)
+	Components.createToggle(miscC, "Chat Spam", function(v) State.Misc.ChatSpam = v end)
+	Components.createSlider(miscC, "Spam Delay", 1, 10, 2, function(v) State.Misc.SpamDelay = v end)
+	Components.createDivider(miscC)
+	Components.createSection(miscC, "Server")
+	Components.createToggle(miscC, "Server Hop", function(v) if v then pcall(function() local s = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")) for _, srv in ipairs(s.data) do if srv.id ~= game.JobId then TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id) break end end end) end end)
+	Components.createToggle(miscC, "Rejoin", function(v) if v then TeleportService:Teleport(game.PlaceId) end end)
 	
-	Tabs.activate(combatTab, combatContent)
+	-- Activate first tab
+	Tabs.activate(combatT, combatC)
 	
-	-- MENU TOGGLE
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- MENU TOGGLE (M KEY) - WITH MOUSE UNLOCK
+	-- ═══════════════════════════════════════════════════════════════════════════
 	UIS.InputBegan:Connect(function(input, gp)
 		if gp then return end
 		if input.KeyCode == State.Settings.MenuKey then
-			local show = not mainFrame.Visible
-			mainFrame.Visible = show
+			local show = not main.Visible
+			main.Visible = show
+			
 			if show then
-				PreviousMouseState.behavior = UIS.MouseBehavior
-				PreviousMouseState.icon = UIS.MouseIconEnabled
+				-- Store previous mouse state
+				PrevMouseState.behavior = UIS.MouseBehavior
+				PrevMouseState.icon = UIS.MouseIconEnabled
+				
+				-- UNLOCK MOUSE (Required per spec)
 				UIS.MouseBehavior = Enum.MouseBehavior.Default
 				UIS.MouseIconEnabled = true
-				mainFrame.Size = UDim2.new(0, 0, 0, 0)
-				Animations.tween(mainFrame, {Size = UDim2.new(0, 950, 0, 650)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+				
+				-- Animate open
+				main.Size = UDim2.new(0, 0, 0, 0)
+				tween(main, {Size = UDim2.new(0, 950, 0, 650)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
 			else
-				UIS.MouseBehavior = PreviousMouseState.behavior or Enum.MouseBehavior.Default
-				UIS.MouseIconEnabled = PreviousMouseState.icon ~= false
+				-- Restore previous mouse state
+				UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
+				UIS.MouseIconEnabled = PrevMouseState.icon ~= false
 			end
 		end
 	end)
 	
+	-- ═══════════════════════════════════════════════════════════════════════════
 	-- DRAGGING
+	-- ═══════════════════════════════════════════════════════════════════════════
 	local dragging, dragStart, startPos = false, nil, nil
-	header.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = inp.Position startPos = mainFrame.Position inp.Changed:Connect(function() if inp.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
-	UIS.InputChanged:Connect(function(inp) if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then local d = inp.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
+	hdr.InputBegan:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = inp.Position
+			startPos = main.Position
+			inp.Changed:Connect(function()
+				if inp.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	UIS.InputChanged:Connect(function(inp)
+		if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
+			local d = inp.Position - dragStart
+			main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+		end
+	end)
 	
-	-- CHARACTER EVENTS
-	player.CharacterAdded:Connect(function(c) task.wait(0.5) local h = c:FindFirstChildOfClass("Humanoid") if h then if State.Movement.Speed then h.WalkSpeed = State.Movement.SpeedValue end if State.Movement.JumpPower then h.JumpPower = State.Movement.JumpPowerValue end end if State.ESP.Chams then updateChams() end if State.Player.Invisibility then task.wait(0.2) InvisibilitySystem:Enable() end end)
-	Players.PlayerAdded:Connect(function() task.wait(1) if State.ESP.Chams then updateChams() end end)
-	Players.PlayerRemoving:Connect(function(p) EntityCache.players[p.Name] = nil BacktrackPositions[p.Name] = nil end)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- CHARACTER EVENTS (Reapply features on respawn)
+	-- ═══════════════════════════════════════════════════════════════════════════
+	player.CharacterAdded:Connect(function(c)
+		task.wait(0.5)
+		local h = c:FindFirstChildOfClass("Humanoid")
+		if h then
+			if State.Movement.Speed then h.WalkSpeed = State.Movement.SpeedValue end
+			if State.Movement.JumpPower then h.JumpPower = State.Movement.JumpValue end
+		end
+		if State.ESP.Chams then updateChams() end
+		if State.Player.Invisibility then
+			task.wait(0.2)
+			InvisSystem:Enable()
+		end
+	end)
 	
-	print("[Vertex Hub] Loaded! Press M to toggle | 8 Tabs | 100+ Features")
+	Players.PlayerAdded:Connect(function()
+		task.wait(1)
+		if State.ESP.Chams then updateChams() end
+	end)
+	
+	Players.PlayerRemoving:Connect(function(p)
+		EntityCache.players[p.Name] = nil
+		BacktrackPositions[p.Name] = nil
+	end)
+	
+	-- ═══════════════════════════════════════════════════════════════════════════
+	-- INITIALIZATION COMPLETE
+	-- ═══════════════════════════════════════════════════════════════════════════
+	print("[Vertex Hub] Loaded successfully! Press M to toggle menu.")
 end
