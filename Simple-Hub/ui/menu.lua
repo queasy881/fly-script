@@ -3,14 +3,13 @@
 -- No require(), No script.Parent, No undefined dependencies
 -- ═══════════════════════════════════════════════════════════════════════════
 
-return function(deps)
+return function()
 	-- ═══════════════════════════════════════════════════════════════════════════
-	-- DEPENDENCY GUARD - Prevent nil errors
+	-- BUILT-IN: Tabs, Components, Animations (no external deps needed)
 	-- ═══════════════════════════════════════════════════════════════════════════
-	deps = deps or {}
-	local Tabs = deps.Tabs or _G.VertexTabs
-	local Components = deps.Components or _G.VertexComponents
-	local Animations = deps.Animations or _G.VertexAnimations
+	local Tabs = nil -- Will be created below
+	local Components = nil -- Will be created below
+	local Animations = nil -- Will be created below
 	
 	-- ═══════════════════════════════════════════════════════════════════════════
 	-- SERVICES
