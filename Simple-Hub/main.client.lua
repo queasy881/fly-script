@@ -23,6 +23,9 @@ local Animations = load("ui/animations.lua")
 local Components = load("ui/components.lua")
 local Tabs = load("ui/tabs.lua")
 
+
+
+
 -- ============================================
 -- 3. CONTROLLER (loads before menu)
 -- ============================================
@@ -78,12 +81,12 @@ load("settings/presets.lua")
 -- 6. START MENU (last, with all dependencies)
 -- ============================================
 local startMenu = load("ui/menu.lua")
-startMenu({
-	Tabs = Tabs,
-	Components = Components,
-	Animations = Animations,
-	Controller = Controller
-})
+
+if type(startMenu) ~= "function" then
+    error("menu.lua did not return a function")
+end
+
+startMenu()
 
 print("[Simple Hub] ✓ All features loaded and integrated")
 print("[Simple Hub] ✓ Press M to open menu")
