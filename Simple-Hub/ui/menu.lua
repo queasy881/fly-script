@@ -1,266 +1,536 @@
--- ui/menu.lua
--- Simple Hub ULTIMATE - ALL FEATURES
+-- ████████████████████████████████████████████████████████████████
+-- █░░░░░░░░░░░░░░█░░░░░░░░░░░░░░█░░░░░░░░░░░░░░█░░░░░░░░░░░░░░░░█
+-- █░░▄▀▄▀▄▀▄▀▄▀░░█░░▄▀▄▀▄▀▄▀▄▀░░█░░▄▀▄▀▄▀▄▀▄▀░░█░░▄▀▄▀▄▀▄▀▄▀▄▀░░█
+-- █░░▄▀░░░░░░▄▀░░█░░▄▀░░░░░░░░░░█░░░░░░▄▀░░░░░░█░░▄▀░░░░░░░░▄▀░░█
+-- █░░▄▀░░██░░▄▀░░█░░▄▀░░█████████████░░▄▀░░█████░░▄▀░░████░░▄▀░░█
+-- █░░▄▀░░██░░▄▀░░█░░▄▀░░░░░░░░░░█████░░▄▀░░█████░░▄▀░░░░░░░░▄▀░░█
+-- █░░▄▀░░██░░▄▀░░█░░▄▀▄▀▄▀▄▀▄▀░░█████░░▄▀░░█████░░▄▀▄▀▄▀▄▀▄▀▄▀░░█
+-- █░░▄▀░░██░░▄▀░░█░░▄▀░░░░░░░░░░█████░░▄▀░░█████░░▄▀░░░░░░▄▀░░░░█
+-- █░░▄▀░░██░░▄▀░░█░░▄▀░░█████████████░░▄▀░░█████░░▄▀░░██░░▄▀░░██
+-- █░░▄▀░░░░░░▄▀░░█░░▄▀░░░░░░░░░░█████░░▄▀░░█████░░▄▀░░██░░▄▀░░██
+-- █░░▄▀▄▀▄▀▄▀▄▀░░█░░▄▀▄▀▄▀▄▀▄▀░░█████░░▄▀░░█████░░▄▀░░██░░▄▀░░██
+-- █░░░░░░░░░░░░░░█░░░░░░░░░░░░░░█████░░░░░░█████░░░░░░██░░░░░░██
+-- ████████████████████████████████████████████████████████████████
+-- VERTEX HUB ULTIMATE - ALL 100+ FEATURES
+-- ████████████████████████████████████████████████████████████████
 
 return function(deps)
 	local Tabs = deps.Tabs
 	local Components = deps.Components
 	local Animations = deps.Animations
 	
-	if not Tabs or not Components or not Animations then
-		error("[Menu] Missing dependencies")
-	end
-	
-	print("[SimpleHub] Initializing ULTIMATE edition...")
-	
-	-- Services
+	-- ══════════════════════════════════════════════════════════════
+	-- SERVICES
+	-- ══════════════════════════════════════════════════════════════
 	local Players = game:GetService("Players")
 	local UIS = game:GetService("UserInputService")
-	local TweenService = game:GetService("TweenService")
 	local RunService = game:GetService("RunService")
+	local TweenService = game:GetService("TweenService")
 	local Lighting = game:GetService("Lighting")
 	local TeleportService = game:GetService("TeleportService")
-	local StarterGui = game:GetService("StarterGui")
 	local Debris = game:GetService("Debris")
-	local SoundService = game:GetService("SoundService")
 	local Stats = game:GetService("Stats")
 	local HttpService = game:GetService("HttpService")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
-	local CoreGui = game:GetService("CoreGui")
+	local SoundService = game:GetService("SoundService")
+	local VirtualInputManager = game:GetService("VirtualInputManager")
 	
 	local player = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
 	local mouse = player:GetMouse()
 	
-	-- Helpers
-	local function getCharacter()
-		return player.Character or player.CharacterAdded:Wait()
+	-- ══════════════════════════════════════════════════════════════
+	-- UTILITY FUNCTIONS
+	-- ══════════════════════════════════════════════════════════════
+	local function getCharacter() return player.Character end
+	local function getRoot() local c = getCharacter() return c and c:FindFirstChild("HumanoidRootPart") end
+	local function getHumanoid() local c = getCharacter() return c and c:FindFirstChildOfClass("Humanoid") end
+	local function getHead() local c = getCharacter() return c and c:FindFirstChild("Head") end
+	local function getTool() local c = getCharacter() return c and c:FindFirstChildOfClass("Tool") end
+	
+	-- ══════════════════════════════════════════════════════════════
+	-- ENTITY CACHE SYSTEM
+	-- ══════════════════════════════════════════════════════════════
+	local EntityCache = {
+		players = {},
+		npcs = {},
+		items = {}
+	}
+	
+	local function updateEntityCache()
+		-- Clean dead entries
+		for name, data in pairs(EntityCache.players) do
+			if not data.Player or not data.Player.Parent then
+				EntityCache.players[name] = nil
+			elseif data.Character then
+				if not data.Character.Parent or not data.Humanoid or data.Humanoid.Health <= 0 then
+					data.Character = nil
+					data.Humanoid = nil
+					data.RootPart = nil
+					data.Head = nil
+				end
+			end
+		end
+		
+		-- Update players
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= player then
+				if not EntityCache.players[plr.Name] then
+					EntityCache.players[plr.Name] = {
+						Player = plr,
+						IsPlayer = true,
+						Team = plr.Team
+					}
+				end
+				
+				local data = EntityCache.players[plr.Name]
+				data.Team = plr.Team
+				
+				if plr.Character and not data.Character then
+					data.Character = plr.Character
+					data.Humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+					data.RootPart = plr.Character:FindFirstChild("HumanoidRootPart")
+					data.Head = plr.Character:FindFirstChild("Head")
+				end
+			end
+		end
+		
+		-- Update NPCs
+		EntityCache.npcs = {}
+		for _, obj in ipairs(workspace:GetDescendants()) do
+			if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+				if not Players:GetPlayerFromCharacter(obj) then
+					local hum = obj:FindFirstChildOfClass("Humanoid")
+					local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChild("Head")
+					if hum and hum.Health > 0 and root then
+						table.insert(EntityCache.npcs, {
+							Model = obj,
+							Name = obj.Name,
+							Humanoid = hum,
+							RootPart = root,
+							Head = obj:FindFirstChild("Head"),
+							IsNPC = true
+						})
+					end
+				end
+			end
+		end
+		
+		-- Update Items
+		EntityCache.items = {}
+		for _, obj in ipairs(workspace:GetDescendants()) do
+			if obj:IsA("Tool") then
+				local handle = obj:FindFirstChild("Handle")
+				if handle then
+					table.insert(EntityCache.items, {Object = obj, Position = handle.Position, Name = obj.Name, IsItem = true})
+				end
+			elseif obj:IsA("BasePart") then
+				local n = obj.Name:lower()
+				if n:find("coin") or n:find("gem") or n:find("item") or n:find("pickup") or n:find("chest") or n:find("loot") or n:find("drop") then
+					table.insert(EntityCache.items, {Object = obj, Position = obj.Position, Name = obj.Name, IsItem = true})
+				end
+			end
+		end
 	end
 	
-	local function getRoot()
-		local char = getCharacter()
-		return char and char:FindFirstChild("HumanoidRootPart")
-	end
+	-- ══════════════════════════════════════════════════════════════
+	-- DRAWING OBJECT POOL (Optimized - No recreation)
+	-- ══════════════════════════════════════════════════════════════
+	local DrawingPool = {
+		text = {},
+		square = {},
+		line = {},
+		triangle = {},
+		circle = {},
+		quad = {}
+	}
+	local ActiveDrawings = {}
 	
-	local function getHumanoid()
-		local char = getCharacter()
-		return char and char:FindFirstChildOfClass("Humanoid")
-	end
-	
-	-- ============================================
-	-- LOAD EXTERNAL MODULES
-	-- ============================================
-	local BASE = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
-	
-	local function loadModule(path)
-		local success, result = pcall(function()
-			return loadstring(game:HttpGet(BASE .. path .. "?nocache=" .. os.clock()))()
+	local function getDrawing(drawType)
+		local pool = DrawingPool[drawType]
+		if not pool then return nil end
+		
+		-- Find unused drawing
+		for i, obj in ipairs(pool) do
+			if not obj._inUse then
+				obj._inUse = true
+				obj.Visible = true
+				table.insert(ActiveDrawings, obj)
+				return obj
+			end
+		end
+		
+		-- Create new drawing
+		local newDraw
+		local success = pcall(function()
+			if drawType == "text" then
+				newDraw = Drawing.new("Text")
+				newDraw.Size = 14
+				newDraw.Center = true
+				newDraw.Outline = true
+				newDraw.Font = Drawing.Fonts.Gotham
+			elseif drawType == "square" then
+				newDraw = Drawing.new("Square")
+				newDraw.Thickness = 1
+				newDraw.Filled = false
+			elseif drawType == "line" then
+				newDraw = Drawing.new("Line")
+				newDraw.Thickness = 1
+			elseif drawType == "triangle" then
+				newDraw = Drawing.new("Triangle")
+				newDraw.Filled = true
+			elseif drawType == "circle" then
+				newDraw = Drawing.new("Circle")
+				newDraw.Thickness = 2
+				newDraw.NumSides = 64
+				newDraw.Filled = false
+			elseif drawType == "quad" then
+				newDraw = Drawing.new("Quad")
+				newDraw.Thickness = 1
+				newDraw.Filled = false
+			end
 		end)
-		if success then return result end
+		
+		if success and newDraw then
+			newDraw._inUse = true
+			newDraw.Visible = true
+			table.insert(pool, newDraw)
+			table.insert(ActiveDrawings, newDraw)
+			return newDraw
+		end
 		return nil
 	end
 	
-	local Fly = loadModule("movement/fly.lua")
-	local Noclip = loadModule("movement/noclip.lua")
-	local Dash = loadModule("movement/dash.lua")
-	local SilentAim = loadModule("combat/silent_aim.lua")
+	local function releaseAllDrawings()
+		for _, obj in ipairs(ActiveDrawings) do
+			if obj then
+				obj.Visible = false
+				obj._inUse = false
+			end
+		end
+		ActiveDrawings = {}
+	end
 	
-	-- ============================================
-	-- ALL FEATURE STATES
-	-- ============================================
-	
-	-- Movement
-	local Movement = {
-		walkSpeedEnabled = false, walkSpeedValue = 16,
-		jumpPowerEnabled = false, jumpPowerValue = 50,
-		infiniteJump = false,
-		speedGlide = false, glideSpeed = 0.1,
-		longJump = false, longJumpForce = 100,
-		bunnyHop = false,
-		anchored = false,
-		clickTP = false,
-		antiVoid = false, antiVoidHeight = -100,
-		spinBot = false, spinSpeed = 20,
-		fakeLag = false, fakeLagIntensity = 5
-	}
-	
-	-- Combat
-	local Combat = {
-		aimAssistEnabled = false, aimAssistSmooth = 0.15, aimAssistFOV = 150,
-		aimPrediction = false, predictionAmount = 0.1,
-		showFOVCircle = false,
-		triggerbot = false, triggerbotDelay = 0.1,
-		killAura = false, killAuraRange = 15,
-		reach = false, reachDistance = 20,
-		targetStrafe = false, strafeSpeed = 5, strafeRadius = 10,
-		autoParry = false,
-		autoCombo = false,
-		hitboxExpander = false, hitboxSize = 5,
-		antiAim = false,
-		backtrack = false, backtrackTime = 0.2
-	}
-	
-	-- ESP
-	local ESPState = {
-		NameESP = false, BoxESP = false, HealthESP = false,
-		DistanceESP = false, Tracers = false, Chams = false,
-		SkeletonESP = false, ItemESP = false, NPCESP = false,
-		OffscreenArrows = false, XRay = false
-	}
-	
-	-- Visuals
-	local Visuals = {
-		fullbright = false, noFog = false, noShadows = false,
-		customCrosshair = false, crosshairSize = 10,
-		cameraFOV = 70, freecam = false, freecamSpeed = 1,
-		thirdPerson = false,
-		hitboxVisualizer = false,
-		partTransparency = false, transparencyValue = 0.5
-	}
-	
-	-- Player
-	local PlayerMods = {
-		godMode = false, noRagdoll = false, invisible = false,
-		noRecoil = false, noSpread = false, infiniteStamina = false,
-		autoRespawn = false,
-		characterScale = 1
-	}
-	
-	-- Farming
-	local Farming = {
-		autoFarm = false, autoCollect = false,
-		autoQuest = false, autoAttack = false,
-		tpToItems = false
-	}
-	
-	-- Misc
-	local Misc = {
-		antiAFK = false,
-		chatSpam = false, chatSpamMsg = "Simple Hub!", chatSpamDelay = 2,
-		annoyPlayer = false, annoyTarget = nil,
-		orbitPlayer = false, orbitTarget = nil, orbitRadius = 10, orbitSpeed = 2,
-		fling = false
-	}
-	
-	-- World
-	local World = {
-		deleteMode = false,
-		gravity = 196.2,
-		timeOfDay = 14
-	}
-	
-	-- HUD
-	local HUD = {
-		watermark = false,
-		fpsCounter = false,
-		pingDisplay = false,
-		playerCount = false,
-		keybindsDisplay = false,
-		targetInfo = false,
-		velocityDisplay = false
-	}
-	
-	-- Sounds
-	local Sounds = {
-		hitSound = false, hitSoundId = "rbxassetid://6607026206",
-		killSound = false, killSoundId = "rbxassetid://4612378712",
-		espSound = false
-	}
-	
-	-- Troll
-	local Troll = {
-		headless = false,
-		animationId = nil,
-		korbloxLegs = false
-	}
-	
-	-- Settings
-	local Settings = {
-		menuKey = Enum.KeyCode.M,
-		menuScale = 1,
-		menuOpacity = 1,
-		accentColor = Color3.fromRGB(60, 120, 255)
-	}
-	
-	-- Waypoints
-	local Waypoints = {}
-	
-	-- ============================================
-	-- DRAWING OBJECTS
-	-- ============================================
-	local ESPObjects = {}
-	local DrawingObjects = {}
+	-- ══════════════════════════════════════════════════════════════
+	-- STATIC HUD DRAWINGS (Persistent elements)
+	-- ══════════════════════════════════════════════════════════════
+	local HUDDrawings = {}
 	
 	pcall(function()
-		DrawingObjects.FOVCircle = Drawing.new("Circle")
-		DrawingObjects.FOVCircle.Thickness = 2
-		DrawingObjects.FOVCircle.NumSides = 64
-		DrawingObjects.FOVCircle.Filled = false
-		DrawingObjects.FOVCircle.Visible = false
-		DrawingObjects.FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+		-- FOV Circle
+		HUDDrawings.FOVCircle = Drawing.new("Circle")
+		HUDDrawings.FOVCircle.Thickness = 2
+		HUDDrawings.FOVCircle.NumSides = 64
+		HUDDrawings.FOVCircle.Filled = false
+		HUDDrawings.FOVCircle.Visible = false
+		HUDDrawings.FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+		HUDDrawings.FOVCircle.Transparency = 0.7
 		
-		DrawingObjects.CrosshairH = Drawing.new("Line")
-		DrawingObjects.CrosshairH.Visible = false
-		DrawingObjects.CrosshairH.Color = Color3.fromRGB(255, 0, 0)
-		DrawingObjects.CrosshairH.Thickness = 2
+		-- Crosshair (4 lines for gap style)
+		HUDDrawings.CrosshairLeft = Drawing.new("Line")
+		HUDDrawings.CrosshairLeft.Thickness = 2
+		HUDDrawings.CrosshairLeft.Visible = false
 		
-		DrawingObjects.CrosshairV = Drawing.new("Line")
-		DrawingObjects.CrosshairV.Visible = false
-		DrawingObjects.CrosshairV.Color = Color3.fromRGB(255, 0, 0)
-		DrawingObjects.CrosshairV.Thickness = 2
+		HUDDrawings.CrosshairRight = Drawing.new("Line")
+		HUDDrawings.CrosshairRight.Thickness = 2
+		HUDDrawings.CrosshairRight.Visible = false
 		
-		-- HUD Elements
-		DrawingObjects.Watermark = Drawing.new("Text")
-		DrawingObjects.Watermark.Size = 18
-		DrawingObjects.Watermark.Font = Drawing.Fonts.GothamBold
-		DrawingObjects.Watermark.Color = Color3.fromRGB(255, 255, 255)
-		DrawingObjects.Watermark.Outline = true
-		DrawingObjects.Watermark.Position = Vector2.new(10, 10)
-		DrawingObjects.Watermark.Visible = false
+		HUDDrawings.CrosshairTop = Drawing.new("Line")
+		HUDDrawings.CrosshairTop.Thickness = 2
+		HUDDrawings.CrosshairTop.Visible = false
 		
-		DrawingObjects.FPS = Drawing.new("Text")
-		DrawingObjects.FPS.Size = 16
-		DrawingObjects.FPS.Font = Drawing.Fonts.Gotham
-		DrawingObjects.FPS.Color = Color3.fromRGB(255, 255, 255)
-		DrawingObjects.FPS.Outline = true
-		DrawingObjects.FPS.Position = Vector2.new(10, 35)
-		DrawingObjects.FPS.Visible = false
+		HUDDrawings.CrosshairBottom = Drawing.new("Line")
+		HUDDrawings.CrosshairBottom.Thickness = 2
+		HUDDrawings.CrosshairBottom.Visible = false
 		
-		DrawingObjects.Ping = Drawing.new("Text")
-		DrawingObjects.Ping.Size = 16
-		DrawingObjects.Ping.Font = Drawing.Fonts.Gotham
-		DrawingObjects.Ping.Color = Color3.fromRGB(255, 255, 255)
-		DrawingObjects.Ping.Outline = true
-		DrawingObjects.Ping.Position = Vector2.new(10, 55)
-		DrawingObjects.Ping.Visible = false
+		-- Watermark
+		HUDDrawings.Watermark = Drawing.new("Text")
+		HUDDrawings.Watermark.Size = 20
+		HUDDrawings.Watermark.Font = Drawing.Fonts.GothamBold
+		HUDDrawings.Watermark.Outline = true
+		HUDDrawings.Watermark.Position = Vector2.new(10, 10)
+		HUDDrawings.Watermark.Visible = false
+		HUDDrawings.Watermark.Color = Color3.fromRGB(60, 120, 255)
 		
-		DrawingObjects.PlayerCount = Drawing.new("Text")
-		DrawingObjects.PlayerCount.Size = 16
-		DrawingObjects.PlayerCount.Font = Drawing.Fonts.Gotham
-		DrawingObjects.PlayerCount.Color = Color3.fromRGB(255, 255, 255)
-		DrawingObjects.PlayerCount.Outline = true
-		DrawingObjects.PlayerCount.Position = Vector2.new(10, 75)
-		DrawingObjects.PlayerCount.Visible = false
+		-- FPS Counter
+		HUDDrawings.FPSCounter = Drawing.new("Text")
+		HUDDrawings.FPSCounter.Size = 16
+		HUDDrawings.FPSCounter.Font = Drawing.Fonts.Gotham
+		HUDDrawings.FPSCounter.Outline = true
+		HUDDrawings.FPSCounter.Position = Vector2.new(10, 35)
+		HUDDrawings.FPSCounter.Visible = false
+		HUDDrawings.FPSCounter.Color = Color3.fromRGB(255, 255, 255)
 		
-		DrawingObjects.Velocity = Drawing.new("Text")
-		DrawingObjects.Velocity.Size = 16
-		DrawingObjects.Velocity.Font = Drawing.Fonts.Gotham
-		DrawingObjects.Velocity.Color = Color3.fromRGB(255, 255, 255)
-		DrawingObjects.Velocity.Outline = true
-		DrawingObjects.Velocity.Position = Vector2.new(10, 95)
-		DrawingObjects.Velocity.Visible = false
+		-- Ping Display
+		HUDDrawings.PingDisplay = Drawing.new("Text")
+		HUDDrawings.PingDisplay.Size = 16
+		HUDDrawings.PingDisplay.Font = Drawing.Fonts.Gotham
+		HUDDrawings.PingDisplay.Outline = true
+		HUDDrawings.PingDisplay.Position = Vector2.new(10, 55)
+		HUDDrawings.PingDisplay.Visible = false
+		HUDDrawings.PingDisplay.Color = Color3.fromRGB(255, 255, 255)
 		
-		DrawingObjects.TargetInfo = Drawing.new("Text")
-		DrawingObjects.TargetInfo.Size = 16
-		DrawingObjects.TargetInfo.Font = Drawing.Fonts.Gotham
-		DrawingObjects.TargetInfo.Color = Color3.fromRGB(255, 255, 255)
-		DrawingObjects.TargetInfo.Outline = true
-		DrawingObjects.TargetInfo.Position = Vector2.new(10, 115)
-		DrawingObjects.TargetInfo.Visible = false
+		-- Player Count
+		HUDDrawings.PlayerCount = Drawing.new("Text")
+		HUDDrawings.PlayerCount.Size = 16
+		HUDDrawings.PlayerCount.Font = Drawing.Fonts.Gotham
+		HUDDrawings.PlayerCount.Outline = true
+		HUDDrawings.PlayerCount.Position = Vector2.new(10, 75)
+		HUDDrawings.PlayerCount.Visible = false
+		HUDDrawings.PlayerCount.Color = Color3.fromRGB(255, 255, 255)
+		
+		-- Velocity Display
+		HUDDrawings.VelocityDisplay = Drawing.new("Text")
+		HUDDrawings.VelocityDisplay.Size = 16
+		HUDDrawings.VelocityDisplay.Font = Drawing.Fonts.Gotham
+		HUDDrawings.VelocityDisplay.Outline = true
+		HUDDrawings.VelocityDisplay.Position = Vector2.new(10, 95)
+		HUDDrawings.VelocityDisplay.Visible = false
+		HUDDrawings.VelocityDisplay.Color = Color3.fromRGB(255, 255, 255)
+		
+		-- Target Info
+		HUDDrawings.TargetInfo = Drawing.new("Text")
+		HUDDrawings.TargetInfo.Size = 16
+		HUDDrawings.TargetInfo.Font = Drawing.Fonts.Gotham
+		HUDDrawings.TargetInfo.Outline = true
+		HUDDrawings.TargetInfo.Position = Vector2.new(10, 115)
+		HUDDrawings.TargetInfo.Visible = false
+		HUDDrawings.TargetInfo.Color = Color3.fromRGB(255, 255, 255)
+		
+		-- Keybinds Display
+		HUDDrawings.KeybindsDisplay = Drawing.new("Text")
+		HUDDrawings.KeybindsDisplay.Size = 14
+		HUDDrawings.KeybindsDisplay.Font = Drawing.Fonts.Gotham
+		HUDDrawings.KeybindsDisplay.Outline = true
+		HUDDrawings.KeybindsDisplay.Visible = false
+		HUDDrawings.KeybindsDisplay.Color = Color3.fromRGB(255, 255, 255)
 	end)
 	
-	-- ============================================
-	-- ORIGINAL VALUES
-	-- ============================================
+	-- ══════════════════════════════════════════════════════════════
+	-- ALL STATE VARIABLES (100+ Features)
+	-- ══════════════════════════════════════════════════════════════
+	local State = {
+		-- ═══════════ ESP STATE ═══════════
+		ESP = {
+			-- Player ESP
+			NameESP = false,
+			BoxESP = false,
+			HealthESP = false,
+			DistanceESP = false,
+			Tracers = false,
+			SkeletonESP = false,
+			OffscreenArrows = false,
+			Chams = false,
+			-- World ESP
+			ItemESP = false,
+			NPCESP = false,
+			-- Settings
+			MaxDistance = 1000,
+			TeamCheck = false,
+			FriendCheck = false,
+			-- Colors
+			BoxColor = Color3.fromRGB(255, 0, 0),
+			NameColor = Color3.fromRGB(255, 255, 255),
+			HealthColor = Color3.fromRGB(0, 255, 0),
+			TracerColor = Color3.fromRGB(255, 255, 0),
+			SkeletonColor = Color3.fromRGB(255, 255, 255),
+			ArrowColor = Color3.fromRGB(255, 0, 0),
+			ItemColor = Color3.fromRGB(255, 200, 0),
+			NPCColor = Color3.fromRGB(0, 200, 255)
+		},
+		
+		-- ═══════════ COMBAT STATE ═══════════
+		Combat = {
+			-- Aim Assist
+			AimAssist = false,
+			AimSmoothness = 0.15,
+			AimFOV = 150,
+			AimPrediction = false,
+			PredictionAmount = 0.1,
+			ShowFOVCircle = false,
+			AimTargetPart = "Head",
+			-- Silent Aim
+			SilentAim = false,
+			SilentAimHitChance = 100,
+			SilentAimTargetPart = "Head",
+			-- Kill Aura
+			KillAura = false,
+			KillAuraRange = 15,
+			KillAuraCPS = 10,
+			KillAuraTargetPlayers = true,
+			KillAuraTargetNPCs = false,
+			KillAuraWallCheck = true,
+			KillAuraLegitMode = false,
+			-- Reach
+			Reach = false,
+			ReachDistance = 18,
+			ReachLegitMode = false,
+			-- Triggerbot
+			Triggerbot = false,
+			TriggerbotDelay = 0.1,
+			-- Auto
+			AutoParry = false,
+			AutoCombo = false,
+			AutoBlock = false,
+			-- Exploits
+			HitboxExpander = false,
+			HitboxSize = 5,
+			Backtrack = false,
+			BacktrackTime = 0.2,
+			TargetStrafe = false,
+			TargetStrafeSpeed = 5,
+			TargetStrafeRadius = 10,
+			AntiAim = false
+		},
+		
+		-- ═══════════ MOVEMENT STATE ═══════════
+		Movement = {
+			-- Fly
+			Fly = false,
+			FlySpeed = 50,
+			FlyLegitMode = false,
+			-- Noclip
+			Noclip = false,
+			-- Speed
+			Speed = false,
+			SpeedValue = 16,
+			SpeedLegitMode = false,
+			-- Jump
+			JumpPower = false,
+			JumpPowerValue = 50,
+			InfiniteJump = false,
+			-- Special Movement
+			BunnyHop = false,
+			LongJump = false,
+			LongJumpForce = 100,
+			SpeedGlide = false,
+			SpeedGlideValue = 10,
+			Dash = false,
+			DashForce = 100,
+			DashCooldown = 1,
+			AirControl = false,
+			-- Teleport
+			ClickTP = false,
+			-- Safety
+			AntiVoid = false,
+			AntiVoidHeight = -100,
+			Anchor = false,
+			-- Exploits
+			SpinBot = false,
+			SpinBotSpeed = 20,
+			FakeLag = false,
+			FakeLagIntensity = 5
+		},
+		
+		-- ═══════════ VISUALS STATE ═══════════
+		Visuals = {
+			-- Lighting
+			Fullbright = false,
+			NoFog = false,
+			NoShadows = false,
+			-- Crosshair
+			CustomCrosshair = false,
+			CrosshairSize = 10,
+			CrosshairGap = 5,
+			CrosshairColor = Color3.fromRGB(255, 0, 0),
+			-- Camera
+			CameraFOV = 70,
+			ThirdPerson = false,
+			Freecam = false,
+			FreecamSpeed = 1,
+			-- World
+			XRay = false,
+			XRayTransparency = 0.5,
+			Ambient = false,
+			AmbientColor = Color3.fromRGB(128, 128, 128)
+		},
+		
+		-- ═══════════ WORLD STATE ═══════════
+		World = {
+			TimeOfDay = 14,
+			Gravity = 196.2,
+			DeleteMode = false,
+			RemoveGrass = false,
+			RemoveFog = false,
+			NoClipParts = false
+		},
+		
+		-- ═══════════ PLAYER STATE ═══════════
+		Player = {
+			-- Character
+			GodMode = false,
+			NoRagdoll = false,
+			AutoRespawn = false,
+			CharacterScale = 1,
+			-- Invisibility
+			Invisibility = false,
+			InvisibilityMode = "Safe",
+			InvisibilityOffset = 100,
+			-- Weapon
+			NoRecoil = false,
+			NoSpread = false,
+			InfiniteStamina = false,
+			InfiniteAmmo = false,
+			RapidFire = false
+		},
+		
+		-- ═══════════ TROLL STATE ═══════════
+		Troll = {
+			AnnoyPlayer = false,
+			AnnoyTarget = "",
+			OrbitPlayer = false,
+			OrbitTarget = "",
+			OrbitRadius = 10,
+			OrbitSpeed = 2,
+			Fling = false,
+			FlingPower = 500,
+			Headless = false,
+			InvisibleBody = false,
+			SpinOthers = false
+		},
+		
+		-- ═══════════ MISC STATE ═══════════
+		Misc = {
+			-- Anti Detection
+			AntiAFK = false,
+			-- Chat
+			ChatSpam = false,
+			ChatSpamMessage = "Vertex Hub on top!",
+			ChatSpamDelay = 2,
+			-- HUD
+			Watermark = false,
+			FPSCounter = false,
+			PingDisplay = false,
+			PlayerCount = false,
+			VelocityDisplay = false,
+			TargetInfo = false,
+			KeybindsDisplay = false
+		},
+		
+		-- ═══════════ SETTINGS STATE ═══════════
+		Settings = {
+			MenuKey = Enum.KeyCode.M,
+			MenuScale = 1,
+			AccentColor = Color3.fromRGB(60, 120, 255)
+		}
+	}
+	
+	-- ══════════════════════════════════════════════════════════════
+	-- STORAGE FOR SPECIAL SYSTEMS
+	-- ══════════════════════════════════════════════════════════════
+	local BacktrackPositions = {}
+	local CurrentTarget = nil
+	local LastAttackTime = 0
+	local LastTriggerbotTime = 0
+	local LastDashTime = 0
+	local FreecamPosition = Vector3.new(0, 50, 0)
+	local FreecamAngles = Vector2.new(0, 0)
+	local FPSCounter = {frames = 0, lastTime = tick(), fps = 60}
+	local PreviousMouseState = {behavior = nil, icon = nil}
+	
+	-- ══════════════════════════════════════════════════════════════
+	-- ORIGINAL VALUES STORAGE
+	-- ══════════════════════════════════════════════════════════════
 	local OriginalValues = {
 		Ambient = Lighting.Ambient,
 		Brightness = Lighting.Brightness,
@@ -268,761 +538,447 @@ return function(deps)
 		FogStart = Lighting.FogStart,
 		GlobalShadows = Lighting.GlobalShadows,
 		OutdoorAmbient = Lighting.OutdoorAmbient,
+		ClockTime = Lighting.ClockTime,
 		Gravity = workspace.Gravity,
 		FieldOfView = camera.FieldOfView
 	}
 	
-	-- ============================================
-	-- UTILITY FUNCTIONS
-	-- ============================================
-	
-	local function getClosestPlayer(fov)
-		local closest, closestDist = nil, math.huge
-		local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+	-- ══════════════════════════════════════════════════════════════
+	-- TARGET ACQUISITION SYSTEM
+	-- ══════════════════════════════════════════════════════════════
+	local function getBestTarget(options)
+		options = options or {}
+		local range = options.Range or 150
+		local targetPlayers = options.Players ~= false
+		local targetNPCs = options.NPCs or false
+		local wallCheck = options.WallCheck or false
+		local useFOV = options.UseFOV or false
+		local fov = options.FOV or 150
+		local sortBy = options.Sort or "Distance"
+		local targetPart = options.TargetPart or "Head"
 		
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= player and plr.Character then
-				local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-				local head = plr.Character:FindFirstChild("Head")
-				
-				if humanoid and humanoid.Health > 0 and head then
-					local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
-					if onScreen then
-						local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-						if dist < fov and dist < closestDist then
-							closestDist = dist
-							closest = {Player = plr, Character = plr.Character, Head = head, Humanoid = humanoid, Root = plr.Character:FindFirstChild("HumanoidRootPart")}
-						end
+		local myRoot = getRoot()
+		if not myRoot then return nil end
+		
+		local targets = {}
+		local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+		local myTeam = player.Team
+		
+		-- Gather player targets
+		if targetPlayers then
+			for name, data in pairs(EntityCache.players) do
+				if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
+					-- Team check
+					if State.ESP.TeamCheck and data.Team and myTeam and data.Team == myTeam then
+						continue
 					end
-				end
-			end
-		end
-		return closest
-	end
-	
-	local function getNearestPlayer()
-		local closest, closestDist = nil, math.huge
-		local root = getRoot()
-		if not root then return nil end
-		
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= player and plr.Character then
-				local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-				local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-				if targetRoot and humanoid and humanoid.Health > 0 then
-					local dist = (root.Position - targetRoot.Position).Magnitude
-					if dist < closestDist then
-						closestDist = dist
-						closest = {Player = plr, Character = plr.Character, Root = targetRoot, Humanoid = humanoid, Distance = dist}
-					end
-				end
-			end
-		end
-		return closest
-	end
-	
-	local function playSound(soundId)
-		pcall(function()
-			local sound = Instance.new("Sound")
-			sound.SoundId = soundId
-			sound.Volume = 1
-			sound.Parent = SoundService
-			sound:Play()
-			Debris:AddItem(sound, 3)
-		end)
-	end
-	
-	local function clearESP()
-		for _, obj in pairs(ESPObjects) do
-			pcall(function() if obj.Remove then obj:Remove() end end)
-		end
-		ESPObjects = {}
-	end
-	
-	local lastFPSUpdate = 0
-	local frameCount = 0
-	local currentFPS = 0
-	
-	-- Freecam
-	local freecamPos = Vector3.new(0, 50, 0)
-	local freecamAngles = Vector2.new(0, 0)
-	
-	-- Backtrack storage
-	local backtrackPositions = {}
-	
-	-- ============================================
-	-- MAIN UPDATE LOOP
-	-- ============================================
-	RunService.RenderStepped:Connect(function(dt)
-		local char = player.Character
-		camera = workspace.CurrentCamera
-		
-		local root = char and char:FindFirstChild("HumanoidRootPart")
-		local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-		
-		-- FPS Counter
-		frameCount = frameCount + 1
-		if tick() - lastFPSUpdate >= 1 then
-			currentFPS = frameCount
-			frameCount = 0
-			lastFPSUpdate = tick()
-		end
-		
-		-- ========== MOVEMENT ==========
-		
-		if Movement.speedGlide and root and humanoid then
-			if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
-				root.Velocity = Vector3.new(root.Velocity.X, math.max(root.Velocity.Y, -Movement.glideSpeed * 100), root.Velocity.Z)
-			end
-		end
-		
-		if Movement.bunnyHop and humanoid then
-			if humanoid.FloorMaterial ~= Enum.Material.Air then
-				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-			end
-		end
-		
-		if Movement.antiVoid and root then
-			if root.Position.Y < Movement.antiVoidHeight then
-				root.CFrame = CFrame.new(root.Position.X, 50, root.Position.Z)
-			end
-		end
-		
-		if Movement.spinBot and root then
-			root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(Movement.spinSpeed), 0)
-		end
-		
-		if Movement.fakeLag and root then
-			if math.random(1, 10) <= Movement.fakeLagIntensity then
-				root.Velocity = Vector3.new(0, 0, 0)
-			end
-		end
-		
-		if Fly and Fly.enabled and Fly.update and root then
-			Fly.update(root, camera, UIS)
-		end
-		
-		if Noclip and Noclip.enabled and Noclip.update and char then
-			Noclip.update(char)
-		end
-		
-		-- ========== COMBAT ==========
-		
-		-- Aim Assist with Prediction
-		if Combat.aimAssistEnabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-			local target = getClosestPlayer(Combat.aimAssistFOV)
-			if target and target.Head then
-				local targetPos = target.Head.Position
-				
-				-- Add prediction
-				if Combat.aimPrediction and target.Root then
-					targetPos = targetPos + target.Root.Velocity * Combat.predictionAmount
-				end
-				
-				local targetCF = CFrame.new(camera.CFrame.Position, targetPos)
-				camera.CFrame = camera.CFrame:Lerp(targetCF, Combat.aimAssistSmooth)
-			end
-		end
-		
-		-- Target Strafe
-		if Combat.targetStrafe and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-			local target = getClosestPlayer(Combat.aimAssistFOV)
-			if target and target.Root and root then
-				local angle = tick() * Combat.strafeSpeed
-				local offset = Vector3.new(math.cos(angle) * Combat.strafeRadius, 0, math.sin(angle) * Combat.strafeRadius)
-				root.CFrame = CFrame.new(target.Root.Position + offset, target.Root.Position)
-			end
-		end
-		
-		-- Triggerbot
-		if Combat.triggerbot then
-			local target = mouse.Target
-			if target and Players:GetPlayerFromCharacter(target.Parent) then
-				pcall(function() mouse1click() end)
-			end
-		end
-		
-		-- Kill Aura
-		if Combat.killAura and root then
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= player and plr.Character then
-					local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-					local targetHum = plr.Character:FindFirstChildOfClass("Humanoid")
-					if targetRoot and targetHum and targetHum.Health > 0 then
-						if (root.Position - targetRoot.Position).Magnitude <= Combat.killAuraRange then
-							pcall(function()
-								local tool = char:FindFirstChildOfClass("Tool")
-								if tool and tool:FindFirstChild("Handle") then
-									firetouchinterest(tool.Handle, targetRoot, 0)
-									firetouchinterest(tool.Handle, targetRoot, 1)
-								end
-							end)
-						end
-					end
-				end
-			end
-		end
-		
-		-- Hitbox Expander
-		if Combat.hitboxExpander then
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= player and plr.Character then
-					local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-					if targetRoot then
-						targetRoot.Size = Vector3.new(Combat.hitboxSize, Combat.hitboxSize, Combat.hitboxSize)
-						targetRoot.Transparency = 0.7
-					end
-				end
-			end
-		end
-		
-		-- Backtrack - Store positions
-		if Combat.backtrack then
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= player and plr.Character then
-					local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart")
-					if targetRoot then
-						if not backtrackPositions[plr.Name] then
-							backtrackPositions[plr.Name] = {}
-						end
-						table.insert(backtrackPositions[plr.Name], {Position = targetRoot.Position, Time = tick()})
-						-- Clean old positions
-						for i = #backtrackPositions[plr.Name], 1, -1 do
-							if tick() - backtrackPositions[plr.Name][i].Time > Combat.backtrackTime then
-								table.remove(backtrackPositions[plr.Name], i)
-							end
-						end
-					end
-				end
-			end
-		end
-		
-		-- Auto Parry (generic)
-		if Combat.autoParry then
-			pcall(function()
-				for _, obj in ipairs(workspace:GetDescendants()) do
-					if obj:IsA("BasePart") and (obj.Name:lower():find("sword") or obj.Name:lower():find("blade")) then
-						if obj.Parent ~= char and obj.Parent.Parent ~= char then
-							local dist = root and (root.Position - obj.Position).Magnitude or math.huge
-							if dist < 15 then
-								-- Try to trigger block
-								local tool = char:FindFirstChildOfClass("Tool")
-								if tool then
-									pcall(function() tool:Activate() end)
-								end
-								pcall(function() mouse2click() end)
-							end
-						end
-					end
-				end
-			end)
-		end
-		
-		-- ========== FOV CIRCLE ==========
-		if DrawingObjects.FOVCircle then
-			DrawingObjects.FOVCircle.Visible = Combat.showFOVCircle
-			DrawingObjects.FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-			DrawingObjects.FOVCircle.Radius = Combat.aimAssistFOV
-			DrawingObjects.FOVCircle.Color = Settings.accentColor
-		end
-		
-		-- ========== CROSSHAIR ==========
-		if DrawingObjects.CrosshairH and DrawingObjects.CrosshairV then
-			local visible = Visuals.customCrosshair
-			local cx, cy = camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2
-			local size = Visuals.crosshairSize
-			
-			DrawingObjects.CrosshairH.Visible = visible
-			DrawingObjects.CrosshairH.From = Vector2.new(cx - size, cy)
-			DrawingObjects.CrosshairH.To = Vector2.new(cx + size, cy)
-			DrawingObjects.CrosshairH.Color = Settings.accentColor
-			
-			DrawingObjects.CrosshairV.Visible = visible
-			DrawingObjects.CrosshairV.From = Vector2.new(cx, cy - size)
-			DrawingObjects.CrosshairV.To = Vector2.new(cx, cy + size)
-			DrawingObjects.CrosshairV.Color = Settings.accentColor
-		end
-		
-		-- ========== FREECAM ==========
-		if Visuals.freecam then
-			local speed = Visuals.freecamSpeed * 2
-			local move = Vector3.new()
-			
-			if UIS:IsKeyDown(Enum.KeyCode.W) then move = move + camera.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.S) then move = move - camera.CFrame.LookVector end
-			if UIS:IsKeyDown(Enum.KeyCode.A) then move = move - camera.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.D) then move = move + camera.CFrame.RightVector end
-			if UIS:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
-			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then move = move - Vector3.new(0, 1, 0) end
-			
-			if move.Magnitude > 0 then
-				freecamPos = freecamPos + move.Unit * speed
-			end
-			
-			camera.CameraType = Enum.CameraType.Scriptable
-			camera.CFrame = CFrame.new(freecamPos) * CFrame.Angles(math.rad(freecamAngles.X), math.rad(freecamAngles.Y), 0)
-		end
-		
-		-- ========== PLAYER MODS ==========
-		
-		if PlayerMods.godMode and humanoid then
-			humanoid.Health = humanoid.MaxHealth
-		end
-		
-		if PlayerMods.noRagdoll and humanoid then
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-			humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-		end
-		
-		if PlayerMods.infiniteStamina then
-			pcall(function()
-				for _, v in pairs(player.PlayerGui:GetDescendants()) do
-					if v.Name:lower():find("stamina") and v:IsA("ValueBase") then
-						v.Value = v.Value > 0 and 100 or v.Value
-					end
-				end
-			end)
-		end
-		
-		-- Character Scale
-		if PlayerMods.characterScale ~= 1 and humanoid then
-			pcall(function()
-				local scale = humanoid:FindFirstChild("BodyHeightScale") or humanoid:FindFirstChild("HeadScale")
-				if scale then
-					scale.Value = PlayerMods.characterScale
-				end
-			end)
-		end
-		
-		-- ========== FARMING ==========
-		
-		if Farming.autoCollect and root then
-			for _, item in ipairs(workspace:GetDescendants()) do
-				if item:IsA("Tool") or (item:IsA("BasePart") and (item.Name:lower():find("coin") or item.Name:lower():find("gem") or item.Name:lower():find("item") or item.Name:lower():find("pickup"))) then
-					local pos = item.Position or (item:FindFirstChild("Handle") and item.Handle.Position)
-					if pos then
-						local dist = (root.Position - pos).Magnitude
-						if dist < 50 then
-							pcall(function()
-								firetouchinterest(root, item, 0)
-								firetouchinterest(root, item, 1)
-							end)
-						end
-					end
-				end
-			end
-		end
-		
-		if Farming.autoAttack then
-			local nearest = getNearestPlayer()
-			if nearest and nearest.Distance < 20 then
-				pcall(function()
-					local tool = char:FindFirstChildOfClass("Tool")
-					if tool then tool:Activate() end
-				end)
-			end
-		end
-		
-		-- ========== TROLL ==========
-		
-		if Misc.annoyPlayer and Misc.annoyTarget and root then
-			local targetPlayer = Players:FindFirstChild(Misc.annoyTarget)
-			if targetPlayer and targetPlayer.Character then
-				local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-				if targetRoot then
-					root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -3)
-				end
-			end
-		end
-		
-		if Misc.orbitPlayer and Misc.orbitTarget and root then
-			local targetPlayer = Players:FindFirstChild(Misc.orbitTarget)
-			if targetPlayer and targetPlayer.Character then
-				local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-				if targetRoot then
-					local angle = tick() * Misc.orbitSpeed
-					local offset = Vector3.new(math.cos(angle) * Misc.orbitRadius, 0, math.sin(angle) * Misc.orbitRadius)
-					root.CFrame = CFrame.new(targetRoot.Position + offset, targetRoot.Position)
-				end
-			end
-		end
-		
-		if Misc.fling and root then
-			root.Velocity = Vector3.new(math.random(-500, 500), math.random(100, 500), math.random(-500, 500))
-			root.RotVelocity = Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
-		end
-		
-		if Troll.headless and char then
-			local head = char:FindFirstChild("Head")
-			if head then
-				head.Transparency = 1
-				local face = head:FindFirstChildOfClass("Decal")
-				if face then face.Transparency = 1 end
-			end
-		end
-		
-		-- ========== MISC ==========
-		
-		if Misc.antiAFK then
-			pcall(function()
-				local vu = game:GetService("VirtualUser")
-				vu:CaptureController()
-				vu:ClickButton2(Vector2.new())
-			end)
-		end
-		
-		-- ========== HUD ==========
-		
-		if DrawingObjects.Watermark then
-			DrawingObjects.Watermark.Visible = HUD.watermark
-			DrawingObjects.Watermark.Text = "Simple Hub ULTIMATE"
-			DrawingObjects.Watermark.Color = Settings.accentColor
-		end
-		
-		if DrawingObjects.FPS then
-			DrawingObjects.FPS.Visible = HUD.fpsCounter
-			DrawingObjects.FPS.Text = "FPS: " .. tostring(currentFPS)
-		end
-		
-		if DrawingObjects.Ping then
-			DrawingObjects.Ping.Visible = HUD.pingDisplay
-			local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-			DrawingObjects.Ping.Text = "Ping: " .. math.floor(ping) .. "ms"
-		end
-		
-		if DrawingObjects.PlayerCount then
-			DrawingObjects.PlayerCount.Visible = HUD.playerCount
-			DrawingObjects.PlayerCount.Text = "Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers
-		end
-		
-		if DrawingObjects.Velocity then
-			DrawingObjects.Velocity.Visible = HUD.velocityDisplay
-			local vel = root and root.Velocity.Magnitude or 0
-			DrawingObjects.Velocity.Text = "Speed: " .. math.floor(vel) .. " studs/s"
-		end
-		
-		if DrawingObjects.TargetInfo then
-			DrawingObjects.TargetInfo.Visible = HUD.targetInfo
-			local target = getClosestPlayer(Combat.aimAssistFOV)
-			if target then
-				DrawingObjects.TargetInfo.Text = "Target: " .. target.Player.Name .. " [" .. math.floor(target.Humanoid.Health) .. "HP]"
-			else
-				DrawingObjects.TargetInfo.Text = "Target: None"
-			end
-		end
-		
-		-- ========== X-RAY ==========
-		if Visuals.partTransparency then
-			for _, part in ipairs(workspace:GetDescendants()) do
-				if part:IsA("BasePart") and not part:IsDescendantOf(char or {}) then
-					if part.Transparency < 1 then
-						part.LocalTransparencyModifier = Visuals.transparencyValue
-					end
-				end
-			end
-		end
-		
-		-- ========== ESP ==========
-		updateESP()
-	end)
-	
-	-- ============================================
-	-- ESP UPDATE
-	-- ============================================
-	function updateESP()
-		clearESP()
-		
-		local anyEnabled = ESPState.NameESP or ESPState.BoxESP or ESPState.HealthESP or 
-			ESPState.DistanceESP or ESPState.Tracers or ESPState.SkeletonESP or ESPState.OffscreenArrows
-		
-		if not anyEnabled then return end
-		
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= player and plr.Character then
-				local char = plr.Character
-				local humanoid = char:FindFirstChildOfClass("Humanoid")
-				local rootPart = char:FindFirstChild("HumanoidRootPart")
-				local head = char:FindFirstChild("Head")
-				
-				if humanoid and humanoid.Health > 0 and rootPart then
-					local pos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
-					local distance = (camera.CFrame.Position - rootPart.Position).Magnitude
-					local scale = math.clamp(1 / (pos.Z * 0.04), 0.2, 2)
 					
-					if onScreen then
-						if ESPState.NameESP then
-							pcall(function()
-								local t = Drawing.new("Text")
-								t.Text = plr.Name
-								t.Size = 14
-								t.Color = Color3.fromRGB(255, 255, 255)
-								t.Center = true
-								t.Outline = true
-								t.Position = Vector2.new(pos.X, pos.Y - 50 * scale)
-								t.Visible = true
-								table.insert(ESPObjects, t)
-							end)
-						end
+					local targetPos = data[targetPart] and data[targetPart].Position or data.RootPart.Position
+					local distance = (myRoot.Position - data.RootPart.Position).Magnitude
+					
+					if distance <= range then
+						local screenPos, onScreen = camera:WorldToViewportPoint(targetPos)
+						local screenDistance = onScreen and (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude or math.huge
 						
-						if ESPState.HealthESP then
-							pcall(function()
-								local t = Drawing.new("Text")
-								t.Text = math.floor((humanoid.Health / humanoid.MaxHealth) * 100) .. "%"
-								t.Size = 12
-								t.Color = Color3.fromRGB(100, 255, 100)
-								t.Center = true
-								t.Outline = true
-								t.Position = Vector2.new(pos.X, pos.Y - 35 * scale)
-								t.Visible = true
-								table.insert(ESPObjects, t)
-							end)
-						end
-						
-						if ESPState.DistanceESP then
-							pcall(function()
-								local t = Drawing.new("Text")
-								t.Text = math.floor(distance) .. "m"
-								t.Size = 12
-								t.Color = Color3.fromRGB(200, 200, 200)
-								t.Center = true
-								t.Outline = true
-								t.Position = Vector2.new(pos.X, pos.Y + 40 * scale)
-								t.Visible = true
-								table.insert(ESPObjects, t)
-							end)
-						end
-						
-						if ESPState.BoxESP then
-							pcall(function()
-								local b = Drawing.new("Square")
-								local sz = Vector2.new(50 * scale, 70 * scale)
-								b.Size = sz
-								b.Position = Vector2.new(pos.X - sz.X / 2, pos.Y - sz.Y / 2)
-								b.Color = Color3.fromRGB(255, 0, 0)
-								b.Thickness = 1
-								b.Filled = false
-								b.Visible = true
-								table.insert(ESPObjects, b)
-							end)
-						end
-						
-						if ESPState.Tracers then
-							pcall(function()
-								local l = Drawing.new("Line")
-								l.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-								l.To = Vector2.new(pos.X, pos.Y)
-								l.Color = Color3.fromRGB(255, 255, 0)
-								l.Thickness = 1
-								l.Visible = true
-								table.insert(ESPObjects, l)
-							end)
-						end
-						
-						if ESPState.SkeletonESP then
-							pcall(function()
-								local joints = char:FindFirstChild("UpperTorso") and {
-									{"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
-									{"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-									{"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-									{"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-									{"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
-								} or {{"Head", "Torso"}, {"Torso", "Left Arm"}, {"Torso", "Right Arm"}, {"Torso", "Left Leg"}, {"Torso", "Right Leg"}}
-								
-								for _, j in ipairs(joints) do
-									local p1, p2 = char:FindFirstChild(j[1]), char:FindFirstChild(j[2])
-									if p1 and p2 then
-										local s1, v1 = camera:WorldToViewportPoint(p1.Position)
-										local s2, v2 = camera:WorldToViewportPoint(p2.Position)
-										if v1 and v2 then
-											local line = Drawing.new("Line")
-											line.From = Vector2.new(s1.X, s1.Y)
-											line.To = Vector2.new(s2.X, s2.Y)
-											line.Color = Color3.fromRGB(255, 255, 255)
-											line.Thickness = 1
-											line.Visible = true
-											table.insert(ESPObjects, line)
-										end
-									end
-								end
-							end)
-						end
-					else
-						if ESPState.OffscreenArrows then
-							pcall(function()
-								local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-								local dir = (Vector2.new(pos.X, pos.Y) - center).Unit
-								local arrowPos = center + dir * 300
-								arrowPos = Vector2.new(
-									math.clamp(arrowPos.X, 50, camera.ViewportSize.X - 50),
-									math.clamp(arrowPos.Y, 50, camera.ViewportSize.Y - 50)
-								)
-								
-								local arrow = Drawing.new("Triangle")
-								local angle = math.atan2(dir.Y, dir.X)
-								arrow.PointA = arrowPos + Vector2.new(math.cos(angle) * 15, math.sin(angle) * 15)
-								arrow.PointB = arrowPos + Vector2.new(math.cos(angle + 2.5) * 15, math.sin(angle + 2.5) * 15)
-								arrow.PointC = arrowPos + Vector2.new(math.cos(angle - 2.5) * 15, math.sin(angle - 2.5) * 15)
-								arrow.Color = Color3.fromRGB(255, 0, 0)
-								arrow.Filled = true
-								arrow.Visible = true
-								table.insert(ESPObjects, arrow)
-							end)
+						-- FOV check
+						if not useFOV or screenDistance <= fov then
+							-- Wall check
+							local passWallCheck = true
+							if wallCheck then
+								local rayOrigin = myRoot.Position
+								local rayDirection = (data.RootPart.Position - myRoot.Position)
+								local raycastParams = RaycastParams.new()
+								raycastParams.FilterDescendantsInstances = {getCharacter(), data.Character}
+								raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+								local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+								passWallCheck = result == nil
+							end
+							
+							if passWallCheck then
+								table.insert(targets, {
+									Entity = data,
+									Distance = distance,
+									ScreenDistance = screenDistance,
+									Health = data.Humanoid.Health,
+									Position = targetPos,
+									IsPlayer = true
+								})
+							end
 						end
 					end
 				end
 			end
 		end
 		
-		if ESPState.ItemESP then
-			for _, item in ipairs(workspace:GetDescendants()) do
-				if item:IsA("Tool") or (item:IsA("BasePart") and item.Name:lower():find("item")) then
-					local itemPos = item.Position or (item:FindFirstChild("Handle") and item.Handle.Position)
-					if itemPos then
-						local p, v = camera:WorldToViewportPoint(itemPos)
-						if v then
-							pcall(function()
-								local t = Drawing.new("Text")
-								t.Text = "[Item] " .. item.Name
-								t.Size = 12
-								t.Color = Color3.fromRGB(255, 200, 0)
-								t.Center = true
-								t.Outline = true
-								t.Position = Vector2.new(p.X, p.Y)
-								t.Visible = true
-								table.insert(ESPObjects, t)
-							end)
+		-- Gather NPC targets
+		if targetNPCs then
+			for _, data in ipairs(EntityCache.npcs) do
+				if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
+					local targetPos = data.Head and data.Head.Position or data.RootPart.Position
+					local distance = (myRoot.Position - data.RootPart.Position).Magnitude
+					
+					if distance <= range then
+						local screenPos, onScreen = camera:WorldToViewportPoint(targetPos)
+						local screenDistance = onScreen and (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude or math.huge
+						
+						if not useFOV or screenDistance <= fov then
+							table.insert(targets, {
+								Entity = data,
+								Distance = distance,
+								ScreenDistance = screenDistance,
+								Health = data.Humanoid.Health,
+								Position = targetPos,
+								IsNPC = true
+							})
 						end
 					end
 				end
 			end
 		end
 		
-		if ESPState.NPCESP then
-			for _, npc in ipairs(workspace:GetDescendants()) do
-				if npc:IsA("Model") and npc:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
-					local npcRoot = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso") or npc:FindFirstChild("Head")
-					if npcRoot then
-						local p, v = camera:WorldToViewportPoint(npcRoot.Position)
-						if v then
-							pcall(function()
-								local t = Drawing.new("Text")
-								t.Text = "[NPC] " .. npc.Name
-								t.Size = 12
-								t.Color = Color3.fromRGB(0, 200, 255)
-								t.Center = true
-								t.Outline = true
-								t.Position = Vector2.new(p.X, p.Y - 30)
-								t.Visible = true
-								table.insert(ESPObjects, t)
-							end)
-						end
-					end
-				end
+		if #targets == 0 then return nil end
+		
+		-- Sort targets
+		table.sort(targets, function(a, b)
+			if sortBy == "Distance" then
+				return a.Distance < b.Distance
+			elseif sortBy == "Health" then
+				return a.Health < b.Health
+			elseif sortBy == "Angle" or sortBy == "FOV" then
+				return a.ScreenDistance < b.ScreenDistance
+			elseif sortBy == "Threat" then
+				return (a.Health / a.Distance) < (b.Health / b.Distance)
+			end
+			return a.Distance < b.Distance
+		end)
+		
+		CurrentTarget = targets[1].Entity
+		return targets[1].Entity, targets[1].Position
+	end
+	
+	-- ══════════════════════════════════════════════════════════════
+	-- FLY SYSTEM (Stealth)
+	-- ══════════════════════════════════════════════════════════════
+	local FlySystem = {
+		enabled = false,
+		bodyGyro = nil,
+		bodyVelocity = nil,
+		currentVelocity = Vector3.new()
+	}
+	
+	function FlySystem:Enable()
+		local root = getRoot()
+		local humanoid = getHumanoid()
+		if not root or not humanoid then return end
+		
+		self.enabled = true
+		humanoid.PlatformStand = true
+		
+		-- Create BodyGyro for rotation
+		self.bodyGyro = Instance.new("BodyGyro")
+		self.bodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+		self.bodyGyro.P = 1e4
+		self.bodyGyro.D = 100
+		self.bodyGyro.Parent = root
+		
+		-- Create BodyVelocity for movement
+		self.bodyVelocity = Instance.new("BodyVelocity")
+		self.bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+		self.bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+		self.bodyVelocity.Parent = root
+		
+		self.currentVelocity = Vector3.new()
+	end
+	
+	function FlySystem:Disable()
+		self.enabled = false
+		
+		local humanoid = getHumanoid()
+		if humanoid then
+			humanoid.PlatformStand = false
+		end
+		
+		if self.bodyGyro then
+			self.bodyGyro:Destroy()
+			self.bodyGyro = nil
+		end
+		
+		if self.bodyVelocity then
+			self.bodyVelocity:Destroy()
+			self.bodyVelocity = nil
+		end
+		
+		self.currentVelocity = Vector3.new()
+	end
+	
+	function FlySystem:Update()
+		if not self.enabled or not self.bodyVelocity or not self.bodyGyro then return end
+		
+		local root = getRoot()
+		if not root then return end
+		
+		-- Update rotation to face camera direction
+		self.bodyGyro.CFrame = camera.CFrame
+		
+		-- Calculate movement direction
+		local moveDirection = Vector3.new()
+		
+		if UIS:IsKeyDown(Enum.KeyCode.W) then
+			moveDirection = moveDirection + camera.CFrame.LookVector
+		end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then
+			moveDirection = moveDirection - camera.CFrame.LookVector
+		end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then
+			moveDirection = moveDirection - camera.CFrame.RightVector
+		end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then
+			moveDirection = moveDirection + camera.CFrame.RightVector
+		end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then
+			moveDirection = moveDirection + Vector3.new(0, 1, 0)
+		end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+			moveDirection = moveDirection - Vector3.new(0, 1, 0)
+		end
+		
+		-- Normalize direction
+		if moveDirection.Magnitude > 0 then
+			moveDirection = moveDirection.Unit
+		end
+		
+		-- Calculate target velocity
+		local targetVelocity = moveDirection * State.Movement.FlySpeed
+		
+		-- Apply smoothing for legit mode
+		if State.Movement.FlyLegitMode then
+			self.currentVelocity = self.currentVelocity:Lerp(targetVelocity, 0.08)
+			self.bodyVelocity.Velocity = self.currentVelocity
+		else
+			self.bodyVelocity.Velocity = targetVelocity
+		end
+	end
+	
+	-- ══════════════════════════════════════════════════════════════
+	-- INVISIBILITY SYSTEM (Hitbox-only, NO transparency)
+	-- ══════════════════════════════════════════════════════════════
+	local InvisibilitySystem = {
+		enabled = false,
+		originalCFrames = {},
+		connection = nil
+	}
+	
+	function InvisibilitySystem:Enable()
+		local character = getCharacter()
+		local root = getRoot()
+		if not character or not root then return end
+		
+		self.enabled = true
+		self.originalCFrames = {}
+		
+		-- Calculate offset based on mode
+		local offset = State.Player.InvisibilityOffset
+		if State.Player.InvisibilityMode == "Extreme" then
+			offset = 500
+		end
+		
+		-- Move all parts except HumanoidRootPart
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+				self.originalCFrames[part] = part.CFrame:ToObjectSpace(root.CFrame)
+				part.CFrame = part.CFrame + Vector3.new(0, offset, 0)
 			end
 		end
 	end
 	
-	-- ============================================
-	-- CHAMS
-	-- ============================================
-	local function updateChams()
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= player and plr.Character then
-				local existing = plr.Character:FindFirstChild("SimpleHubChams")
-				if ESPState.Chams then
-					if not existing then
-						local h = Instance.new("Highlight")
-						h.Name = "SimpleHubChams"
-						h.FillColor = Color3.fromRGB(255, 0, 0)
-						h.OutlineColor = Color3.fromRGB(255, 255, 255)
-						h.FillTransparency = 0.5
-						h.Parent = plr.Character
-					end
-				else
-					if existing then existing:Destroy() end
-				end
+	function InvisibilitySystem:Disable()
+		self.enabled = false
+		
+		local root = getRoot()
+		if not root then return end
+		
+		-- Restore original positions
+		for part, relativeCFrame in pairs(self.originalCFrames) do
+			if part and part.Parent then
+				part.CFrame = root.CFrame * relativeCFrame
+			end
+		end
+		
+		self.originalCFrames = {}
+	end
+	
+	function InvisibilitySystem:Update()
+		if not self.enabled then return end
+		
+		local root = getRoot()
+		if not root then return end
+		
+		local offset = State.Player.InvisibilityOffset
+		if State.Player.InvisibilityMode == "Extreme" then
+			offset = 500
+		end
+		
+		-- Keep parts offset
+		for part, _ in pairs(self.originalCFrames) do
+			if part and part.Parent then
+				part.CFrame = root.CFrame + Vector3.new(0, offset, 0)
 			end
 		end
 	end
 	
-	-- ============================================
-	-- INPUT
-	-- ============================================
-	UIS.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then return end
-		
-		if input.KeyCode == Enum.KeyCode.Space then
-			if Movement.infiniteJump then
-				local hum = getHumanoid()
-				if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-			end
-			if Movement.longJump then
-				local root = getRoot()
-				if root then
-					local bv = Instance.new("BodyVelocity")
-					bv.Velocity = camera.CFrame.LookVector * Movement.longJumpForce + Vector3.new(0, 50, 0)
-					bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-					bv.Parent = root
-					Debris:AddItem(bv, 0.2)
+	-- ══════════════════════════════════════════════════════════════
+	-- SILENT AIM HOOKS
+	-- ══════════════════════════════════════════════════════════════
+	local function getAimTarget()
+		return getBestTarget({
+			Range = 1000,
+			Players = true,
+			NPCs = true,
+			UseFOV = true,
+			FOV = State.Combat.AimFOV,
+			Sort = "Angle",
+			TargetPart = State.Combat.SilentAimTargetPart
+		})
+	end
+	
+	-- Hook mouse properties
+	pcall(function()
+		local oldIndex
+		oldIndex = hookmetamethod(game, "__index", function(self, key)
+			if State.Combat.SilentAim and self == mouse then
+				-- Hit chance check
+				if math.random(1, 100) <= State.Combat.SilentAimHitChance then
+					local target, targetPos = getAimTarget()
+					
+					if target and targetPos then
+						-- Apply prediction if enabled
+						if State.Combat.AimPrediction and target.RootPart then
+							targetPos = targetPos + target.RootPart.Velocity * State.Combat.PredictionAmount
+						end
+						
+						if key == "Hit" then
+							return CFrame.new(targetPos)
+						elseif key == "Target" then
+							return target[State.Combat.SilentAimTargetPart] or target.Head or target.RootPart
+						elseif key == "X" then
+							local screenPos = camera:WorldToViewportPoint(targetPos)
+							return screenPos.X
+						elseif key == "Y" then
+							local screenPos = camera:WorldToViewportPoint(targetPos)
+							return screenPos.Y
+						elseif key == "UnitRay" then
+							local origin = camera.CFrame.Position
+							local direction = (targetPos - origin).Unit
+							return Ray.new(origin, direction)
+						end
+					end
 				end
+			end
+			return oldIndex(self, key)
+		end)
+	end)
+	
+	-- Hook raycast methods
+	pcall(function()
+		local oldNamecall
+		oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+			local method = getnamecallmethod()
+			local args = {...}
+			
+			if State.Combat.SilentAim and self == workspace then
+				local methods = {
+					["Raycast"] = true,
+					["FindPartOnRay"] = true,
+					["FindPartOnRayWithIgnoreList"] = true,
+					["FindPartOnRayWithWhitelist"] = true
+				}
+				
+				if methods[method] then
+					if math.random(1, 100) <= State.Combat.SilentAimHitChance then
+						local target, targetPos = getAimTarget()
+						
+						if target and targetPos then
+							if State.Combat.AimPrediction and target.RootPart then
+								targetPos = targetPos + target.RootPart.Velocity * State.Combat.PredictionAmount
+							end
+							
+							if method == "Raycast" and args[1] then
+								local origin = args[1]
+								local newDirection = (targetPos - origin).Unit * 1000
+								return oldNamecall(self, origin, newDirection, unpack(args, 3))
+							elseif args[1] and typeof(args[1]) == "Ray" then
+								local origin = args[1].Origin
+								local newDirection = (targetPos - origin).Unit * 1000
+								local newRay = Ray.new(origin, newDirection)
+								return oldNamecall(self, newRay, unpack(args, 2))
+							end
+						end
+					end
+				end
+			end
+			
+			return oldNamecall(self, ...)
+		end)
+	end)
+	
+	-- Hook camera ray methods
+	pcall(function()
+		local oldScreenPointToRay = camera.ScreenPointToRay
+		local oldViewportPointToRay = camera.ViewportPointToRay
+		
+		local function hookCameraRay(originalFunc)
+			return function(self, x, y, depth)
+				if State.Combat.SilentAim and self == camera then
+					if math.random(1, 100) <= State.Combat.SilentAimHitChance then
+						local target, targetPos = getAimTarget()
+						if target and targetPos then
+							if State.Combat.AimPrediction and target.RootPart then
+								targetPos = targetPos + target.RootPart.Velocity * State.Combat.PredictionAmount
+							end
+							local origin = camera.CFrame.Position
+							local direction = (targetPos - origin).Unit
+							return Ray.new(origin, direction)
+						end
+					end
+				end
+				return originalFunc(self, x, y, depth)
 			end
 		end
 		
-		if input.KeyCode == Enum.KeyCode.F then
-			if Dash and Dash.enabled then
-				local root = getRoot()
-				if root then Dash.tryDash(root, camera) end
-			end
-		end
-		
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			if Movement.clickTP then
-				local root = getRoot()
-				if root and mouse.Hit then
-					root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
-				end
-			end
-			if World.deleteMode then
-				local target = mouse.Target
-				if target and not target:IsDescendantOf(player.Character or {}) then
-					target:Destroy()
-				end
-			end
+		if hookfunction then
+			hookfunction(camera.ScreenPointToRay, hookCameraRay(oldScreenPointToRay))
+			hookfunction(camera.ViewportPointToRay, hookCameraRay(oldViewportPointToRay))
 		end
 	end)
 	
-	UIS.InputChanged:Connect(function(input)
-		if Visuals.freecam and input.UserInputType == Enum.UserInputType.MouseMovement then
-			local delta = UIS:GetMouseDelta()
-			freecamAngles = Vector2.new(
-				math.clamp(freecamAngles.X - delta.Y * 0.5, -80, 80),
-				freecamAngles.Y - delta.X * 0.5
-			)
-		end
-	end)
+	-- ══════════════════════════════════════════════════════════════
+	-- BACKGROUND LOOPS
+	-- ══════════════════════════════════════════════════════════════
 	
-	-- ============================================
-	-- CHAT SPAM
-	-- ============================================
+	-- Chat Spam Loop
 	task.spawn(function()
 		while true do
-			if Misc.chatSpam then
+			if State.Misc.ChatSpam then
 				pcall(function()
-					ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest"):FireServer(Misc.chatSpamMsg, "All")
+					local chatEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+					if chatEvents then
+						local sayMsg = chatEvents:FindFirstChild("SayMessageRequest")
+						if sayMsg then
+							sayMsg:FireServer(State.Misc.ChatSpamMessage, "All")
+						end
+					end
 				end)
 			end
-			task.wait(Misc.chatSpamDelay)
+			task.wait(State.Misc.ChatSpamDelay)
 		end
 	end)
 	
-	-- ============================================
-	-- AUTO RESPAWN
-	-- ============================================
+	-- Auto Respawn Loop
 	task.spawn(function()
 		while true do
-			if PlayerMods.autoRespawn then
-				local hum = getHumanoid()
-				if hum and hum.Health <= 0 then
+			if State.Player.AutoRespawn then
+				local humanoid = getHumanoid()
+				if humanoid and humanoid.Health <= 0 then
 					task.wait(0.1)
 					pcall(function()
 						player:LoadCharacter()
@@ -1033,462 +989,1283 @@ return function(deps)
 		end
 	end)
 	
-	-- ============================================
-	-- COLORS
-	-- ============================================
-	local Colors = {
-		Background = Color3.fromRGB(18, 18, 25),
-		Panel = Color3.fromRGB(22, 22, 32),
-		Surface = Color3.fromRGB(26, 26, 36),
-		ContentBg = Color3.fromRGB(20, 20, 28),
-		ScrollBg = Color3.fromRGB(18, 18, 25),
-		Accent = Settings.accentColor,
-		Text = Color3.fromRGB(220, 220, 240),
-		TextDim = Color3.fromRGB(140, 140, 160),
-		Border = Color3.fromRGB(45, 50, 65)
-	}
-	
-	-- ============================================
-	-- GUI CREATION
-	-- ============================================
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "SimpleHubUltimate"
-	gui.ResetOnSpawn = false
-	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.Parent = player:WaitForChild("PlayerGui")
-	
-	local main = Instance.new("Frame")
-	main.Name = "Main"
-	main.Size = UDim2.new(0, 950, 0, 650)
-	main.Position = UDim2.new(0.5, 0, 0.5, 0)
-	main.AnchorPoint = Vector2.new(0.5, 0.5)
-	main.BackgroundColor3 = Colors.Background
-	main.BorderSizePixel = 0
-	main.ClipsDescendants = true
-	main.Visible = false
-	main.Parent = gui
-	
-	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
-	local stroke = Instance.new("UIStroke", main)
-	stroke.Color = Colors.Border
-	stroke.Thickness = 2
-	
-	-- Header
-	local header = Instance.new("Frame")
-	header.Size = UDim2.new(1, 0, 0, 45)
-	header.BackgroundColor3 = Colors.Panel
-	header.BorderSizePixel = 0
-	header.Parent = main
-	
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(0, 400, 1, 0)
-	title.Position = UDim2.new(0, 15, 0, 0)
-	title.BackgroundTransparency = 1
-	title.Text = "SIMPLE HUB ULTIMATE"
-	title.TextColor3 = Colors.Text
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Font = Enum.Font.GothamBold
-	title.TextSize = 16
-	title.Parent = header
-	
-	local accent = Instance.new("Frame")
-	accent.Size = UDim2.new(0, 60, 0, 3)
-	accent.Position = UDim2.new(0, 15, 1, -3)
-	accent.BackgroundColor3 = Colors.Accent
-	accent.BorderSizePixel = 0
-	accent.Parent = header
-	Instance.new("UICorner", accent).CornerRadius = UDim.new(1, 0)
-	
-	local closeBtn = Instance.new("TextButton")
-	closeBtn.Size = UDim2.new(0, 28, 0, 28)
-	closeBtn.Position = UDim2.new(1, -38, 0.5, 0)
-	closeBtn.AnchorPoint = Vector2.new(0, 0.5)
-	closeBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-	closeBtn.Text = "×"
-	closeBtn.TextColor3 = Colors.Text
-	closeBtn.Font = Enum.Font.GothamBold
-	closeBtn.TextSize = 18
-	closeBtn.AutoButtonColor = false
-	closeBtn.Parent = header
-	Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
-	
-	closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
-	closeBtn.MouseEnter:Connect(function() closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) end)
-	closeBtn.MouseLeave:Connect(function() closeBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45) end)
-	
-	-- Tab bar
-	local tabBar = Instance.new("Frame")
-	tabBar.Size = UDim2.new(1, 0, 0, 45)
-	tabBar.Position = UDim2.new(0, 0, 0, 45)
-	tabBar.BackgroundColor3 = Colors.Surface
-	tabBar.BorderSizePixel = 0
-	tabBar.Parent = main
-	
-	Tabs.setupTabBar(tabBar)
-	
-	-- Content area
-	local contentArea = Instance.new("Frame")
-	contentArea.Size = UDim2.new(1, 0, 1, -90)
-	contentArea.Position = UDim2.new(0, 0, 0, 90)
-	contentArea.BackgroundColor3 = Colors.ContentBg
-	contentArea.BorderSizePixel = 0
-	contentArea.Parent = main
-	
-	local contentContainer = Instance.new("Frame")
-	contentContainer.Size = UDim2.new(1, -20, 1, -12)
-	contentContainer.Position = UDim2.new(0, 10, 0, 6)
-	contentContainer.BackgroundTransparency = 1
-	contentContainer.Parent = contentArea
-	
-	local function createTabContent(name)
-		local scroll = Instance.new("ScrollingFrame")
-		scroll.Name = name
-		scroll.Size = UDim2.new(1, 0, 1, 0)
-		scroll.BackgroundColor3 = Colors.ScrollBg
-		scroll.BackgroundTransparency = 0
-		scroll.BorderSizePixel = 0
-		scroll.ScrollBarThickness = 4
-		scroll.ScrollBarImageColor3 = Colors.Accent
-		scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-		scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-		scroll.Visible = false
-		scroll.Parent = contentContainer
+	-- ══════════════════════════════════════════════════════════════
+	-- CHAMS UPDATE FUNCTION
+	-- ══════════════════════════════════════════════════════════════
+	local function updateChams()
+		for name, data in pairs(EntityCache.players) do
+			if data.Character then
+				local existingChams = data.Character:FindFirstChild("VertexHubChams")
+				
+				if State.ESP.Chams then
+					if not existingChams then
+						local highlight = Instance.new("Highlight")
+						highlight.Name = "VertexHubChams"
+						highlight.FillColor = Color3.fromRGB(255, 0, 0)
+						highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+						highlight.FillTransparency = 0.5
+						highlight.OutlineTransparency = 0
+						highlight.Parent = data.Character
+					end
+				else
+					if existingChams then
+						existingChams:Destroy()
+					end
+				end
+			end
+		end
 		
-		local layout = Instance.new("UIListLayout", scroll)
-		layout.Padding = UDim.new(0, 6)
-		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		
-		local padding = Instance.new("UIPadding", scroll)
-		padding.PaddingTop = UDim.new(0, 4)
-		padding.PaddingBottom = UDim.new(0, 8)
-		padding.PaddingLeft = UDim.new(0, 4)
-		padding.PaddingRight = UDim.new(0, 8)
-		
-		return scroll
+		-- NPC Chams
+		for _, data in ipairs(EntityCache.npcs) do
+			if data.Model then
+				local existingChams = data.Model:FindFirstChild("VertexHubChams")
+				
+				if State.ESP.Chams and State.ESP.NPCESP then
+					if not existingChams then
+						local highlight = Instance.new("Highlight")
+						highlight.Name = "VertexHubChams"
+						highlight.FillColor = Color3.fromRGB(0, 200, 255)
+						highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+						highlight.FillTransparency = 0.5
+						highlight.OutlineTransparency = 0
+						highlight.Parent = data.Model
+					end
+				else
+					if existingChams then
+						existingChams:Destroy()
+					end
+				end
+			end
+		end
 	end
 	
-	-- Create all tabs
-	local movementContent = createTabContent("Movement")
-	local combatContent = createTabContent("Combat")
-	local espContent = createTabContent("ESP")
-	local visualsContent = createTabContent("Visuals")
-	local playerContent = createTabContent("Player")
-	local farmingContent = createTabContent("Farming")
-	local trollContent = createTabContent("Troll")
-	local miscContent = createTabContent("Misc")
-	local worldContent = createTabContent("World")
-	local hudContent = createTabContent("HUD")
-	local settingsContent = createTabContent("Settings")
+	-- ══════════════════════════════════════════════════════════════
+	-- MAIN UPDATE LOOP (Single RenderStepped)
+	-- ══════════════════════════════════════════════════════════════
+	local lastCacheUpdate = 0
 	
-	local movementTab = Tabs.create(tabBar, "Move", "🏃")
-	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
-	local espTab = Tabs.create(tabBar, "ESP", "👁")
-	local visualsTab = Tabs.create(tabBar, "Visual", "🎨")
-	local playerTab = Tabs.create(tabBar, "Player", "👤")
-	local farmingTab = Tabs.create(tabBar, "Farm", "🌾")
-	local trollTab = Tabs.create(tabBar, "Troll", "🎭")
-	local miscTab = Tabs.create(tabBar, "Misc", "⚙")
-	local worldTab = Tabs.create(tabBar, "World", "🌍")
-	local hudTab = Tabs.create(tabBar, "HUD", "📊")
-	local settingsTab = Tabs.create(tabBar, "Set", "⚡")
+	RunService.RenderStepped:Connect(function(deltaTime)
+		camera = workspace.CurrentCamera
+		local character = getCharacter()
+		local root = getRoot()
+		local humanoid = getHumanoid()
+		
+		-- ═══════════ UPDATE CACHE (Every 0.5s) ═══════════
+		if tick() - lastCacheUpdate > 0.5 then
+			lastCacheUpdate = tick()
+			updateEntityCache()
+		end
+		
+		-- ═══════════ FPS COUNTER ═══════════
+		FPSCounter.frames = FPSCounter.frames + 1
+		if tick() - FPSCounter.lastTime >= 1 then
+			FPSCounter.fps = FPSCounter.frames
+			FPSCounter.frames = 0
+			FPSCounter.lastTime = tick()
+		end
+		
+		-- ══════════════════════════════════════════════════════════════
+		-- MOVEMENT FEATURES
+		-- ══════════════════════════════════════════════════════════════
+		
+		-- Fly
+		if State.Movement.Fly then
+			if not FlySystem.enabled then
+				FlySystem:Enable()
+			end
+			FlySystem:Update()
+		elseif FlySystem.enabled then
+			FlySystem:Disable()
+		end
+		
+		-- Noclip
+		if State.Movement.Noclip and character then
+			for _, part in ipairs(character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = false
+				end
+			end
+		end
+		
+		-- Speed
+		if State.Movement.Speed and humanoid then
+			local targetSpeed = State.Movement.SpeedValue
+			if State.Movement.SpeedLegitMode then
+				humanoid.WalkSpeed = humanoid.WalkSpeed + (targetSpeed - humanoid.WalkSpeed) * 0.1
+			else
+				humanoid.WalkSpeed = targetSpeed
+			end
+		end
+		
+		-- Jump Power
+		if State.Movement.JumpPower and humanoid then
+			humanoid.JumpPower = State.Movement.JumpPowerValue
+			humanoid.JumpHeight = State.Movement.JumpPowerValue * 0.5
+		end
+		
+		-- Bunny Hop
+		if State.Movement.BunnyHop and humanoid then
+			if humanoid.FloorMaterial ~= Enum.Material.Air and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
+				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+			end
+		end
+		
+		-- Speed Glide
+		if State.Movement.SpeedGlide and root and humanoid then
+			if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
+				local maxFallSpeed = -State.Movement.SpeedGlideValue * 10
+				if root.Velocity.Y < maxFallSpeed then
+					root.Velocity = Vector3.new(root.Velocity.X, maxFallSpeed, root.Velocity.Z)
+				end
+			end
+		end
+		
+		-- Anti Void
+		if State.Movement.AntiVoid and root then
+			if root.Position.Y < State.Movement.AntiVoidHeight then
+				root.CFrame = CFrame.new(root.Position.X, 50, root.Position.Z)
+			end
+		end
+		
+		-- Anchor
+		if State.Movement.Anchor and root then
+			root.Anchored = true
+		elseif root and root.Anchored and not State.Movement.Anchor then
+			root.Anchored = false
+		end
+		
+		-- Spin Bot
+		if State.Movement.SpinBot and root then
+			root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(State.Movement.SpinBotSpeed), 0)
+		end
+		
+		-- Fake Lag
+		if State.Movement.FakeLag and root then
+			if math.random(1, 10) <= State.Movement.FakeLagIntensity then
+				root.Velocity = Vector3.new(0, root.Velocity.Y, 0)
+			end
+		end
+		
+		-- Air Control
+		if State.Movement.AirControl and humanoid and root then
+			if humanoid:GetState() == Enum.HumanoidStateType.Freefall then
+				local moveDir = Vector3.new()
+				if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+				if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+				if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+				if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+				
+				if moveDir.Magnitude > 0 then
+					moveDir = moveDir.Unit
+					root.Velocity = Vector3.new(moveDir.X * 50, root.Velocity.Y, moveDir.Z * 50)
+				end
+			end
+		end
+		
+		-- ══════════════════════════════════════════════════════════════
+		-- COMBAT FEATURES
+		-- ══════════════════════════════════════════════════════════════
+		
+		-- Aim Assist
+		if State.Combat.AimAssist and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+			local target, targetPos = getBestTarget({
+				Range = 1000,
+				Players = true,
+				NPCs = true,
+				UseFOV = true,
+				FOV = State.Combat.AimFOV,
+				Sort = "Angle",
+				TargetPart = State.Combat.AimTargetPart
+			})
+			
+			if target and targetPos then
+				-- Apply prediction
+				if State.Combat.AimPrediction and target.RootPart then
+					targetPos = targetPos + target.RootPart.Velocity * State.Combat.PredictionAmount
+				end
+				
+				local targetCFrame = CFrame.new(camera.CFrame.Position, targetPos)
+				camera.CFrame = camera.CFrame:Lerp(targetCFrame, State.Combat.AimSmoothness)
+			end
+		end
+		
+		-- Target Strafe
+		if State.Combat.TargetStrafe and root and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+			local target = getBestTarget({
+				Range = State.Combat.TargetStrafeRadius * 2,
+				Players = true,
+				NPCs = true
+			})
+			
+			if target and target.RootPart then
+				local angle = tick() * State.Combat.TargetStrafeSpeed
+				local offset = Vector3.new(
+					math.cos(angle) * State.Combat.TargetStrafeRadius,
+					0,
+					math.sin(angle) * State.Combat.TargetStrafeRadius
+				)
+				root.CFrame = CFrame.new(target.RootPart.Position + offset, target.RootPart.Position)
+			end
+		end
+		
+		-- Kill Aura
+		if State.Combat.KillAura and root then
+			local now = tick()
+			local cooldown = 1 / State.Combat.KillAuraCPS
+			
+			-- Add randomness for legit mode
+			if State.Combat.KillAuraLegitMode then
+				cooldown = cooldown * (1 + math.random() * 0.3)
+			end
+			
+			if now - LastAttackTime >= cooldown then
+				local target = getBestTarget({
+					Range = State.Combat.KillAuraRange,
+					Players = State.Combat.KillAuraTargetPlayers,
+					NPCs = State.Combat.KillAuraTargetNPCs,
+					WallCheck = State.Combat.KillAuraWallCheck,
+					Sort = "Distance"
+				})
+				
+				if target and target.RootPart then
+					LastAttackTime = now
+					
+					local tool = getTool()
+					if tool then
+						-- Try to activate tool
+						pcall(function()
+							tool:Activate()
+						end)
+						
+						-- Try touch interest for melee weapons
+						pcall(function()
+							local handle = tool:FindFirstChild("Handle")
+							if handle then
+								firetouchinterest(handle, target.RootPart, 0)
+								task.defer(function()
+									firetouchinterest(handle, target.RootPart, 1)
+								end)
+							end
+						end)
+					end
+				end
+			end
+		end
+		
+		-- Triggerbot
+		if State.Combat.Triggerbot then
+			local now = tick()
+			if now - LastTriggerbotTime >= State.Combat.TriggerbotDelay then
+				local target = mouse.Target
+				if target then
+					local targetPlayer = Players:GetPlayerFromCharacter(target.Parent)
+					if targetPlayer and targetPlayer ~= player then
+						LastTriggerbotTime = now
+						pcall(function()
+							mouse1click()
+						end)
+					end
+				end
+			end
+		end
+		
+		-- Auto Parry
+		if State.Combat.AutoParry and root and character then
+			for _, obj in ipairs(workspace:GetDescendants()) do
+				if obj:IsA("BasePart") then
+					local name = obj.Name:lower()
+					if name:find("sword") or name:find("blade") or name:find("slash") or name:find("attack") then
+						if obj.Parent ~= character and (obj.Parent and obj.Parent.Parent ~= character) then
+							local distance = (root.Position - obj.Position).Magnitude
+							if distance < 15 then
+								local tool = getTool()
+								if tool then
+									pcall(function() tool:Activate() end)
+								end
+								pcall(function() mouse2click() end)
+								break
+							end
+						end
+					end
+				end
+			end
+		end
+		
+		-- Hitbox Expander
+		if State.Combat.HitboxExpander then
+			for name, data in pairs(EntityCache.players) do
+				if data.RootPart then
+					data.RootPart.Size = Vector3.new(
+						State.Combat.HitboxSize,
+						State.Combat.HitboxSize,
+						State.Combat.HitboxSize
+					)
+					data.RootPart.Transparency = 0.7
+				end
+			end
+		end
+		
+		-- Backtrack
+		if State.Combat.Backtrack then
+			for name, data in pairs(EntityCache.players) do
+				if data.RootPart then
+					if not BacktrackPositions[name] then
+						BacktrackPositions[name] = {}
+					end
+					
+					table.insert(BacktrackPositions[name], {
+						Position = data.RootPart.Position,
+						Time = tick()
+					})
+					
+					-- Clean old positions
+					for i = #BacktrackPositions[name], 1, -1 do
+						if tick() - BacktrackPositions[name][i].Time > State.Combat.BacktrackTime then
+							table.remove(BacktrackPositions[name], i)
+						end
+					end
+				end
+			end
+		end
+		
+		-- ══════════════════════════════════════════════════════════════
+		-- PLAYER FEATURES
+		-- ══════════════════════════════════════════════════════════════
+		
+		-- God Mode
+		if State.Player.GodMode and humanoid then
+			humanoid.Health = humanoid.MaxHealth
+		end
+		
+		-- No Ragdoll
+		if State.Player.NoRagdoll and humanoid then
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+			humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp, false)
+		end
+		
+		-- Invisibility Update
+		if State.Player.Invisibility then
+			InvisibilitySystem:Update()
+		end
+		
+		-- Infinite Stamina
+		if State.Player.InfiniteStamina then
+			pcall(function()
+				for _, descendant in pairs(player.PlayerGui:GetDescendants()) do
+					if descendant.Name:lower():find("stamina") and descendant:IsA("ValueBase") then
+						if descendant.Value < 100 then
+							descendant.Value = 100
+						end
+					end
+				end
+			end)
+		end
+		
+		-- ══════════════════════════════════════════════════════════════
+		-- TROLL FEATURES
+		-- ══════════════════════════════════════════════════════════════
+		
+		-- Annoy Player
+		if State.Troll.AnnoyPlayer and State.Troll.AnnoyTarget ~= "" and root then
+			local targetPlayer = Players:FindFirstChild(State.Troll.AnnoyTarget)
+			if targetPlayer and targetPlayer.Character then
+				local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+				if targetRoot then
+					root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -3)
+				end
+			end
+		end
+		
+		-- Orbit Player
+		if State.Troll.OrbitPlayer and State.Troll.OrbitTarget ~= "" and root then
+			local targetPlayer = Players:FindFirstChild(State.Troll.OrbitTarget)
+			if targetPlayer and targetPlayer.Character then
+				local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+				if targetRoot then
+					local angle = tick() * State.Troll.OrbitSpeed
+					local offset = Vector3.new(
+						math.cos(angle) * State.Troll.OrbitRadius,
+						0,
+						math.sin(angle) * State.Troll.OrbitRadius
+					)
+					root.CFrame = CFrame.new(targetRoot.Position + offset, targetRoot.Position)
+				end
+			end
+		end
+		
+		-- Fling
+		if State.Troll.Fling and root then
+			root.Velocity = Vector3.new(
+				math.random(-State.Troll.FlingPower, State.Troll.FlingPower),
+				math.random(100, State.Troll.FlingPower),
+				math.random(-State.Troll.FlingPower, State.Troll.FlingPower)
+			)
+			root.RotVelocity = Vector3.new(
+				math.random(-100, 100),
+				math.random(-100, 100),
+				math.random(-100, 100)
+			)
+		end
+		
+		-- Headless
+		if State.Troll.Headless and character then
+			local head = character:FindFirstChild("Head")
+			if head then
+				head.Transparency = 1
+				local face = head:FindFirstChildOfClass("Decal")
+				if face then
+					face.Transparency = 1
+				end
+				for _, accessory in ipairs(character:GetChildren()) do
+					if accessory:IsA("Accessory") then
+						local handle = accessory:FindFirstChild("Handle")
+						if handle then
+							handle.Transparency = 1
+						end
+					end
+				end
+			end
+		end
+		
+		-- ══════════════════════════════════════════════════════════════
+		-- VISUALS FEATURES
+		-- ══════════════════════════════════════════════════════════════
+		
+		-- Freecam
+		if State.Visuals.Freecam then
+			local speed = State.Visuals.FreecamSpeed * 2
+			local moveDir = Vector3.new()
+			
+			if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+			if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+			
+			if moveDir.Magnitude > 0 then
+				FreecamPosition = FreecamPosition + moveDir.Unit * speed
+			end
+			
+			camera.CameraType = Enum.CameraType.Scriptable
+			camera.CFrame = CFrame.new(FreecamPosition) * CFrame.Angles(
+				math.rad(FreecamAngles.X),
+				math.rad(FreecamAngles.Y),
+				0
+			)
+		end
+		
+		-- X-Ray
+		if State.Visuals.XRay then
+			for _, part in ipairs(workspace:GetDescendants()) do
+				if part:IsA("BasePart") and not part:IsDescendantOf(character or {}) then
+					if part.Transparency < 1 then
+						part.LocalTransparencyModifier = State.Visuals.XRayTransparency
+					end
+				end
+			end
+		end
+		
+		-- ══════════════════════════════════════════════════════════════
+		-- HUD UPDATES
+		-- ══════════════════════════════════════════════════════════════
+		
+		-- FOV Circle
+		if HUDDrawings.FOVCircle then
+			HUDDrawings.FOVCircle.Visible = State.Combat.ShowFOVCircle
+			HUDDrawings.FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+			HUDDrawings.FOVCircle.Radius = State.Combat.AimFOV
+			HUDDrawings.FOVCircle.Color = State.Settings.AccentColor
+		end
+		
+		-- Crosshair
+		if HUDDrawings.CrosshairLeft then
+			local visible = State.Visuals.CustomCrosshair
+			local cx, cy = camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2
+			local size = State.Visuals.CrosshairSize
+			local gap = State.Visuals.CrosshairGap
+			local color = State.Visuals.CrosshairColor
+			
+			HUDDrawings.CrosshairLeft.Visible = visible
+			HUDDrawings.CrosshairLeft.From = Vector2.new(cx - size - gap, cy)
+			HUDDrawings.CrosshairLeft.To = Vector2.new(cx - gap, cy)
+			HUDDrawings.CrosshairLeft.Color = color
+			
+			HUDDrawings.CrosshairRight.Visible = visible
+			HUDDrawings.CrosshairRight.From = Vector2.new(cx + gap, cy)
+			HUDDrawings.CrosshairRight.To = Vector2.new(cx + size + gap, cy)
+			HUDDrawings.CrosshairRight.Color = color
+			
+			HUDDrawings.CrosshairTop.Visible = visible
+			HUDDrawings.CrosshairTop.From = Vector2.new(cx, cy - size - gap)
+			HUDDrawings.CrosshairTop.To = Vector2.new(cx, cy - gap)
+			HUDDrawings.CrosshairTop.Color = color
+			
+			HUDDrawings.CrosshairBottom.Visible = visible
+			HUDDrawings.CrosshairBottom.From = Vector2.new(cx, cy + gap)
+			HUDDrawings.CrosshairBottom.To = Vector2.new(cx, cy + size + gap)
+			HUDDrawings.CrosshairBottom.Color = color
+		end
+		
+		-- Watermark
+		if HUDDrawings.Watermark then
+			HUDDrawings.Watermark.Visible = State.Misc.Watermark
+			HUDDrawings.Watermark.Text = "Vertex Hub"
+			HUDDrawings.Watermark.Color = State.Settings.AccentColor
+		end
+		
+		-- FPS Counter
+		if HUDDrawings.FPSCounter then
+			HUDDrawings.FPSCounter.Visible = State.Misc.FPSCounter
+			HUDDrawings.FPSCounter.Text = "FPS: " .. tostring(FPSCounter.fps)
+		end
+		
+		-- Ping Display
+		if HUDDrawings.PingDisplay then
+			HUDDrawings.PingDisplay.Visible = State.Misc.PingDisplay
+			local ping = 0
+			pcall(function()
+				ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+			end)
+			HUDDrawings.PingDisplay.Text = "Ping: " .. math.floor(ping) .. "ms"
+		end
+		
+		-- Player Count
+		if HUDDrawings.PlayerCount then
+			HUDDrawings.PlayerCount.Visible = State.Misc.PlayerCount
+			HUDDrawings.PlayerCount.Text = "Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers
+		end
+		
+		-- Velocity Display
+		if HUDDrawings.VelocityDisplay then
+			HUDDrawings.VelocityDisplay.Visible = State.Misc.VelocityDisplay
+			local velocity = root and root.Velocity.Magnitude or 0
+			HUDDrawings.VelocityDisplay.Text = "Speed: " .. math.floor(velocity) .. " studs/s"
+		end
+		
+		-- Target Info
+		if HUDDrawings.TargetInfo then
+			HUDDrawings.TargetInfo.Visible = State.Misc.TargetInfo
+			if CurrentTarget and CurrentTarget.Humanoid then
+				local name = CurrentTarget.Player and CurrentTarget.Player.Name or (CurrentTarget.Model and CurrentTarget.Model.Name) or "Unknown"
+				HUDDrawings.TargetInfo.Text = "Target: " .. name .. " [" .. math.floor(CurrentTarget.Humanoid.Health) .. " HP]"
+			else
+				HUDDrawings.TargetInfo.Text = "Target: None"
+			end
+		end
+		
+		-- Keybinds Display
+		if HUDDrawings.KeybindsDisplay then
+			HUDDrawings.KeybindsDisplay.Visible = State.Misc.KeybindsDisplay
+			HUDDrawings.KeybindsDisplay.Position = Vector2.new(camera.ViewportSize.X - 150, 10)
+			
+			local activeFeatures = {}
+			if State.Movement.Fly then table.insert(activeFeatures, "Fly") end
+			if State.Movement.Noclip then table.insert(activeFeatures, "Noclip") end
+			if State.Movement.Speed then table.insert(activeFeatures, "Speed") end
+			if State.Combat.AimAssist then table.insert(activeFeatures, "Aim") end
+			if State.Combat.SilentAim then table.insert(activeFeatures, "Silent") end
+			if State.Combat.KillAura then table.insert(activeFeatures, "Aura") end
+			if State.ESP.BoxESP or State.ESP.NameESP then table.insert(activeFeatures, "ESP") end
+			
+			HUDDrawings.KeybindsDisplay.Text = "[Active]\n" .. (#activeFeatures > 0 and table.concat(activeFeatures, "\n") or "None")
+		end
+		
+		-- ══════════════════════════════════════════════════════════════
+		-- ESP RENDERING
+		-- ══════════════════════════════════════════════════════════════
+		releaseAllDrawings()
+		
+		local anyESPEnabled = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or 
+			State.ESP.DistanceESP or State.ESP.Tracers or State.ESP.SkeletonESP or 
+			State.ESP.OffscreenArrows or State.ESP.ItemESP or State.ESP.NPCESP
+		
+		if anyESPEnabled then
+			-- Player ESP
+			for name, data in pairs(EntityCache.players) do
+				if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
+					local distance = root and (root.Position - data.RootPart.Position).Magnitude or 0
+					
+					if distance <= State.ESP.MaxDistance then
+						local pos, onScreen = camera:WorldToViewportPoint(data.RootPart.Position)
+						local scale = math.clamp(1 / (pos.Z * 0.04), 0.2, 2)
+						
+						if onScreen then
+							-- Name ESP
+							if State.ESP.NameESP then
+								local text = getDrawing("text")
+								if text then
+									text.Text = name
+									text.Position = Vector2.new(pos.X, pos.Y - 50 * scale)
+									text.Color = State.ESP.NameColor
+									text.Size = 14
+								end
+							end
+							
+							-- Health ESP
+							if State.ESP.HealthESP then
+								local text = getDrawing("text")
+								if text then
+									local healthPercent = math.floor((data.Humanoid.Health / data.Humanoid.MaxHealth) * 100)
+									text.Text = healthPercent .. "%"
+									text.Position = Vector2.new(pos.X, pos.Y - 35 * scale)
+									text.Color = State.ESP.HealthColor
+									text.Size = 12
+								end
+							end
+							
+							-- Distance ESP
+							if State.ESP.DistanceESP then
+								local text = getDrawing("text")
+								if text then
+									text.Text = math.floor(distance) .. "m"
+									text.Position = Vector2.new(pos.X, pos.Y + 40 * scale)
+									text.Color = Color3.fromRGB(200, 200, 200)
+									text.Size = 12
+								end
+							end
+							
+							-- Box ESP
+							if State.ESP.BoxESP then
+								local box = getDrawing("square")
+								if box then
+									local boxSize = Vector2.new(50 * scale, 70 * scale)
+									box.Size = boxSize
+									box.Position = Vector2.new(pos.X - boxSize.X / 2, pos.Y - boxSize.Y / 2)
+									box.Color = State.ESP.BoxColor
+								end
+							end
+							
+							-- Tracers
+							if State.ESP.Tracers then
+								local line = getDrawing("line")
+								if line then
+									line.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+									line.To = Vector2.new(pos.X, pos.Y)
+									line.Color = State.ESP.TracerColor
+								end
+							end
+							
+							-- Skeleton ESP
+							if State.ESP.SkeletonESP and data.Character then
+								local isR15 = data.Character:FindFirstChild("UpperTorso") ~= nil
+								local joints
+								
+								if isR15 then
+									joints = {
+										{"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
+										{"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+										{"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
+										{"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
+										{"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
+									}
+								else
+									joints = {
+										{"Head", "Torso"},
+										{"Torso", "Left Arm"}, {"Torso", "Right Arm"},
+										{"Torso", "Left Leg"}, {"Torso", "Right Leg"}
+									}
+								end
+								
+								for _, joint in ipairs(joints) do
+									local part1 = data.Character:FindFirstChild(joint[1])
+									local part2 = data.Character:FindFirstChild(joint[2])
+									
+									if part1 and part2 then
+										local screen1, visible1 = camera:WorldToViewportPoint(part1.Position)
+										local screen2, visible2 = camera:WorldToViewportPoint(part2.Position)
+										
+										if visible1 and visible2 then
+											local line = getDrawing("line")
+											if line then
+												line.From = Vector2.new(screen1.X, screen1.Y)
+												line.To = Vector2.new(screen2.X, screen2.Y)
+												line.Color = State.ESP.SkeletonColor
+											end
+										end
+									end
+								end
+							end
+						else
+							-- Offscreen Arrows
+							if State.ESP.OffscreenArrows then
+								local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+								local direction = (Vector2.new(pos.X, pos.Y) - screenCenter).Unit
+								local arrowPosition = screenCenter + direction * 300
+								
+								arrowPosition = Vector2.new(
+									math.clamp(arrowPosition.X, 50, camera.ViewportSize.X - 50),
+									math.clamp(arrowPosition.Y, 50, camera.ViewportSize.Y - 50)
+								)
+								
+								local arrow = getDrawing("triangle")
+								if arrow then
+									local angle = math.atan2(direction.Y, direction.X)
+									arrow.PointA = arrowPosition + Vector2.new(math.cos(angle) * 15, math.sin(angle) * 15)
+									arrow.PointB = arrowPosition + Vector2.new(math.cos(angle + 2.5) * 15, math.sin(angle + 2.5) * 15)
+									arrow.PointC = arrowPosition + Vector2.new(math.cos(angle - 2.5) * 15, math.sin(angle - 2.5) * 15)
+									arrow.Color = State.ESP.ArrowColor
+								end
+							end
+						end
+					end
+				end
+			end
+			
+			-- NPC ESP
+			if State.ESP.NPCESP then
+				for _, data in ipairs(EntityCache.npcs) do
+					if data.RootPart then
+						local pos, onScreen = camera:WorldToViewportPoint(data.RootPart.Position)
+						if onScreen then
+							local text = getDrawing("text")
+							if text then
+								text.Text = "[NPC] " .. data.Name
+								text.Position = Vector2.new(pos.X, pos.Y - 30)
+								text.Color = State.ESP.NPCColor
+								text.Size = 12
+							end
+						end
+					end
+				end
+			end
+			
+			-- Item ESP
+			if State.ESP.ItemESP then
+				for _, data in ipairs(EntityCache.items) do
+					local pos, onScreen = camera:WorldToViewportPoint(data.Position)
+					if onScreen then
+						local text = getDrawing("text")
+						if text then
+							text.Text = "[Item] " .. data.Name
+							text.Position = Vector2.new(pos.X, pos.Y)
+							text.Color = State.ESP.ItemColor
+							text.Size = 12
+						end
+					end
+				end
+			end
+		end
+		
+		-- ══════════════════════════════════════════════════════════════
+		-- MISC FEATURES
+		-- ══════════════════════════════════════════════════════════════
+		
+		-- Anti AFK
+		if State.Misc.AntiAFK then
+			pcall(function()
+				local virtualUser = game:GetService("VirtualUser")
+				virtualUser:CaptureController()
+				virtualUser:ClickButton2(Vector2.new())
+			end)
+		end
+	end)
 	
-	Tabs.connectTab(movementTab, movementContent)
-	Tabs.connectTab(combatTab, combatContent)
-	Tabs.connectTab(espTab, espContent)
-	Tabs.connectTab(visualsTab, visualsContent)
-	Tabs.connectTab(playerTab, playerContent)
-	Tabs.connectTab(farmingTab, farmingContent)
-	Tabs.connectTab(trollTab, trollContent)
-	Tabs.connectTab(miscTab, miscContent)
-	Tabs.connectTab(worldTab, worldContent)
-	Tabs.connectTab(hudTab, hudContent)
-	Tabs.connectTab(settingsTab, settingsContent)
-	
-	-- ============================================
-	-- MOVEMENT TAB
-	-- ============================================
-	Components.createSection(movementContent, "Flight & Noclip")
-	Components.createToggle(movementContent, "Fly", function(s) if Fly then if s then local r=getRoot() if r then Fly.enable(r,camera) end else Fly.disable() end end end)
-	Components.createSlider(movementContent, "Fly Speed", 10, 300, 50, function(v) if Fly then Fly.speed = v end end)
-	Components.createToggle(movementContent, "Noclip", function(s) if Noclip then Noclip.enabled = s end end)
-	
-	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Speed & Jump")
-	Components.createToggle(movementContent, "Walk Speed", function(s) Movement.walkSpeedEnabled=s local h=getHumanoid() if h then h.WalkSpeed=s and Movement.walkSpeedValue or 16 end end)
-	Components.createSlider(movementContent, "Speed Value", 16, 500, 16, function(v) Movement.walkSpeedValue=v if Movement.walkSpeedEnabled then local h=getHumanoid() if h then h.WalkSpeed=v end end end)
-	Components.createToggle(movementContent, "Jump Power", function(s) Movement.jumpPowerEnabled=s local h=getHumanoid() if h then h.JumpPower=s and Movement.jumpPowerValue or 50 end end)
-	Components.createSlider(movementContent, "Jump Value", 50, 500, 50, function(v) Movement.jumpPowerValue=v if Movement.jumpPowerEnabled then local h=getHumanoid() if h then h.JumpPower=v end end end)
-	Components.createToggle(movementContent, "Infinite Jump", function(s) Movement.infiniteJump=s end)
-	
-	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Special Movement")
-	Components.createToggle(movementContent, "Speed Glide", function(s) Movement.speedGlide=s end)
-	Components.createSlider(movementContent, "Glide Speed", 1, 50, 10, function(v) Movement.glideSpeed=v/100 end)
-	Components.createToggle(movementContent, "Long Jump", function(s) Movement.longJump=s end)
-	Components.createSlider(movementContent, "Long Jump Force", 50, 400, 100, function(v) Movement.longJumpForce=v end)
-	Components.createToggle(movementContent, "Bunny Hop", function(s) Movement.bunnyHop=s end)
-	Components.createToggle(movementContent, "Dash (F)", function(s) if Dash then Dash.enabled=s end end)
-	
-	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Teleport & Safety")
-	Components.createToggle(movementContent, "Click TP", function(s) Movement.clickTP=s end)
-	Components.createToggle(movementContent, "Anti Void", function(s) Movement.antiVoid=s end)
-	Components.createSlider(movementContent, "Void Height", -500, 0, -100, function(v) Movement.antiVoidHeight=v end)
-	Components.createToggle(movementContent, "Anchor", function(s) Movement.anchored=s local r=getRoot() if r then r.Anchored=s end end)
-	
-	Components.createDivider(movementContent)
-	Components.createSection(movementContent, "Exploits")
-	Components.createToggle(movementContent, "Spin Bot", function(s) Movement.spinBot=s end)
-	Components.createSlider(movementContent, "Spin Speed", 1, 50, 20, function(v) Movement.spinSpeed=v end)
-	Components.createToggle(movementContent, "Fake Lag", function(s) Movement.fakeLag=s end)
-	Components.createSlider(movementContent, "Lag Intensity", 1, 10, 5, function(v) Movement.fakeLagIntensity=v end)
-	
-	-- ============================================
-	-- COMBAT TAB
-	-- ============================================
-	Components.createSection(combatContent, "Aim Assist")
-	Components.createToggle(combatContent, "Aim Assist", function(s) Combat.aimAssistEnabled=s end)
-	Components.createSlider(combatContent, "Smoothness", 1, 100, 15, function(v) Combat.aimAssistSmooth=v/200 end)
-	Components.createSlider(combatContent, "FOV", 50, 600, 150, function(v) Combat.aimAssistFOV=v if SilentAim then SilentAim.fov=v end end)
-	Components.createToggle(combatContent, "Show FOV Circle", function(s) Combat.showFOVCircle=s end)
-	Components.createToggle(combatContent, "Aim Prediction", function(s) Combat.aimPrediction=s end)
-	Components.createSlider(combatContent, "Prediction Amount", 1, 50, 10, function(v) Combat.predictionAmount=v/100 end)
-	
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Silent Aim")
-	Components.createToggle(combatContent, "Silent Aim", function(s) if SilentAim then SilentAim.enabled=s end end)
-	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(v) if SilentAim then SilentAim.hitChance=v end end)
-	
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Auto")
-	Components.createToggle(combatContent, "Triggerbot", function(s) Combat.triggerbot=s end)
-	Components.createToggle(combatContent, "Kill Aura", function(s) Combat.killAura=s end)
-	Components.createSlider(combatContent, "Kill Aura Range", 5, 50, 15, function(v) Combat.killAuraRange=v end)
-	Components.createToggle(combatContent, "Auto Parry", function(s) Combat.autoParry=s end)
-	Components.createToggle(combatContent, "Auto Combo", function(s) Combat.autoCombo=s end)
-	
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Exploits")
-	Components.createToggle(combatContent, "Hitbox Expander", function(s) Combat.hitboxExpander=s end)
-	Components.createSlider(combatContent, "Hitbox Size", 1, 20, 5, function(v) Combat.hitboxSize=v end)
-	Components.createToggle(combatContent, "Backtrack", function(s) Combat.backtrack=s end)
-	Components.createSlider(combatContent, "Backtrack Time", 1, 50, 20, function(v) Combat.backtrackTime=v/100 end)
-	
-	Components.createDivider(combatContent)
-	Components.createSection(combatContent, "Movement")
-	Components.createToggle(combatContent, "Target Strafe", function(s) Combat.targetStrafe=s end)
-	Components.createSlider(combatContent, "Strafe Speed", 1, 20, 5, function(v) Combat.strafeSpeed=v end)
-	Components.createSlider(combatContent, "Strafe Radius", 5, 30, 10, function(v) Combat.strafeRadius=v end)
-	
-	-- ============================================
-	-- ESP TAB
-	-- ============================================
-	Components.createSection(espContent, "Player ESP")
-	Components.createToggle(espContent, "Name ESP", function(s) ESPState.NameESP=s end)
-	Components.createToggle(espContent, "Box ESP", function(s) ESPState.BoxESP=s end)
-	Components.createToggle(espContent, "Health ESP", function(s) ESPState.HealthESP=s end)
-	Components.createToggle(espContent, "Distance ESP", function(s) ESPState.DistanceESP=s end)
-	Components.createToggle(espContent, "Tracers", function(s) ESPState.Tracers=s end)
-	Components.createToggle(espContent, "Skeleton ESP", function(s) ESPState.SkeletonESP=s end)
-	Components.createToggle(espContent, "Offscreen Arrows", function(s) ESPState.OffscreenArrows=s end)
-	
-	Components.createDivider(espContent)
-	Components.createSection(espContent, "World ESP")
-	Components.createToggle(espContent, "Item ESP", function(s) ESPState.ItemESP=s end)
-	Components.createToggle(espContent, "NPC ESP", function(s) ESPState.NPCESP=s end)
-	
-	Components.createDivider(espContent)
-	Components.createSection(espContent, "Highlights")
-	Components.createToggle(espContent, "Chams", function(s) ESPState.Chams=s updateChams() end)
-	
-	-- ============================================
-	-- VISUALS TAB
-	-- ============================================
-	Components.createSection(visualsContent, "Lighting")
-	Components.createToggle(visualsContent, "Fullbright", function(s) Visuals.fullbright=s if s then Lighting.Ambient=Color3.new(1,1,1) Lighting.Brightness=2 Lighting.OutdoorAmbient=Color3.new(1,1,1) else Lighting.Ambient=OriginalValues.Ambient Lighting.Brightness=OriginalValues.Brightness Lighting.OutdoorAmbient=OriginalValues.OutdoorAmbient end end)
-	Components.createToggle(visualsContent, "No Fog", function(s) Visuals.noFog=s if s then Lighting.FogEnd=1e10 Lighting.FogStart=1e10 else Lighting.FogEnd=OriginalValues.FogEnd Lighting.FogStart=OriginalValues.FogStart end end)
-	Components.createToggle(visualsContent, "No Shadows", function(s) Visuals.noShadows=s Lighting.GlobalShadows=not s end)
-	
-	Components.createDivider(visualsContent)
-	Components.createSection(visualsContent, "Crosshair")
-	Components.createToggle(visualsContent, "Custom Crosshair", function(s) Visuals.customCrosshair=s end)
-	Components.createSlider(visualsContent, "Crosshair Size", 5, 50, 10, function(v) Visuals.crosshairSize=v end)
-	
-	Components.createDivider(visualsContent)
-	Components.createSection(visualsContent, "Camera")
-	Components.createSlider(visualsContent, "Camera FOV", 30, 120, 70, function(v) Visuals.cameraFOV=v camera.FieldOfView=v end)
-	Components.createToggle(visualsContent, "Third Person", function(s) Visuals.thirdPerson=s player.CameraMaxZoomDistance=s and 100 or 128 player.CameraMinZoomDistance=s and 15 or 0.5 end)
-	Components.createToggle(visualsContent, "Freecam", function(s) Visuals.freecam=s if s then freecamPos=camera.CFrame.Position UIS.MouseBehavior=Enum.MouseBehavior.LockCenter else camera.CameraType=Enum.CameraType.Custom UIS.MouseBehavior=Enum.MouseBehavior.Default end end)
-	Components.createSlider(visualsContent, "Freecam Speed", 1, 20, 1, function(v) Visuals.freecamSpeed=v end)
-	
-	Components.createDivider(visualsContent)
-	Components.createSection(visualsContent, "World")
-	Components.createToggle(visualsContent, "X-Ray / Part Transparency", function(s) Visuals.partTransparency=s end)
-	Components.createSlider(visualsContent, "Transparency", 0, 100, 50, function(v) Visuals.transparencyValue=v/100 end)
-	
-	-- ============================================
-	-- PLAYER TAB
-	-- ============================================
-	Components.createSection(playerContent, "Character")
-	Components.createToggle(playerContent, "God Mode", function(s) PlayerMods.godMode=s end)
-	Components.createToggle(playerContent, "No Ragdoll", function(s) PlayerMods.noRagdoll=s end)
-	Components.createToggle(playerContent, "Invisibility", function(s) PlayerMods.invisible=s local c=getCharacter() if c then for _,p in ipairs(c:GetDescendants()) do if p:IsA("BasePart") and p.Name~="HumanoidRootPart" then p.Transparency=s and 1 or 0 elseif p:IsA("Decal") then p.Transparency=s and 1 or 0 end end end end)
-	Components.createToggle(playerContent, "Auto Respawn", function(s) PlayerMods.autoRespawn=s end)
-	Components.createSlider(playerContent, "Character Scale", 50, 200, 100, function(v) PlayerMods.characterScale=v/100 end)
-	
-	Components.createDivider(playerContent)
-	Components.createSection(playerContent, "Weapon (Game Specific)")
-	Components.createToggle(playerContent, "No Recoil", function(s) PlayerMods.noRecoil=s end)
-	Components.createToggle(playerContent, "No Spread", function(s) PlayerMods.noSpread=s end)
-	Components.createToggle(playerContent, "Infinite Stamina", function(s) PlayerMods.infiniteStamina=s end)
-	
-	-- ============================================
-	-- FARMING TAB
-	-- ============================================
-	Components.createSection(farmingContent, "Auto Farm")
-	Components.createToggle(farmingContent, "Auto Farm", function(s) Farming.autoFarm=s end)
-	Components.createToggle(farmingContent, "Auto Collect", function(s) Farming.autoCollect=s end)
-	Components.createToggle(farmingContent, "Auto Quest", function(s) Farming.autoQuest=s end)
-	Components.createToggle(farmingContent, "Auto Attack", function(s) Farming.autoAttack=s end)
-	
-	Components.createDivider(farmingContent)
-	Components.createSection(farmingContent, "Teleport")
-	Components.createToggle(farmingContent, "TP to Items", function(s) Farming.tpToItems=s if s then local r=getRoot() if r then for _,i in ipairs(workspace:GetDescendants()) do if i:IsA("Tool") or (i:IsA("BasePart") and i.Name:lower():find("coin")) then local pos=i.Position or (i:FindFirstChild("Handle") and i.Handle.Position) if pos then r.CFrame=CFrame.new(pos+Vector3.new(0,3,0)) break end end end end end end)
-	
-	-- ============================================
-	-- TROLL TAB
-	-- ============================================
-	Components.createSection(trollContent, "Follow/Orbit")
-	Components.createToggle(trollContent, "Annoy Player", function(s) Misc.annoyPlayer=s end)
-	Components.createToggle(trollContent, "Orbit Player", function(s) Misc.orbitPlayer=s end)
-	Components.createSlider(trollContent, "Orbit Radius", 5, 30, 10, function(v) Misc.orbitRadius=v end)
-	Components.createSlider(trollContent, "Orbit Speed", 1, 10, 2, function(v) Misc.orbitSpeed=v end)
-	
-	Components.createDivider(trollContent)
-	Components.createSection(trollContent, "Character")
-	Components.createToggle(trollContent, "Fling", function(s) Misc.fling=s end)
-	Components.createToggle(trollContent, "Headless", function(s) Troll.headless=s end)
-	
-	Components.createDivider(trollContent)
-	Components.createSection(trollContent, "Info")
-	Components.createLabel(trollContent, "For Annoy/Orbit: Type player name in chat: /target [name]")
-	
-	-- ============================================
-	-- MISC TAB
-	-- ============================================
-	Components.createSection(miscContent, "Anti-Detection")
-	Components.createToggle(miscContent, "Anti AFK", function(s) Misc.antiAFK=s end)
-	
-	Components.createDivider(miscContent)
-	Components.createSection(miscContent, "Chat")
-	Components.createToggle(miscContent, "Chat Spam", function(s) Misc.chatSpam=s end)
-	Components.createSlider(miscContent, "Spam Delay", 1, 10, 2, function(v) Misc.chatSpamDelay=v end)
-	
-	Components.createDivider(miscContent)
-	Components.createSection(miscContent, "Server")
-	Components.createToggle(miscContent, "Server Hop", function(s) if s then pcall(function() local servers=HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100")) for _,srv in ipairs(servers.data) do if srv.id~=game.JobId then TeleportService:TeleportToPlaceInstance(game.PlaceId,srv.id) break end end end) end end)
-	Components.createToggle(miscContent, "Rejoin", function(s) if s then TeleportService:Teleport(game.PlaceId) end end)
-	
-	-- ============================================
-	-- WORLD TAB
-	-- ============================================
-	Components.createSection(worldContent, "Environment")
-	Components.createSlider(worldContent, "Time of Day", 0, 24, 14, function(v) World.timeOfDay=v Lighting.ClockTime=v end)
-	Components.createSlider(worldContent, "Gravity", 0, 500, 196, function(v) World.gravity=v workspace.Gravity=v end)
-	
-	Components.createDivider(worldContent)
-	Components.createSection(worldContent, "Terrain")
-	Components.createToggle(worldContent, "Remove Grass", function(s) local t=workspace:FindFirstChildOfClass("Terrain") if t then t.Decoration=not s end for _,o in ipairs(workspace:GetDescendants()) do if o:IsA("BasePart") and (o.Name:lower():find("grass") or o.Name:lower():find("foliage")) then o.Transparency=s and 1 or 0 end end end)
-	
-	Components.createDivider(worldContent)
-	Components.createSection(worldContent, "Tools")
-	Components.createToggle(worldContent, "Delete Mode (Click)", function(s) World.deleteMode=s end)
-	
-	-- ============================================
-	-- HUD TAB
-	-- ============================================
-	Components.createSection(hudContent, "Display")
-	Components.createToggle(hudContent, "Watermark", function(s) HUD.watermark=s end)
-	Components.createToggle(hudContent, "FPS Counter", function(s) HUD.fpsCounter=s end)
-	Components.createToggle(hudContent, "Ping Display", function(s) HUD.pingDisplay=s end)
-	Components.createToggle(hudContent, "Player Count", function(s) HUD.playerCount=s end)
-	Components.createToggle(hudContent, "Velocity Display", function(s) HUD.velocityDisplay=s end)
-	Components.createToggle(hudContent, "Target Info", function(s) HUD.targetInfo=s end)
-	
-	-- ============================================
-	-- SETTINGS TAB
-	-- ============================================
-	Components.createSection(settingsContent, "Menu")
-	Components.createSlider(settingsContent, "Menu Scale", 50, 150, 100, function(v) Settings.menuScale=v/100 main.Size=UDim2.new(0, 950*Settings.menuScale, 0, 650*Settings.menuScale) end)
-	
-	Components.createDivider(settingsContent)
-	Components.createSection(settingsContent, "Theme")
-	Components.createLabel(settingsContent, "Accent: Blue (default)")
-	
-	Components.createDivider(settingsContent)
-	Components.createSection(settingsContent, "Info")
-	Components.createLabel(settingsContent, "Simple Hub ULTIMATE v2.0")
-	Components.createLabel(settingsContent, "Press M to toggle menu")
-	Components.createLabel(settingsContent, "All features are working!")
-	
-	-- Activate first tab
-	Tabs.activate(movementTab, movementContent)
-	
-	-- ============================================
-	-- TOGGLE MENU
-	-- ============================================
-	UIS.InputBegan:Connect(function(input, gp)
-		if gp then return end
-		if input.KeyCode == Settings.menuKey then
-			main.Visible = not main.Visible
-			if main.Visible then
-				main.Size = UDim2.new(0, 0, 0, 0)
-				Animations.tween(main, {Size = UDim2.new(0, 950 * Settings.menuScale, 0, 650 * Settings.menuScale)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+	-- ══════════════════════════════════════════════════════════════
+	-- INPUT HANDLING
+	-- ══════════════════════════════════════════════════════════════
+	UIS.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		
+		-- Infinite Jump
+		if input.KeyCode == Enum.KeyCode.Space then
+			if State.Movement.InfiniteJump then
+				local humanoid = getHumanoid()
+				if humanoid then
+					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+				end
+			end
+			
+			-- Long Jump
+			if State.Movement.LongJump then
+				local root = getRoot()
+				if root then
+					local bodyVelocity = Instance.new("BodyVelocity")
+					bodyVelocity.Velocity = camera.CFrame.LookVector * State.Movement.LongJumpForce + Vector3.new(0, 50, 0)
+					bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+					bodyVelocity.Parent = root
+					Debris:AddItem(bodyVelocity, 0.2)
+				end
+			end
+		end
+		
+		-- Dash (Q key)
+		if input.KeyCode == Enum.KeyCode.Q and State.Movement.Dash then
+			local now = tick()
+			if now - LastDashTime >= State.Movement.DashCooldown then
+				LastDashTime = now
+				local root = getRoot()
+				if root then
+					local bodyVelocity = Instance.new("BodyVelocity")
+					bodyVelocity.Velocity = camera.CFrame.LookVector * State.Movement.DashForce
+					bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+					bodyVelocity.Parent = root
+					Debris:AddItem(bodyVelocity, 0.15)
+				end
+			end
+		end
+		
+		-- Click TP
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if State.Movement.ClickTP then
+				local root = getRoot()
+				if root and mouse.Hit then
+					root.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+				end
+			end
+			
+			-- Delete Mode
+			if State.World.DeleteMode then
+				local target = mouse.Target
+				if target and not target:IsDescendantOf(player.Character or {}) then
+					target:Destroy()
+				end
 			end
 		end
 	end)
 	
-	-- ============================================
-	-- DRAGGING
-	-- ============================================
-	local dragging, dragStart, startPos = false, nil, nil
-	header.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			dragStart = input.Position
-			startPos = main.Position
-			input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-		end
-	end)
+	-- Freecam Mouse Movement
 	UIS.InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-			local delta = input.Position - dragStart
-			main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		if State.Visuals.Freecam and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = UIS:GetMouseDelta()
+			FreecamAngles = Vector2.new(
+				math.clamp(FreecamAngles.X - delta.Y * 0.5, -80, 80),
+				FreecamAngles.Y - delta.X * 0.5
+			)
 		end
 	end)
 	
-	-- Character events
-	player.CharacterAdded:Connect(function(c)
-		task.wait(0.5)
-		local h = c:FindFirstChildOfClass("Humanoid")
-		if h then
-			if Movement.walkSpeedEnabled then h.WalkSpeed = Movement.walkSpeedValue end
-			if Movement.jumpPowerEnabled then h.JumpPower = Movement.jumpPowerValue end
+	-- Chat Commands
+	player.Chatted:Connect(function(message)
+		local lowerMsg = message:lower()
+		
+		-- Target command
+		if lowerMsg:sub(1, 8) == "/target " then
+			local targetName = message:sub(9)
+			State.Troll.AnnoyTarget = targetName
+			State.Troll.OrbitTarget = targetName
 		end
-		if ESPState.Chams then updateChams() end
-	end)
-	
-	Players.PlayerAdded:Connect(function() task.wait(1) if ESPState.Chams then updateChams() end end)
-	
-	-- Chat commands for troll features
-	player.Chatted:Connect(function(msg)
-		if msg:sub(1, 8) == "/target " then
-			local name = msg:sub(9)
-			Misc.annoyTarget = name
-			Misc.orbitTarget = name
+		
+		-- Spam message command
+		if lowerMsg:sub(1, 6) == "/spam " then
+			State.Misc.ChatSpamMessage = message:sub(7)
 		end
 	end)
 	
-	print("[SimpleHub] ULTIMATE Edition loaded!")
-	print("[SimpleHub] Press M to toggle | 11 Tabs | 100+ Features")
+	-- ══════════════════════════════════════════════════════════════
+	-- GUI COLORS
+	-- ══════════════════════════════════════════════════════════════
+	local Colors = {
+		Background = Color3.fromRGB(12, 12, 18),
+		Panel = Color3.fromRGB(18, 18, 26),
+		Surface = Color3.fromRGB(22, 22, 32),
+		ContentBg = Color3.fromRGB(16, 16, 24),
+		ScrollBg = Color3.fromRGB(14, 14, 20),
+		Accent = Color3.fromRGB(60, 120, 255),
+		Text = Color3.fromRGB(220, 220, 240),
+		TextDim = Color3.fromRGB(120, 120, 140),
+		Border = Color3.fromRGB(40, 45, 60)
+	}
+	
+	-- ══════════════════════════════════════════════════════════════
+	-- GUI CREATION
+	-- ══════════════════════════════════════════════════════════════
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "VertexHub"
+	screenGui.ResetOnSpawn = false
+	screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	screenGui.Parent = player:WaitForChild("PlayerGui")
+	
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Name = "MainFrame"
+	mainFrame.Size = UDim2.new(0, 950, 0, 650)
+	mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+	mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+	mainFrame.BackgroundColor3 = Colors.Background
+	mainFrame.BorderSizePixel = 0
+	mainFrame.ClipsDescendants = true
+	mainFrame.Visible = false
+	mainFrame.Parent = screenGui
+	
+	local mainCorner = Instance.new("UICorner")
+	mainCorner.CornerRadius = UDim.new(0, 10)
+	mainCorner.Parent = mainFrame
+	
+	local mainStroke = Instance.new("UIStroke")
+	mainStroke.Color = Colors.Border
+	mainStroke.Thickness = 2
+	mainStroke.Parent = mainFrame
+	
+	-- Header
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 45)
+	header.BackgroundColor3 = Colors.Panel
+	header.BorderSizePixel = 0
+	header.Parent = mainFrame
+	
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Size = UDim2.new(0, 300, 1, 0)
+	titleLabel.Position = UDim2.new(0, 15, 0, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = "VERTEX HUB"
+	titleLabel.TextColor3 = Colors.Text
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.TextSize = 18
+	titleLabel.Parent = header
+	
+	local accentLine = Instance.new("Frame")
+	accentLine.Size = UDim2.new(0, 60, 0, 3)
+	accentLine.Position = UDim2.new(0, 15, 1, -3)
+	accentLine.BackgroundColor3 = Colors.Accent
+	accentLine.BorderSizePixel = 0
+	accentLine.Parent = header
+	
+	local accentCorner = Instance.new("UICorner")
+	accentCorner.CornerRadius = UDim.new(1, 0)
+	accentCorner.Parent = accentLine
+	
+	-- Close Button
+	local closeButton = Instance.new("TextButton")
+	closeButton.Size = UDim2.new(0, 30, 0, 30)
+	closeButton.Position = UDim2.new(1, -40, 0.5, 0)
+	closeButton.AnchorPoint = Vector2.new(0, 0.5)
+	closeButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+	closeButton.Text = "×"
+	closeButton.TextColor3 = Colors.Text
+	closeButton.Font = Enum.Font.GothamBold
+	closeButton.TextSize = 20
+	closeButton.AutoButtonColor = false
+	closeButton.Parent = header
+	
+	local closeCorner = Instance.new("UICorner")
+	closeCorner.CornerRadius = UDim.new(0, 6)
+	closeCorner.Parent = closeButton
+	
+	closeButton.MouseButton1Click:Connect(function()
+		mainFrame.Visible = false
+		UIS.MouseBehavior = PreviousMouseState.behavior or Enum.MouseBehavior.Default
+		UIS.MouseIconEnabled = PreviousMouseState.icon ~= false
+	end)
+	
+	closeButton.MouseEnter:Connect(function()
+		closeButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+	end)
+	
+	closeButton.MouseLeave:Connect(function()
+		closeButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+	end)
+	
+	-- Tab Bar
+	local tabBar = Instance.new("Frame")
+	tabBar.Name = "TabBar"
+	tabBar.Size = UDim2.new(1, 0, 0, 45)
+	tabBar.Position = UDim2.new(0, 0, 0, 45)
+	tabBar.BackgroundColor3 = Colors.Surface
+	tabBar.BorderSizePixel = 0
+	tabBar.Parent = mainFrame
+	
+	Tabs.setupTabBar(tabBar)
+	
+	-- Content Area
+	local contentArea = Instance.new("Frame")
+	contentArea.Name = "ContentArea"
+	contentArea.Size = UDim2.new(1, 0, 1, -90)
+	contentArea.Position = UDim2.new(0, 0, 0, 90)
+	contentArea.BackgroundColor3 = Colors.ContentBg
+	contentArea.BorderSizePixel = 0
+	contentArea.Parent = mainFrame
+	
+	local contentContainer = Instance.new("Frame")
+	contentContainer.Name = "ContentContainer"
+	contentContainer.Size = UDim2.new(1, -20, 1, -12)
+	contentContainer.Position = UDim2.new(0, 10, 0, 6)
+	contentContainer.BackgroundTransparency = 1
+	contentContainer.Parent = contentArea
+Area
+	
+	-- Tab Content Creator Function
+	local function createTabContent(name)
+		local scrollFrame = Instance.new("ScrollingFrame")
+		scrollFrame.Name = name
+		scrollFrame.Size = UDim2.new(1, 0, 1, 0)
+		scrollFrame.BackgroundColor3 = Colors.ScrollBg
+		scrollFrame.BackgroundTransparency = 0
+		scrollFrame.BorderSizePixel = 0
+		scrollFrame.ScrollBarThickness = 4
+		scrollFrame.ScrollBarImageColor3 = Colors.Accent
+		scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+		scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		scrollFrame.Visible = false
+		scrollFrame.Parent = contentContainer
+		
+		local listLayout = Instance.new("UIListLayout")
+		listLayout.Padding = UDim.new(0, 6)
+		listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+		listLayout.Parent = scrollFrame
+		
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop = UDim.new(0, 4)
+		padding.PaddingBottom = UDim.new(0, 8)
+		padding.PaddingLeft = UDim.new(0, 4)
+		padding.PaddingRight = UDim.new(0, 8)
+		padding.Parent = scrollFrame
+		
+		return scrollFrame
+	end
+	
+	-- Create All Tab Contents
+	local combatContent = createTabContent("Combat")
+	local movementContent = createTabContent("Movement")
+	local espContent = createTabContent("ESP")
+	local visualsContent = createTabContent("Visuals")
+	local worldContent = createTabContent("World")
+	local playerContent = createTabContent("Player")
+	local trollContent = createTabContent("Troll")
+	local miscContent = createTabContent("Misc")
+	
+	-- Create Tab Buttons
+	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
+	local movementTab = Tabs.create(tabBar, "Move", "🏃")
+	local espTab = Tabs.create(tabBar, "ESP", "👁")
+	local visualsTab = Tabs.create(tabBar, "Visual", "🎨")
+	local worldTab = Tabs.create(tabBar, "World", "🌍")
+	local playerTab = Tabs.create(tabBar, "Player", "👤")
+	local trollTab = Tabs.create(tabBar, "Troll", "🎭")
+	local miscTab = Tabs.create(tabBar, "Misc", "⚙")
+	
+	-- Connect Tabs
+	Tabs.connectTab(combatTab, combatContent)
+	Tabs.connectTab(movementTab, movementContent)
+	Tabs.connectTab(espTab, espContent)
+	Tabs.connectTab(visualsTab, visualsContent)
+	Tabs.connectTab(worldTab, worldContent)
+	Tabs.connectTab(playerTab, playerContent)
+	Tabs.connectTab(trollTab, trollContent)
+	Tabs.connectTab(miscTab, miscContent)
+	
+	-- COMBAT TAB
+	Components.createSection(combatContent, "Aim Assist")
+	Components.createToggle(combatContent, "Aim Assist", function(state) State.Combat.AimAssist = state end)
+	Components.createSlider(combatContent, "Smoothness", 1, 100, 15, function(value) State.Combat.AimSmoothness = value / 200 end)
+	Components.createSlider(combatContent, "FOV", 50, 600, 150, function(value) State.Combat.AimFOV = value end)
+	Components.createToggle(combatContent, "Show FOV Circle", function(state) State.Combat.ShowFOVCircle = state end)
+	Components.createToggle(combatContent, "Prediction", function(state) State.Combat.AimPrediction = state end)
+	Components.createSlider(combatContent, "Prediction Amount", 1, 50, 10, function(value) State.Combat.PredictionAmount = value / 100 end)
+	Components.createDivider(combatContent)
+	Components.createSection(combatContent, "Silent Aim")
+	Components.createToggle(combatContent, "Silent Aim", function(state) State.Combat.SilentAim = state end)
+	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value) State.Combat.SilentAimHitChance = value end)
+	Components.createDivider(combatContent)
+	Components.createSection(combatContent, "Kill Aura")
+	Components.createToggle(combatContent, "Kill Aura", function(state) State.Combat.KillAura = state end)
+	Components.createSlider(combatContent, "Range", 5, 50, 15, function(value) State.Combat.KillAuraRange = value end)
+	Components.createSlider(combatContent, "CPS", 1, 20, 10, function(value) State.Combat.KillAuraCPS = value end)
+	Components.createToggle(combatContent, "Target Players", function(state) State.Combat.KillAuraTargetPlayers = state end)
+	Components.createToggle(combatContent, "Target NPCs", function(state) State.Combat.KillAuraTargetNPCs = state end)
+	Components.createToggle(combatContent, "Wall Check", function(state) State.Combat.KillAuraWallCheck = state end)
+	Components.createToggle(combatContent, "Legit Mode", function(state) State.Combat.KillAuraLegitMode = state end)
+	Components.createDivider(combatContent)
+	Components.createSection(combatContent, "Reach")
+	Components.createToggle(combatContent, "Reach", function(state) State.Combat.Reach = state end)
+	Components.createSlider(combatContent, "Reach Distance", 10, 30, 18, function(value) State.Combat.ReachDistance = value end)
+	Components.createToggle(combatContent, "Reach Legit Mode", function(state) State.Combat.ReachLegitMode = state end)
+	Components.createDivider(combatContent)
+	Components.createSection(combatContent, "Auto Features")
+	Components.createToggle(combatContent, "Triggerbot", function(state) State.Combat.Triggerbot = state end)
+	Components.createSlider(combatContent, "Trigger Delay", 1, 50, 10, function(value) State.Combat.TriggerbotDelay = value / 100 end)
+	Components.createToggle(combatContent, "Auto Parry", function(state) State.Combat.AutoParry = state end)
+	Components.createToggle(combatContent, "Auto Combo", function(state) State.Combat.AutoCombo = state end)
+	Components.createToggle(combatContent, "Auto Block", function(state) State.Combat.AutoBlock = state end)
+	Components.createDivider(combatContent)
+	Components.createSection(combatContent, "Exploits")
+	Components.createToggle(combatContent, "Hitbox Expander", function(state) State.Combat.HitboxExpander = state end)
+	Components.createSlider(combatContent, "Hitbox Size", 1, 20, 5, function(value) State.Combat.HitboxSize = value end)
+	Components.createToggle(combatContent, "Backtrack", function(state) State.Combat.Backtrack = state end)
+	Components.createSlider(combatContent, "Backtrack Time", 1, 50, 20, function(value) State.Combat.BacktrackTime = value / 100 end)
+	Components.createToggle(combatContent, "Target Strafe", function(state) State.Combat.TargetStrafe = state end)
+	Components.createSlider(combatContent, "Strafe Speed", 1, 20, 5, function(value) State.Combat.TargetStrafeSpeed = value end)
+	Components.createSlider(combatContent, "Strafe Radius", 5, 30, 10, function(value) State.Combat.TargetStrafeRadius = value end)
+	Components.createToggle(combatContent, "Anti Aim", function(state) State.Combat.AntiAim = state end)
+	
+	-- MOVEMENT TAB
+	Components.createSection(movementContent, "Flight")
+	Components.createToggle(movementContent, "Fly", function(state) State.Movement.Fly = state end)
+	Components.createSlider(movementContent, "Fly Speed", 10, 300, 50, function(value) State.Movement.FlySpeed = value end)
+	Components.createToggle(movementContent, "Fly Legit Mode", function(state) State.Movement.FlyLegitMode = state end)
+	Components.createToggle(movementContent, "Noclip", function(state) State.Movement.Noclip = state end)
+	Components.createDivider(movementContent)
+	Components.createSection(movementContent, "Speed & Jump")
+	Components.createToggle(movementContent, "Speed", function(state) State.Movement.Speed = state if not state then local h = getHumanoid() if h then h.WalkSpeed = 16 end end end)
+	Components.createSlider(movementContent, "Speed Value", 16, 500, 16, function(value) State.Movement.SpeedValue = value end)
+	Components.createToggle(movementContent, "Speed Legit Mode", function(state) State.Movement.SpeedLegitMode = state end)
+	Components.createToggle(movementContent, "Jump Power", function(state) State.Movement.JumpPower = state if not state then local h = getHumanoid() if h then h.JumpPower = 50 end end end)
+	Components.createSlider(movementContent, "Jump Value", 50, 500, 50, function(value) State.Movement.JumpPowerValue = value end)
+	Components.createToggle(movementContent, "Infinite Jump", function(state) State.Movement.InfiniteJump = state end)
+	Components.createDivider(movementContent)
+	Components.createSection(movementContent, "Special Movement")
+	Components.createToggle(movementContent, "Bunny Hop", function(state) State.Movement.BunnyHop = state end)
+	Components.createToggle(movementContent, "Long Jump (Space)", function(state) State.Movement.LongJump = state end)
+	Components.createSlider(movementContent, "Long Jump Force", 50, 400, 100, function(value) State.Movement.LongJumpForce = value end)
+	Components.createToggle(movementContent, "Speed Glide", function(state) State.Movement.SpeedGlide = state end)
+	Components.createSlider(movementContent, "Glide Speed", 1, 50, 10, function(value) State.Movement.SpeedGlideValue = value end)
+	Components.createToggle(movementContent, "Dash (Q)", function(state) State.Movement.Dash = state end)
+	Components.createSlider(movementContent, "Dash Force", 50, 300, 100, function(value) State.Movement.DashForce = value end)
+	Components.createSlider(movementContent, "Dash Cooldown", 1, 50, 10, function(value) State.Movement.DashCooldown = value / 10 end)
+	Components.createToggle(movementContent, "Air Control", function(state) State.Movement.AirControl = state end)
+	Components.createDivider(movementContent)
+	Components.createSection(movementContent, "Teleport & Safety")
+	Components.createToggle(movementContent, "Click TP", function(state) State.Movement.ClickTP = state end)
+	Components.createToggle(movementContent, "Anti Void", function(state) State.Movement.AntiVoid = state end)
+	Components.createSlider(movementContent, "Void Height", -500, 0, -100, function(value) State.Movement.AntiVoidHeight = value end)
+	Components.createToggle(movementContent, "Anchor", function(state) State.Movement.Anchor = state end)
+	Components.createDivider(movementContent)
+	Components.createSection(movementContent, "Exploits")
+	Components.createToggle(movementContent, "Spin Bot", function(state) State.Movement.SpinBot = state end)
+	Components.createSlider(movementContent, "Spin Speed", 1, 50, 20, function(value) State.Movement.SpinBotSpeed = value end)
+	Components.createToggle(movementContent, "Fake Lag", function(state) State.Movement.FakeLag = state end)
+	Components.createSlider(movementContent, "Lag Intensity", 1, 10, 5, function(value) State.Movement.FakeLagIntensity = value end)
+	
+	-- ESP TAB
+	Components.createSection(espContent, "Player ESP")
+	Components.createToggle(espContent, "Name ESP", function(state) State.ESP.NameESP = state end)
+	Components.createToggle(espContent, "Box ESP", function(state) State.ESP.BoxESP = state end)
+	Components.createToggle(espContent, "Health ESP", function(state) State.ESP.HealthESP = state end)
+	Components.createToggle(espContent, "Distance ESP", function(state) State.ESP.DistanceESP = state end)
+	Components.createToggle(espContent, "Tracers", function(state) State.ESP.Tracers = state end)
+	Components.createToggle(espContent, "Skeleton ESP", function(state) State.ESP.SkeletonESP = state end)
+	Components.createToggle(espContent, "Offscreen Arrows", function(state) State.ESP.OffscreenArrows = state end)
+	Components.createDivider(espContent)
+	Components.createSection(espContent, "World ESP")
+	Components.createToggle(espContent, "NPC ESP", function(state) State.ESP.NPCESP = state end)
+	Components.createToggle(espContent, "Item ESP", function(state) State.ESP.ItemESP = state end)
+	Components.createDivider(espContent)
+	Components.createSection(espContent, "Highlights")
+	Components.createToggle(espContent, "Chams", function(state) State.ESP.Chams = state updateChams() end)
+	Components.createDivider(espContent)
+	Components.createSection(espContent, "Settings")
+	Components.createSlider(espContent, "Max Distance", 100, 2000, 1000, function(value) State.ESP.MaxDistance = value end)
+	Components.createToggle(espContent, "Team Check", function(state) State.ESP.TeamCheck = state end)
+	Components.createToggle(espContent, "Friend Check", function(state) State.ESP.FriendCheck = state end)
+	
+	-- VISUALS TAB
+	Components.createSection(visualsContent, "Lighting")
+	Components.createToggle(visualsContent, "Fullbright", function(state) State.Visuals.Fullbright = state if state then Lighting.Ambient = Color3.new(1,1,1) Lighting.Brightness = 2 Lighting.OutdoorAmbient = Color3.new(1,1,1) else Lighting.Ambient = OriginalValues.Ambient Lighting.Brightness = OriginalValues.Brightness Lighting.OutdoorAmbient = OriginalValues.OutdoorAmbient end end)
+	Components.createToggle(visualsContent, "No Fog", function(state) State.Visuals.NoFog = state if state then Lighting.FogEnd = 1e10 Lighting.FogStart = 1e10 else Lighting.FogEnd = OriginalValues.FogEnd Lighting.FogStart = OriginalValues.FogStart end end)
+	Components.createToggle(visualsContent, "No Shadows", function(state) State.Visuals.NoShadows = state Lighting.GlobalShadows = not state end)
+	Components.createDivider(visualsContent)
+	Components.createSection(visualsContent, "Crosshair")
+	Components.createToggle(visualsContent, "Custom Crosshair", function(state) State.Visuals.CustomCrosshair = state end)
+	Components.createSlider(visualsContent, "Crosshair Size", 5, 50, 10, function(value) State.Visuals.CrosshairSize = value end)
+	Components.createSlider(visualsContent, "Crosshair Gap", 0, 20, 5, function(value) State.Visuals.CrosshairGap = value end)
+	Components.createDivider(visualsContent)
+	Components.createSection(visualsContent, "Camera")
+	Components.createSlider(visualsContent, "Camera FOV", 30, 120, 70, function(value) State.Visuals.CameraFOV = value camera.FieldOfView = value end)
+	Components.createToggle(visualsContent, "Third Person", function(state) State.Visuals.ThirdPerson = state player.CameraMaxZoomDistance = state and 100 or 128 player.CameraMinZoomDistance = state and 15 or 0.5 end)
+	Components.createToggle(visualsContent, "Freecam", function(state) State.Visuals.Freecam = state if state then FreecamPosition = camera.CFrame.Position UIS.MouseBehavior = Enum.MouseBehavior.LockCenter else camera.CameraType = Enum.CameraType.Custom UIS.MouseBehavior = Enum.MouseBehavior.Default end end)
+	Components.createSlider(visualsContent, "Freecam Speed", 1, 20, 1, function(value) State.Visuals.FreecamSpeed = value end)
+	Components.createDivider(visualsContent)
+	Components.createSection(visualsContent, "World Visuals")
+	Components.createToggle(visualsContent, "X-Ray", function(state) State.Visuals.XRay = state end)
+	Components.createSlider(visualsContent, "X-Ray Transparency", 0, 100, 50, function(value) State.Visuals.XRayTransparency = value / 100 end)
+	
+	-- WORLD TAB
+	Components.createSection(worldContent, "Environment")
+	Components.createSlider(worldContent, "Time of Day", 0, 24, 14, function(value) State.World.TimeOfDay = value Lighting.ClockTime = value end)
+	Components.createSlider(worldContent, "Gravity", 0, 500, 196, function(value) State.World.Gravity = value workspace.Gravity = value end)
+	Components.createDivider(worldContent)
+	Components.createSection(worldContent, "Terrain")
+	Components.createToggle(worldContent, "Remove Grass", function(state) State.World.RemoveGrass = state local t = workspace:FindFirstChildOfClass("Terrain") if t then t.Decoration = not state end for _, o in ipairs(workspace:GetDescendants()) do if o:IsA("BasePart") and (o.Name:lower():find("grass") or o.Name:lower():find("foliage")) then o.Transparency = state and 1 or 0 end end end)
+	Components.createDivider(worldContent)
+	Components.createSection(worldContent, "Tools")
+	Components.createToggle(worldContent, "Delete Mode (Click)", function(state) State.World.DeleteMode = state end)
+	
+	-- PLAYER TAB
+	Components.createSection(playerContent, "Character")
+	Components.createToggle(playerContent, "God Mode", function(state) State.Player.GodMode = state end)
+	Components.createToggle(playerContent, "No Ragdoll", function(state) State.Player.NoRagdoll = state end)
+	Components.createToggle(playerContent, "Auto Respawn", function(state) State.Player.AutoRespawn = state end)
+	Components.createSlider(playerContent, "Character Scale", 50, 200, 100, function(value) State.Player.CharacterScale = value / 100 end)
+	Components.createDivider(playerContent)
+	Components.createSection(playerContent, "Invisibility (Hitbox-Only)")
+	Components.createToggle(playerContent, "Invisibility", function(state) State.Player.Invisibility = state if state then InvisibilitySystem:Enable() else InvisibilitySystem:Disable() end end)
+	Components.createSlider(playerContent, "Invis Offset", 50, 500, 100, function(value) State.Player.InvisibilityOffset = value end)
+	Components.createDivider(playerContent)
+	Components.createSection(playerContent, "Weapon")
+	Components.createToggle(playerContent, "No Recoil", function(state) State.Player.NoRecoil = state end)
+	Components.createToggle(playerContent, "No Spread", function(state) State.Player.NoSpread = state end)
+	Components.createToggle(playerContent, "Infinite Stamina", function(state) State.Player.InfiniteStamina = state end)
+	Components.createToggle(playerContent, "Infinite Ammo", function(state) State.Player.InfiniteAmmo = state end)
+	Components.createToggle(playerContent, "Rapid Fire", function(state) State.Player.RapidFire = state end)
+	
+	-- TROLL TAB
+	Components.createSection(trollContent, "Follow / Orbit")
+	Components.createToggle(trollContent, "Annoy Player", function(state) State.Troll.AnnoyPlayer = state end)
+	Components.createToggle(trollContent, "Orbit Player", function(state) State.Troll.OrbitPlayer = state end)
+	Components.createSlider(trollContent, "Orbit Radius", 5, 30, 10, function(value) State.Troll.OrbitRadius = value end)
+	Components.createSlider(trollContent, "Orbit Speed", 1, 10, 2, function(value) State.Troll.OrbitSpeed = value end)
+	Components.createDivider(trollContent)
+	Components.createSection(trollContent, "Character Troll")
+	Components.createToggle(trollContent, "Fling", function(state) State.Troll.Fling = state end)
+	Components.createSlider(trollContent, "Fling Power", 100, 1000, 500, function(value) State.Troll.FlingPower = value end)
+	Components.createToggle(trollContent, "Headless", function(state) State.Troll.Headless = state end)
+	Components.createToggle(trollContent, "Invisible Body", function(state) State.Troll.InvisibleBody = state end)
+	Components.createDivider(trollContent)
+	Components.createSection(trollContent, "Info")
+	Components.createLabel(trollContent, "Type /target [name] in chat")
+	
+	-- MISC TAB
+	Components.createSection(miscContent, "HUD Elements")
+	Components.createToggle(miscContent, "Watermark", function(state) State.Misc.Watermark = state end)
+	Components.createToggle(miscContent, "FPS Counter", function(state) State.Misc.FPSCounter = state end)
+	Components.createToggle(miscContent, "Ping Display", function(state) State.Misc.PingDisplay = state end)
+	Components.createToggle(miscContent, "Player Count", function(state) State.Misc.PlayerCount = state end)
+	Components.createToggle(miscContent, "Velocity Display", function(state) State.Misc.VelocityDisplay = state end)
+	Components.createToggle(miscContent, "Target Info", function(state) State.Misc.TargetInfo = state end)
+	Components.createToggle(miscContent, "Keybinds Display", function(state) State.Misc.KeybindsDisplay = state end)
+	Components.createDivider(miscContent)
+	Components.createSection(miscContent, "Utility")
+	Components.createToggle(miscContent, "Anti AFK", function(state) State.Misc.AntiAFK = state end)
+	Components.createToggle(miscContent, "Chat Spam", function(state) State.Misc.ChatSpam = state end)
+	Components.createSlider(miscContent, "Spam Delay", 1, 10, 2, function(value) State.Misc.ChatSpamDelay = value end)
+	Components.createDivider(miscContent)
+	Components.createSection(miscContent, "Server")
+	Components.createToggle(miscContent, "Server Hop", function(state) if state then pcall(function() local s = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")) for _, srv in ipairs(s.data) do if srv.id ~= game.JobId then TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id) break end end end) end end)
+	Components.createToggle(miscContent, "Rejoin", function(state) if state then TeleportService:Teleport(game.PlaceId) end end)
+	
+	Tabs.activate(combatTab, combatContent)
+	
+	-- MENU TOGGLE
+	UIS.InputBegan:Connect(function(input, gp)
+		if gp then return end
+		if input.KeyCode == State.Settings.MenuKey then
+			local show = not mainFrame.Visible
+			mainFrame.Visible = show
+			if show then
+				PreviousMouseState.behavior = UIS.MouseBehavior
+				PreviousMouseState.icon = UIS.MouseIconEnabled
+				UIS.MouseBehavior = Enum.MouseBehavior.Default
+				UIS.MouseIconEnabled = true
+				mainFrame.Size = UDim2.new(0, 0, 0, 0)
+				Animations.tween(mainFrame, {Size = UDim2.new(0, 950, 0, 650)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+			else
+				UIS.MouseBehavior = PreviousMouseState.behavior or Enum.MouseBehavior.Default
+				UIS.MouseIconEnabled = PreviousMouseState.icon ~= false
+			end
+		end
+	end)
+	
+	-- DRAGGING
+	local dragging, dragStart, startPos = false, nil, nil
+	header.InputBegan:Connect(function(inp) if inp.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = inp.Position startPos = mainFrame.Position inp.Changed:Connect(function() if inp.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
+	UIS.InputChanged:Connect(function(inp) if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then local d = inp.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
+	
+	-- CHARACTER EVENTS
+	player.CharacterAdded:Connect(function(c) task.wait(0.5) local h = c:FindFirstChildOfClass("Humanoid") if h then if State.Movement.Speed then h.WalkSpeed = State.Movement.SpeedValue end if State.Movement.JumpPower then h.JumpPower = State.Movement.JumpPowerValue end end if State.ESP.Chams then updateChams() end if State.Player.Invisibility then task.wait(0.2) InvisibilitySystem:Enable() end end)
+	Players.PlayerAdded:Connect(function() task.wait(1) if State.ESP.Chams then updateChams() end end)
+	Players.PlayerRemoving:Connect(function(p) EntityCache.players[p.Name] = nil BacktrackPositions[p.Name] = nil end)
+	
+	print("[Vertex Hub] Loaded! Press M to toggle | 8 Tabs | 100+ Features")
 end
