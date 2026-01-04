@@ -13,8 +13,9 @@
 -- ████████████████████████████████████████████████████████████████
 -- VERTEX HUB ULTIMATE - ALL 100+ FEATURES
 -- ████████████████████████████████████████████████████████████████
-
+print("[menu.lua] file executing")
 return function()
+	print("[menu.lua] returning menu function")
 	local Tabs = deps.Tabs
 	local Components = deps.Components
 	local Animations = deps.Animations
