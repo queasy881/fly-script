@@ -3,15 +3,34 @@
 -- No require(), No script.Parent, No undefined dependencies
 -- ---------------------------------------------------------------------------
 
-return function(Tabs, Components, Animations
-
-		warn("mouse1click:", mouse1click)
-warn("firetouchinterest:", firetouchinterest)
-warn("hookmetamethod:", hookmetamethod)
-
+return function(depsOrTabs, Components, Animations)
+	-- Handle both: func({Tabs, Components, Animations}) and func(Tabs, Components, Animations)
+	local Tabs
+	if type(depsOrTabs) == "table" and depsOrTabs.Tabs then
+		-- Called with deps table
+		Tabs = depsOrTabs.Tabs
+		Components = depsOrTabs.Components
+		Animations = depsOrTabs.Animations
+	else
+		-- Called with individual args
+		Tabs = depsOrTabs
+	end
+	
+	-- Fallback to _G if not provided
+	Tabs = Tabs or _G.VertexTabs
+	Components = Components or _G.VertexComponents
+	Animations = Animations or _G.VertexAnimations
+	
 	-- ---------------------------------------------------------------------------
-	-- BUILT-IN: Tabs, Components, Animations (no external deps needed)
-	-- --------------------------------------------------------------------------
+	-- EXECUTOR API DETECTION (Safe checks before using)
+	-- ---------------------------------------------------------------------------
+	local hasHookmetamethod = typeof(hookmetamethod) == "function"
+	local hasGetnamecallmethod = typeof(getnamecallmethod) == "function"
+	local hasFiretouchinterest = typeof(firetouchinterest) == "function"
+	local hasMouse1click = typeof(mouse1click) == "function"
+	local hasMouse2click = typeof(mouse2click) == "function"
+	
+	-- ---------------------------------------------------------------------------
 	
 	-- ---------------------------------------------------------------------------
 	-- SERVICES
@@ -500,10 +519,11 @@ warn("hookmetamethod:", hookmetamethod)
 	
 	local function hookKillAura()
 		if KillAuraHooked then return end
+		if not hasHookmetamethod or not hasGetnamecallmethod then return end
 		KillAuraHooked = true
 		
 		-- Hook remote events that handle combat
-		pcall(function()
+		local ok, err = pcall(function()
 			local oldNamecall
 			oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
 				local method = getnamecallmethod()
@@ -552,13 +572,16 @@ warn("hookmetamethod:", hookmetamethod)
 				return oldNamecall(self, unpack(args))
 			end)
 		end)
+		if not ok then
+			warn("[Vertex Hub] KillAura hook failed:", err)
+		end
 	end
 	
-	-- Initialize hook
-	hookKillAura()
+	-- DEFERRED: Initialize hook after script fully loads
+	task.defer(hookKillAura)
 	
 	-- ---------------------------------------------------------------------------
-	-- SILENT AIM HOOKS
+	-- SILENT AIM HOOKS (Deferred initialization)
 	-- ---------------------------------------------------------------------------
 	local function getAimTarget()
 		return getBestTarget({
@@ -567,36 +590,14 @@ warn("hookmetamethod:", hookmetamethod)
 		})
 	end
 	
-	pcall(function()
-		local oldIndex
-		oldIndex = hookmetamethod(game, "__index", function(self, key)
-			if State.Combat.SilentAim and self == mouse then
-				if math.random(1, 100) <= State.Combat.SilentAimHitChance then
-					local target = getAimTarget()
-					if target then
-						local pos = (target.Head or target.RootPart).Position
-						if State.Combat.AimPrediction and target.RootPart then
-							pos = pos + target.RootPart.Velocity * State.Combat.PredictionAmount
-						end
-						if key == "Hit" then return CFrame.new(pos) end
-						if key == "Target" then return target.Head or target.RootPart end
-						if key == "X" then return camera:WorldToViewportPoint(pos).X end
-						if key == "Y" then return camera:WorldToViewportPoint(pos).Y end
-					end
-				end
-			end
-			return oldIndex(self, key)
-		end)
-	end)
-	
-	pcall(function()
-		local oldNamecall
-		oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-			local method = getnamecallmethod()
-			local args = {...}
-			
-			if State.Combat.SilentAim and self == workspace then
-				if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+	local function initSilentAimHooks()
+		if not hasHookmetamethod or not hasGetnamecallmethod then return end
+		
+		-- Hook __index for mouse properties
+		pcall(function()
+			local oldIndex
+			oldIndex = hookmetamethod(game, "__index", function(self, key)
+				if State.Combat.SilentAim and self == mouse then
 					if math.random(1, 100) <= State.Combat.SilentAimHitChance then
 						local target = getAimTarget()
 						if target then
@@ -604,18 +605,49 @@ warn("hookmetamethod:", hookmetamethod)
 							if State.Combat.AimPrediction and target.RootPart then
 								pos = pos + target.RootPart.Velocity * State.Combat.PredictionAmount
 							end
-							if method == "Raycast" and args[1] then
-								return oldNamecall(self, args[1], (pos - args[1]).Unit * 1000, unpack(args, 3))
-							elseif args[1] and typeof(args[1]) == "Ray" then
-								return oldNamecall(self, Ray.new(args[1].Origin, (pos - args[1].Origin).Unit * 1000), unpack(args, 2))
+							if key == "Hit" then return CFrame.new(pos) end
+							if key == "Target" then return target.Head or target.RootPart end
+							if key == "X" then return camera:WorldToViewportPoint(pos).X end
+							if key == "Y" then return camera:WorldToViewportPoint(pos).Y end
+						end
+					end
+				end
+				return oldIndex(self, key)
+			end)
+		end)
+		
+		-- Hook __namecall for raycast methods
+		pcall(function()
+			local oldNamecall
+			oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+				local method = getnamecallmethod()
+				local args = {...}
+				
+				if State.Combat.SilentAim and self == workspace then
+					if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+						if math.random(1, 100) <= State.Combat.SilentAimHitChance then
+							local target = getAimTarget()
+							if target then
+								local pos = (target.Head or target.RootPart).Position
+								if State.Combat.AimPrediction and target.RootPart then
+									pos = pos + target.RootPart.Velocity * State.Combat.PredictionAmount
+								end
+								if method == "Raycast" and args[1] then
+									return oldNamecall(self, args[1], (pos - args[1]).Unit * 1000, unpack(args, 3))
+								elseif args[1] and typeof(args[1]) == "Ray" then
+									return oldNamecall(self, Ray.new(args[1].Origin, (pos - args[1].Origin).Unit * 1000), unpack(args, 2))
+								end
 							end
 						end
 					end
 				end
-			end
-			return oldNamecall(self, ...)
+				return oldNamecall(self, ...)
+			end)
 		end)
-	end)
+	end
+	
+	-- DEFERRED: Initialize hooks after script fully loads
+	task.defer(initSilentAimHooks)
 	
 	-- ---------------------------------------------------------------------------
 	-- BACKGROUND LOOPS (Spawned once, not per-frame)
