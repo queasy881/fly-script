@@ -1,335 +1,906 @@
--- ui/components.lua
--- Premium component library - FIXED COLORS (NO GRAY)
+-- ui/menu.lua
+-- Premium main menu interface - FULLY WORKING
 
-local Components = {}
-
--- Color palette - ALL DARK BLUE, NO GRAY
-local Colors = {
-	Background = Color3.fromRGB(18, 18, 25),
-	Panel = Color3.fromRGB(22, 22, 32),
-	Surface = Color3.fromRGB(26, 26, 36),
-	Button = Color3.fromRGB(32, 34, 45),           -- Dark blue button
-	ButtonHover = Color3.fromRGB(42, 44, 58),      -- Hover state
-	Active = Color3.fromRGB(60, 120, 255),         -- Blue accent
-	ActiveGlow = Color3.fromRGB(100, 200, 255),
-	Text = Color3.fromRGB(220, 220, 240),
-	TextDim = Color3.fromRGB(140, 140, 160),
-	TextActive = Color3.fromRGB(255, 255, 255),
-	Border = Color3.fromRGB(45, 48, 62),           -- Blue-tinted border
-	Accent = Color3.fromRGB(88, 166, 255),
-	SliderBg = Color3.fromRGB(25, 27, 38)          -- Dark slider background
-}
-
--- Utility: Create rounded corner
-local function addCorner(obj, radius)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius or 8)
-	corner.Parent = obj
-	return corner
-end
-
--- Utility: Create glow effect
-local function addGlow(obj)
-	local glow = Instance.new("ImageLabel")
-	glow.Name = "Glow"
-	glow.Size = UDim2.new(1, 20, 1, 20)
-	glow.Position = UDim2.new(0.5, 0, 0.5, 0)
-	glow.AnchorPoint = Vector2.new(0.5, 0.5)
-	glow.BackgroundTransparency = 1
-	glow.Image = "rbxassetid://5028857472"
-	glow.ImageColor3 = Colors.Active
-	glow.ImageTransparency = 1
-	glow.ScaleType = Enum.ScaleType.Slice
-	glow.SliceCenter = Rect.new(24, 24, 276, 276)
-	glow.ZIndex = obj.ZIndex - 1
-	glow.Parent = obj
-	return glow
-end
-
--- Utility: Create stroke
-local function addStroke(obj, color, thickness)
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = color or Colors.Border
-	stroke.Thickness = thickness or 1
-	stroke.Transparency = 0.5
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Parent = obj
-	return stroke
-end
-
--- Get Animations safely
-local function getAnimations()
-	return _G.Animations
-end
-
--- Toggle Button
-function Components.createToggle(parent, text, callback)
-	local Animations = getAnimations()
+return function(deps)
+	local Tabs = deps.Tabs
+	local Components = deps.Components
+	local Animations = deps.Animations
 	
-	local button = Instance.new("TextButton")
-	button.Name = "Toggle_" .. text
-	button.Size = UDim2.new(1, -20, 0, 38)
-	button.BackgroundColor3 = Colors.Button
-	button.BorderSizePixel = 0
-	button.AutoButtonColor = false
-	button.Text = ""
-	button.Parent = parent
+	if not Tabs or not Components or not Animations then
+		error("[Menu] Missing dependencies")
+	end
 	
-	addCorner(button, 6)
-	addStroke(button)
-	local glow = addGlow(button)
+	print("[SimpleHub] Initializing premium UI...")
 	
-	local label = Instance.new("TextLabel")
-	label.Name = "Label"
-	label.Size = UDim2.new(1, -16, 1, 0)
-	label.Position = UDim2.new(0, 16, 0, 0)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = Colors.TextDim
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 14
-	label.Parent = button
+	local Players = game:GetService("Players")
+	local UIS = game:GetService("UserInputService")
+	local TweenService = game:GetService("TweenService")
+	local RunService = game:GetService("RunService")
+	local player = Players.LocalPlayer
+	local camera = workspace.CurrentCamera
+	local mouse = player:GetMouse()
 	
-	local indicator = Instance.new("Frame")
-	indicator.Name = "Indicator"
-	indicator.Size = UDim2.new(0, 0, 0, 3)
-	indicator.Position = UDim2.new(0, 0, 1, -3)
-	indicator.BackgroundColor3 = Colors.ActiveGlow
-	indicator.BorderSizePixel = 0
-	indicator.Parent = button
+	local function getCharacter()
+		return player.Character or player.CharacterAdded:Wait()
+	end
 	
-	addCorner(indicator, 2)
+	local function getRoot()
+		local char = getCharacter()
+		return char and char:FindFirstChild("HumanoidRootPart")
+	end
 	
-	local state = false
+	local function getHumanoid()
+		local char = getCharacter()
+		return char and char:FindFirstChildOfClass("Humanoid")
+	end
 	
-	button.MouseEnter:Connect(function()
-		if Animations then
-			Animations.buttonHover(button, true)
+	-- ============================================
+	-- LOAD MODULES
+	-- ============================================
+	local BASE = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
+	
+	local function loadModule(path)
+		local success, result = pcall(function()
+			local src = game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
+			return loadstring(src)()
+		end)
+		if success then
+			return result
 		else
-			button.BackgroundColor3 = Colors.ButtonHover
-		end
-	end)
-	
-	button.MouseLeave:Connect(function()
-		if Animations then
-			Animations.buttonHover(button, false)
-		else
-			if not state then
-				button.BackgroundColor3 = Colors.Button
-			end
-		end
-	end)
-	
-	button.MouseButton1Click:Connect(function()
-		if Animations then
-			Animations.buttonClick(button)
-		end
-		state = not state
-		
-		if Animations then
-			if state then
-				Animations.toggleOn(button)
-			else
-				Animations.toggleOff(button)
-			end
-		else
-			-- Fallback without animations
-			if state then
-				button.BackgroundColor3 = Colors.Active
-				label.TextColor3 = Colors.TextActive
-			else
-				button.BackgroundColor3 = Colors.Button
-				label.TextColor3 = Colors.TextDim
-			end
-		end
-		
-		if callback then
-			task.spawn(callback, state)
-		end
-	end)
-	
-	return button
-end
-
--- Slider
-function Components.createSlider(parent, text, min, max, default, callback)
-	local Animations = getAnimations()
-	
-	local container = Instance.new("Frame")
-	container.Name = "Slider_" .. text
-	container.Size = UDim2.new(1, -20, 0, 60)
-	container.BackgroundColor3 = Colors.Button
-	container.BorderSizePixel = 0
-	container.Parent = parent
-	
-	addCorner(container, 6)
-	addStroke(container)
-	
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -16, 0, 20)
-	label.Position = UDim2.new(0, 16, 0, 8)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = Colors.TextDim
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Font = Enum.Font.GothamMedium
-	label.TextSize = 13
-	label.Parent = container
-	
-	local valueLabel = Instance.new("TextLabel")
-	valueLabel.Size = UDim2.new(0, 60, 0, 20)
-	valueLabel.Position = UDim2.new(1, -76, 0, 8)
-	valueLabel.BackgroundTransparency = 1
-	valueLabel.Text = tostring(default)
-	valueLabel.TextColor3 = Colors.Active
-	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-	valueLabel.Font = Enum.Font.GothamBold
-	valueLabel.TextSize = 13
-	valueLabel.Parent = container
-	
-	local sliderBg = Instance.new("Frame")
-	sliderBg.Name = "SliderBg"
-	sliderBg.Size = UDim2.new(1, -32, 0, 6)
-	sliderBg.Position = UDim2.new(0, 16, 1, -18)
-	sliderBg.BackgroundColor3 = Colors.SliderBg
-	sliderBg.BorderSizePixel = 0
-	sliderBg.Parent = container
-	
-	addCorner(sliderBg, 3)
-	
-	local fill = Instance.new("Frame")
-	fill.Name = "Fill"
-	fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-	fill.BackgroundColor3 = Colors.Active
-	fill.BorderSizePixel = 0
-	fill.Parent = sliderBg
-	
-	addCorner(fill, 3)
-	
-	local handle = Instance.new("Frame")
-	handle.Name = "Handle"
-	handle.Size = UDim2.new(0, 14, 0, 14)
-	handle.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
-	handle.AnchorPoint = Vector2.new(0.5, 0.5)
-	handle.BackgroundColor3 = Colors.ActiveGlow
-	handle.BorderSizePixel = 0
-	handle.ZIndex = 2
-	handle.Parent = sliderBg
-	
-	addCorner(handle, 7)
-	addGlow(handle)
-	
-	local dragging = false
-	local value = default
-	
-	local function updateValue(input)
-		local pos = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
-		value = math.floor(min + (max - min) * pos)
-		valueLabel.Text = tostring(value)
-		
-		if Animations then
-			Animations.updateSlider(sliderBg, pos)
-		else
-			fill.Size = UDim2.new(pos, 0, 1, 0)
-			handle.Position = UDim2.new(pos, 0, 0.5, 0)
-		end
-		
-		if callback then
-			callback(value)
+			warn("[SimpleHub] Failed to load " .. path .. ": " .. tostring(result))
+			return nil
 		end
 	end
 	
-	handle.InputBegan:Connect(function(input)
+	-- Movement modules
+	local Fly = loadModule("movement/fly.lua")
+	local Noclip = loadModule("movement/noclip.lua")
+	local WalkSpeed = loadModule("movement/walkspeed.lua")
+	local JumpPower = loadModule("movement/jumppower.lua")
+	local BunnyHop = loadModule("movement/bunnyhop.lua")
+	local Dash = loadModule("movement/dash.lua")
+	local AirControl = loadModule("movement/air-control.lua")
+	
+	-- Extra modules
+	local Fullbright = loadModule("extra/fullbright.lua")
+	local RemoveGrass = loadModule("extra/remove-grass.lua")
+	local ThirdPerson = loadModule("extra/third-person.lua")
+	local AntiAFK = loadModule("extra/anti-afk.lua")
+	local Invisibility = loadModule("extra/invisibility.lua")
+	local WalkOnWater = loadModule("extra/walk-on-water.lua")
+	
+	-- Load silent aim module (for state storage)
+	local SilentAimModule = loadModule("combat/silent_aim.lua")
+	
+	-- Local state
+	local walkSpeedValue = 16
+	local jumpPowerValue = 50
+	
+	-- ============================================
+	-- AIM ASSIST - BUILT IN (replaces module)
+	-- ============================================
+	local AimAssist = {
+		enabled = false,
+		smoothness = 0.15,
+		fov = 150
+	}
+	
+	local function getClosestPlayer()
+		local closest, closestDist = nil, math.huge
+		local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+		
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character then
+				local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+				local head = plr.Character:FindFirstChild("Head")
+				
+				if humanoid and humanoid.Health > 0 and head then
+					local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
+					
+					if onScreen then
+						local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+						
+						if dist < AimAssist.fov and dist < closestDist then
+							closestDist = dist
+							closest = head
+						end
+					end
+				end
+			end
+		end
+		
+		return closest
+	end
+	
+	-- ============================================
+	-- SILENT AIM - WITH ACTUAL HOOKS
+	-- ============================================
+	local SilentAim = {
+		enabled = false,
+		fov = 150,
+		hitChance = 100
+	}
+	
+	local function getSilentTarget()
+		local closest, closestDist = nil, math.huge
+		local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+		
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character then
+				local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
+				local head = plr.Character:FindFirstChild("Head")
+				
+				if humanoid and humanoid.Health > 0 and head then
+					local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
+					
+					if onScreen then
+						local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+						
+						if dist < SilentAim.fov and dist < closestDist then
+							closestDist = dist
+							closest = head
+						end
+					end
+				end
+			end
+		end
+		
+		return closest
+	end
+	
+	-- Set up Silent Aim hooks (only if executor supports it)
+	pcall(function()
+		-- Hook mouse.Hit and mouse.Target
+		local oldIndex
+		oldIndex = hookmetamethod(game, "__index", function(self, key)
+			if SilentAim.enabled then
+				if self == mouse then
+					if key == "Hit" then
+						if math.random(1, 100) <= SilentAim.hitChance then
+							local target = getSilentTarget()
+							if target then
+								return CFrame.new(target.Position)
+							end
+						end
+					elseif key == "Target" then
+						if math.random(1, 100) <= SilentAim.hitChance then
+							local target = getSilentTarget()
+							if target then
+								return target
+							end
+						end
+					end
+				end
+			end
+			return oldIndex(self, key)
+		end)
+		print("[SimpleHub] Silent Aim hooks installed")
+	end)
+	
+	-- Alternative hook for raycast-based games
+	pcall(function()
+		local oldNamecall
+		oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+			local method = getnamecallmethod()
+			local args = {...}
+			
+			if SilentAim.enabled and self == workspace then
+				if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
+					if math.random(1, 100) <= SilentAim.hitChance then
+						local target = getSilentTarget()
+						if target and args[1] then
+							local ray = args[1]
+							local origin = ray.Origin
+							local newDirection = (target.Position - origin).Unit * 1000
+							args[1] = Ray.new(origin, newDirection)
+							return oldNamecall(self, unpack(args))
+						end
+					end
+				end
+			end
+			
+			return oldNamecall(self, ...)
+		end)
+		print("[SimpleHub] Raycast hooks installed")
+	end)
+	
+	-- ============================================
+	-- FOV CIRCLE
+	-- ============================================
+	local FOVCircle = {
+		enabled = false,
+		circle = nil
+	}
+	
+	pcall(function()
+		FOVCircle.circle = Drawing.new("Circle")
+		FOVCircle.circle.Thickness = 2
+		FOVCircle.circle.NumSides = 64
+		FOVCircle.circle.Radius = 150
+		FOVCircle.circle.Filled = false
+		FOVCircle.circle.Visible = false
+		FOVCircle.circle.Color = Color3.fromRGB(255, 255, 255)
+		FOVCircle.circle.Transparency = 0.7
+	end)
+	
+	-- ============================================
+	-- ESP
+	-- ============================================
+	local ESPState = {
+		NameESP = false,
+		BoxESP = false,
+		HealthESP = false,
+		DistanceESP = false,
+		Tracers = false,
+		Chams = false
+	}
+	
+	local ESPObjects = {}
+	
+	local function clearESP()
+		for _, obj in pairs(ESPObjects) do
+			pcall(function()
+				if obj.Remove then obj:Remove() end
+			end)
+		end
+		ESPObjects = {}
+	end
+	
+	local function updateESP()
+		clearESP()
+		
+		if not (ESPState.NameESP or ESPState.BoxESP or ESPState.HealthESP or ESPState.DistanceESP or ESPState.Tracers) then
+			return
+		end
+		
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character then
+				local char = plr.Character
+				local humanoid = char:FindFirstChildOfClass("Humanoid")
+				local rootPart = char:FindFirstChild("HumanoidRootPart")
+				local head = char:FindFirstChild("Head")
+				
+				if humanoid and humanoid.Health > 0 and rootPart and head then
+					local pos, onScreen = camera:WorldToViewportPoint(rootPart.Position)
+					
+					if onScreen then
+						local distance = (camera.CFrame.Position - rootPart.Position).Magnitude
+						local scaleFactor = 1 / (pos.Z * 0.04)
+						scaleFactor = math.clamp(scaleFactor, 0.2, 2)
+						
+						-- Name ESP
+						if ESPState.NameESP then
+							pcall(function()
+								local nameTag = Drawing.new("Text")
+								nameTag.Text = plr.Name
+								nameTag.Size = 14
+								nameTag.Color = Color3.fromRGB(255, 255, 255)
+								nameTag.Center = true
+								nameTag.Outline = true
+								nameTag.Position = Vector2.new(pos.X, pos.Y - 50 * scaleFactor)
+								nameTag.Visible = true
+								table.insert(ESPObjects, nameTag)
+							end)
+						end
+						
+						-- Health ESP
+						if ESPState.HealthESP then
+							pcall(function()
+								local healthTag = Drawing.new("Text")
+								local healthPercent = math.floor((humanoid.Health / humanoid.MaxHealth) * 100)
+								healthTag.Text = healthPercent .. "%"
+								healthTag.Size = 12
+								healthTag.Color = Color3.fromRGB(100, 255, 100)
+								healthTag.Center = true
+								healthTag.Outline = true
+								healthTag.Position = Vector2.new(pos.X, pos.Y - 35 * scaleFactor)
+								healthTag.Visible = true
+								table.insert(ESPObjects, healthTag)
+							end)
+						end
+						
+						-- Distance ESP
+						if ESPState.DistanceESP then
+							pcall(function()
+								local distTag = Drawing.new("Text")
+								distTag.Text = math.floor(distance) .. "m"
+								distTag.Size = 12
+								distTag.Color = Color3.fromRGB(200, 200, 200)
+								distTag.Center = true
+								distTag.Outline = true
+								distTag.Position = Vector2.new(pos.X, pos.Y + 40 * scaleFactor)
+								distTag.Visible = true
+								table.insert(ESPObjects, distTag)
+							end)
+						end
+						
+						-- Box ESP
+						if ESPState.BoxESP then
+							pcall(function()
+								local box = Drawing.new("Square")
+								local boxSize = Vector2.new(50 * scaleFactor, 70 * scaleFactor)
+								box.Size = boxSize
+								box.Position = Vector2.new(pos.X - boxSize.X / 2, pos.Y - boxSize.Y / 2)
+								box.Color = Color3.fromRGB(255, 0, 0)
+								box.Thickness = 1
+								box.Filled = false
+								box.Visible = true
+								table.insert(ESPObjects, box)
+							end)
+						end
+						
+						-- Tracers
+						if ESPState.Tracers then
+							pcall(function()
+								local tracer = Drawing.new("Line")
+								tracer.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+								tracer.To = Vector2.new(pos.X, pos.Y)
+								tracer.Color = Color3.fromRGB(255, 255, 0)
+								tracer.Thickness = 1
+								tracer.Visible = true
+								table.insert(ESPObjects, tracer)
+							end)
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	-- Chams
+	local function updateChams()
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= player and plr.Character then
+				local existingHighlight = plr.Character:FindFirstChild("SimpleHubChams")
+				
+				if ESPState.Chams then
+					if not existingHighlight then
+						local highlight = Instance.new("Highlight")
+						highlight.Name = "SimpleHubChams"
+						highlight.FillColor = Color3.fromRGB(255, 0, 0)
+						highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+						highlight.FillTransparency = 0.5
+						highlight.OutlineTransparency = 0
+						highlight.Parent = plr.Character
+					end
+				else
+					if existingHighlight then
+						existingHighlight:Destroy()
+					end
+				end
+			end
+		end
+	end
+	
+	-- ============================================
+	-- MAIN UPDATE LOOP
+	-- ============================================
+	RunService.RenderStepped:Connect(function(dt)
+		local char = player.Character
+		if not char then return end
+		
+		local root = char:FindFirstChild("HumanoidRootPart")
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		
+		-- Update camera reference
+		camera = workspace.CurrentCamera
+		
+		-- Aim Assist
+		if AimAssist.enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+			local target = getClosestPlayer()
+			if target then
+				local targetCF = CFrame.new(camera.CFrame.Position, target.Position)
+				camera.CFrame = camera.CFrame:Lerp(targetCF, AimAssist.smoothness)
+			end
+		end
+		
+		-- FOV Circle
+		if FOVCircle.circle then
+			FOVCircle.circle.Visible = FOVCircle.enabled
+			FOVCircle.circle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+			FOVCircle.circle.Radius = AimAssist.fov
+		end
+		
+		-- Movement updates
+		if root and humanoid then
+			if Fly and Fly.update and Fly.enabled then
+				Fly.update(root, camera, UIS)
+			end
+			
+			if Noclip and Noclip.update and Noclip.enabled then
+				Noclip.update(char)
+			end
+			
+			if BunnyHop and BunnyHop.update and BunnyHop.enabled then
+				BunnyHop.update(humanoid)
+			end
+			
+			if AirControl and AirControl.update and AirControl.strength > 0 then
+				AirControl.update(root, humanoid, camera, UIS)
+			end
+			
+			if WalkOnWater and WalkOnWater.update and WalkOnWater.enabled then
+				WalkOnWater.update(root)
+			end
+		end
+		
+		-- Anti AFK
+		if AntiAFK and AntiAFK.update and AntiAFK.enabled then
+			AntiAFK.update(dt)
+		end
+		
+		-- ESP
+		updateESP()
+	end)
+	
+	-- ============================================
+	-- COLORS
+	-- ============================================
+	local Colors = {
+		Background = Color3.fromRGB(18, 18, 25),
+		Panel = Color3.fromRGB(22, 22, 32),
+		Surface = Color3.fromRGB(26, 26, 36),
+		ContentBg = Color3.fromRGB(20, 20, 28),
+		ScrollBg = Color3.fromRGB(18, 18, 25),
+		Accent = Color3.fromRGB(60, 120, 255),
+		Text = Color3.fromRGB(220, 220, 240),
+		TextDim = Color3.fromRGB(140, 140, 160),
+		Border = Color3.fromRGB(45, 50, 65)
+	}
+	
+	-- ============================================
+	-- CREATE GUI
+	-- ============================================
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "SimpleHub"
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = player:WaitForChild("PlayerGui")
+	
+	local main = Instance.new("Frame")
+	main.Name = "Main"
+	main.Size = UDim2.new(0, 820, 0, 540)
+	main.Position = UDim2.new(0.5, 0, 0.5, 0)
+	main.AnchorPoint = Vector2.new(0.5, 0.5)
+	main.BackgroundColor3 = Colors.Background
+	main.BackgroundTransparency = 0
+	main.BorderSizePixel = 0
+	main.ClipsDescendants = true
+	main.Visible = false
+	main.Parent = gui
+	
+	local mainCorner = Instance.new("UICorner")
+	mainCorner.CornerRadius = UDim.new(0, 12)
+	mainCorner.Parent = main
+	
+	local mainStroke = Instance.new("UIStroke")
+	mainStroke.Color = Colors.Border
+	mainStroke.Thickness = 2
+	mainStroke.Transparency = 0.2
+	mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	mainStroke.Parent = main
+	
+	-- Header
+	local header = Instance.new("Frame")
+	header.Name = "Header"
+	header.Size = UDim2.new(1, 0, 0, 55)
+	header.Position = UDim2.new(0, 0, 0, 0)
+	header.BackgroundColor3 = Colors.Panel
+	header.BorderSizePixel = 0
+	header.Parent = main
+	
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(0, 300, 1, 0)
+	title.Position = UDim2.new(0, 20, 0, 0)
+	title.BackgroundTransparency = 1
+	title.Text = "SIMPLE HUB"
+	title.TextColor3 = Colors.Text
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 18
+	title.Parent = header
+	
+	local titleAccent = Instance.new("Frame")
+	titleAccent.Size = UDim2.new(0, 50, 0, 3)
+	titleAccent.Position = UDim2.new(0, 20, 1, -3)
+	titleAccent.BackgroundColor3 = Colors.Accent
+	titleAccent.BorderSizePixel = 0
+	titleAccent.Parent = header
+	
+	local accentCorner = Instance.new("UICorner")
+	accentCorner.CornerRadius = UDim.new(1, 0)
+	accentCorner.Parent = titleAccent
+	
+	local version = Instance.new("TextLabel")
+	version.Size = UDim2.new(0, 80, 0, 20)
+	version.Position = UDim2.new(1, -130, 0.5, 0)
+	version.AnchorPoint = Vector2.new(0, 0.5)
+	version.BackgroundTransparency = 1
+	version.Text = "v1.0"
+	version.TextColor3 = Colors.TextDim
+	version.TextXAlignment = Enum.TextXAlignment.Right
+	version.Font = Enum.Font.GothamMedium
+	version.TextSize = 11
+	version.Parent = header
+	
+	local closeBtn = Instance.new("TextButton")
+	closeBtn.Size = UDim2.new(0, 32, 0, 32)
+	closeBtn.Position = UDim2.new(1, -42, 0.5, 0)
+	closeBtn.AnchorPoint = Vector2.new(0, 0.5)
+	closeBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+	closeBtn.BorderSizePixel = 0
+	closeBtn.Text = "×"
+	closeBtn.TextColor3 = Colors.Text
+	closeBtn.Font = Enum.Font.GothamBold
+	closeBtn.TextSize = 20
+	closeBtn.AutoButtonColor = false
+	closeBtn.Parent = header
+	
+	local closeBtnCorner = Instance.new("UICorner")
+	closeBtnCorner.CornerRadius = UDim.new(0, 6)
+	closeBtnCorner.Parent = closeBtn
+	
+	closeBtn.MouseButton1Click:Connect(function()
+		main.Visible = false
+	end)
+	
+	closeBtn.MouseEnter:Connect(function()
+		Animations.tween(closeBtn, {BackgroundColor3 = Color3.fromRGB(200, 50, 50)}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+	end)
+	
+	closeBtn.MouseLeave:Connect(function()
+		Animations.tween(closeBtn, {BackgroundColor3 = Color3.fromRGB(35, 35, 45)}, {Time = 0.15, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
+	end)
+	
+	-- Tab bar
+	local tabBar = Instance.new("Frame")
+	tabBar.Name = "TabBar"
+	tabBar.Size = UDim2.new(1, 0, 0, 68)
+	tabBar.Position = UDim2.new(0, 0, 0, 55)
+	tabBar.BackgroundColor3 = Colors.Surface
+	tabBar.BorderSizePixel = 0
+	tabBar.Parent = main
+	
+	Tabs.setupTabBar(tabBar)
+	
+	-- Content area
+	local contentArea = Instance.new("Frame")
+	contentArea.Name = "ContentArea"
+	contentArea.Size = UDim2.new(1, 0, 1, -123)
+	contentArea.Position = UDim2.new(0, 0, 0, 123)
+	contentArea.BackgroundColor3 = Colors.ContentBg
+	contentArea.BorderSizePixel = 0
+	contentArea.Parent = main
+	
+	local contentContainer = Instance.new("Frame")
+	contentContainer.Name = "ContentContainer"
+	contentContainer.Size = UDim2.new(1, -24, 1, -16)
+	contentContainer.Position = UDim2.new(0, 12, 0, 8)
+	contentContainer.BackgroundTransparency = 1
+	contentContainer.Parent = contentArea
+	
+	local function createTabContent(name)
+		local scroll = Instance.new("ScrollingFrame")
+		scroll.Name = name .. "Content"
+		scroll.Size = UDim2.new(1, 0, 1, 0)
+		scroll.BackgroundColor3 = Colors.ScrollBg
+		scroll.BackgroundTransparency = 0
+		scroll.BorderSizePixel = 0
+		scroll.ScrollBarThickness = 4
+		scroll.ScrollBarImageColor3 = Colors.Accent
+		scroll.ScrollBarImageTransparency = 0.3
+		scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+		scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		scroll.Visible = false
+		scroll.Parent = contentContainer
+		
+		local layout = Instance.new("UIListLayout")
+		layout.Padding = UDim.new(0, 8)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = scroll
+		
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop = UDim.new(0, 4)
+		padding.PaddingBottom = UDim.new(0, 8)
+		padding.PaddingLeft = UDim.new(0, 4)
+		padding.PaddingRight = UDim.new(0, 8)
+		padding.Parent = scroll
+		
+		return scroll
+	end
+	
+	local movementContent = createTabContent("Movement")
+	local combatContent = createTabContent("Combat")
+	local espContent = createTabContent("ESP")
+	local extraContent = createTabContent("Extra")
+	
+	-- Create tabs
+	local movementTab = Tabs.create(tabBar, "Movement", "⚡")
+	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
+	local espTab = Tabs.create(tabBar, "ESP", "👁")
+	local extraTab = Tabs.create(tabBar, "Extra", "⚙")
+	
+	Tabs.connectTab(movementTab, movementContent)
+	Tabs.connectTab(combatTab, combatContent)
+	Tabs.connectTab(espTab, espContent)
+	Tabs.connectTab(extraTab, extraContent)
+	
+	-- ============================================
+	-- MOVEMENT TAB
+	-- ============================================
+	Components.createSection(movementContent, "Flight")
+	
+	Components.createToggle(movementContent, "Fly", function(state)
+		if Fly then
+			if state then
+				local root = getRoot()
+				if root then Fly.enable(root, camera) end
+			else
+				Fly.disable()
+			end
+		end
+	end)
+	
+	Components.createSlider(movementContent, "Fly Speed", 10, 200, 50, function(value)
+		if Fly then Fly.speed = value end
+	end)
+	
+	Components.createDivider(movementContent)
+	Components.createSection(movementContent, "Speed & Jump")
+	
+	Components.createToggle(movementContent, "Walk Speed", function(state)
+		if WalkSpeed then
+			WalkSpeed.enabled = state
+			local humanoid = getHumanoid()
+			if humanoid then
+				humanoid.WalkSpeed = state and walkSpeedValue or 16
+			end
+		end
+	end)
+	
+	Components.createSlider(movementContent, "Speed Value", 16, 200, 16, function(value)
+		walkSpeedValue = value
+		if WalkSpeed and WalkSpeed.enabled then
+			local humanoid = getHumanoid()
+			if humanoid then humanoid.WalkSpeed = value end
+		end
+	end)
+	
+	Components.createToggle(movementContent, "Jump Power", function(state)
+		if JumpPower then
+			JumpPower.enabled = state
+			local humanoid = getHumanoid()
+			if humanoid then
+				humanoid.JumpPower = state and jumpPowerValue or 50
+			end
+		end
+	end)
+	
+	Components.createSlider(movementContent, "Jump Value", 50, 300, 50, function(value)
+		jumpPowerValue = value
+		if JumpPower and JumpPower.enabled then
+			local humanoid = getHumanoid()
+			if humanoid then humanoid.JumpPower = value end
+		end
+	end)
+	
+	Components.createDivider(movementContent)
+	Components.createSection(movementContent, "Other")
+	
+	Components.createToggle(movementContent, "Noclip", function(state)
+		if Noclip then Noclip.enabled = state end
+	end)
+	
+	Components.createToggle(movementContent, "Bunny Hop", function(state)
+		if BunnyHop then BunnyHop.enabled = state end
+	end)
+	
+	Components.createToggle(movementContent, "Dash (Press F)", function(state)
+		if Dash then Dash.enabled = state end
+	end)
+	
+	Components.createSlider(movementContent, "Air Control", 0, 10, 0, function(value)
+		if AirControl then AirControl.strength = value end
+	end)
+	
+	-- ============================================
+	-- COMBAT TAB - WORKING AIM ASSIST & SILENT AIM
+	-- ============================================
+	Components.createSection(combatContent, "Aim Assist")
+	
+	Components.createToggle(combatContent, "Aim Assist", function(state)
+		AimAssist.enabled = state
+	end)
+	
+	-- Smoothness: 1 = very smooth (slow), 100 = very snappy (fast)
+	Components.createSlider(combatContent, "Smoothness", 1, 100, 15, function(value)
+		-- Map 1-100 to 0.01-0.5
+		AimAssist.smoothness = value / 200
+	end)
+	
+	Components.createSlider(combatContent, "FOV", 50, 500, 150, function(value)
+		AimAssist.fov = value
+		SilentAim.fov = value
+	end)
+	
+	Components.createToggle(combatContent, "Show FOV Circle", function(state)
+		FOVCircle.enabled = state
+	end)
+	
+	Components.createDivider(combatContent)
+	Components.createSection(combatContent, "Silent Aim")
+	
+	Components.createToggle(combatContent, "Silent Aim", function(state)
+		SilentAim.enabled = state
+		-- Also update module state if loaded
+		if SilentAimModule then
+			SilentAimModule.enabled = state
+		end
+	end)
+	
+	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value)
+		SilentAim.hitChance = value
+		if SilentAimModule then
+			SilentAimModule.hitChance = value
+		end
+	end)
+	
+	-- ============================================
+	-- ESP TAB - WORKING
+	-- ============================================
+	Components.createSection(espContent, "Player ESP")
+	
+	Components.createToggle(espContent, "Name ESP", function(state)
+		ESPState.NameESP = state
+	end)
+	
+	Components.createToggle(espContent, "Box ESP", function(state)
+		ESPState.BoxESP = state
+	end)
+	
+	Components.createToggle(espContent, "Health ESP", function(state)
+		ESPState.HealthESP = state
+	end)
+	
+	Components.createToggle(espContent, "Distance ESP", function(state)
+		ESPState.DistanceESP = state
+	end)
+	
+	Components.createToggle(espContent, "Tracers", function(state)
+		ESPState.Tracers = state
+	end)
+	
+	Components.createDivider(espContent)
+	Components.createSection(espContent, "Visuals")
+	
+	Components.createToggle(espContent, "Chams", function(state)
+		ESPState.Chams = state
+		updateChams()
+	end)
+	
+	-- ============================================
+	-- EXTRA TAB
+	-- ============================================
+	Components.createSection(extraContent, "Visual Tweaks")
+	
+	Components.createToggle(extraContent, "Fullbright", function(state)
+		if Fullbright then
+			Fullbright.enabled = state
+			Fullbright.toggle()
+		end
+	end)
+	
+	Components.createToggle(extraContent, "Remove Grass", function(state)
+		if RemoveGrass then
+			RemoveGrass.enabled = state
+			RemoveGrass.apply()
+		end
+	end)
+	
+	Components.createToggle(extraContent, "Third Person", function(state)
+		if ThirdPerson then
+			ThirdPerson.enabled = state
+			ThirdPerson.apply(player)
+		end
+	end)
+	
+	Components.createDivider(extraContent)
+	Components.createSection(extraContent, "Misc")
+	
+	Components.createToggle(extraContent, "Anti AFK", function(state)
+		if AntiAFK then AntiAFK.enabled = state end
+	end)
+	
+	Components.createToggle(extraContent, "Invisibility", function(state)
+		if Invisibility then
+			Invisibility.enabled = state
+			Invisibility.apply(getCharacter())
+		end
+	end)
+	
+	Components.createToggle(extraContent, "Walk on Water", function(state)
+		if WalkOnWater then WalkOnWater.enabled = state end
+	end)
+	
+	-- Activate first tab
+	Tabs.activate(movementTab, movementContent)
+	
+	-- ============================================
+	-- KEYBINDS
+	-- ============================================
+	UIS.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		
+		if input.KeyCode == Enum.KeyCode.M then
+			local isVisible = not main.Visible
+			main.Visible = isVisible
+			
+			if isVisible then
+				main.Size = UDim2.new(0, 0, 0, 0)
+				Animations.tween(main, {Size = UDim2.new(0, 820, 0, 540)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+			end
+		end
+		
+		if input.KeyCode == Enum.KeyCode.F then
+			if Dash and Dash.enabled then
+				local root = getRoot()
+				if root then Dash.tryDash(root, camera) end
+			end
+		end
+	end)
+	
+	-- ============================================
+	-- DRAGGING
+	-- ============================================
+	local dragging = false
+	local dragInput, dragStart, startPos
+	
+	header.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			dragging = true
-			updateValue(input)
+			dragStart = input.Position
+			startPos = main.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
 		end
 	end)
 	
-	handle.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = false
+	UIS.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+		if dragging and dragInput then
+			local delta = dragInput.Position - dragStart
+			Animations.tween(main, {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}, {Time = 0.1, Style = Enum.EasingStyle.Quad, Direction = Enum.EasingDirection.Out})
 		end
 	end)
 	
-	game:GetService("UserInputService").InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-			updateValue(input)
+	-- ============================================
+	-- CHARACTER RESPAWN
+	-- ============================================
+	player.CharacterAdded:Connect(function(char)
+		task.wait(0.5)
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			if WalkSpeed and WalkSpeed.enabled then humanoid.WalkSpeed = walkSpeedValue end
+			if JumpPower and JumpPower.enabled then humanoid.JumpPower = jumpPowerValue end
 		end
+		if Invisibility and Invisibility.enabled then Invisibility.apply(char) end
+		if ESPState.Chams then updateChams() end
 	end)
 	
-	sliderBg.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			updateValue(input)
-		end
+	-- Watch for new players (for chams)
+	Players.PlayerAdded:Connect(function(plr)
+		plr.CharacterAdded:Connect(function()
+			task.wait(0.5)
+			if ESPState.Chams then updateChams() end
+		end)
 	end)
 	
-	return container
+	print("[SimpleHub] Premium UI loaded successfully")
+	print("[SimpleHub] Press M to toggle menu")
+	print("[SimpleHub] Silent Aim uses hookmetamethod - requires supported executor")
 end
-
--- Section Header
-function Components.createSection(parent, text)
-	local section = Instance.new("Frame")
-	section.Name = "Section_" .. text
-	section.Size = UDim2.new(1, -20, 0, 32)
-	section.BackgroundTransparency = 1
-	section.Parent = parent
-	
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -12, 1, 0)
-	label.Position = UDim2.new(0, 12, 0, 0)
-	label.BackgroundTransparency = 1
-	label.Text = text:upper()
-	label.TextColor3 = Colors.Text
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = 12
-	label.Parent = section
-	
-	local line = Instance.new("Frame")
-	line.Size = UDim2.new(0, 3, 0, 16)
-	line.Position = UDim2.new(0, 0, 0.5, 0)
-	line.AnchorPoint = Vector2.new(0, 0.5)
-	line.BackgroundColor3 = Colors.Accent
-	line.BorderSizePixel = 0
-	line.Parent = section
-	
-	addCorner(line, 2)
-	
-	return section
-end
-
--- Divider
-function Components.createDivider(parent)
-	local divider = Instance.new("Frame")
-	divider.Name = "Divider"
-	divider.Size = UDim2.new(1, -40, 0, 1)
-	divider.BackgroundColor3 = Colors.Border
-	divider.BorderSizePixel = 0
-	divider.BackgroundTransparency = 0.5
-	divider.Parent = parent
-	
-	return divider
-end
-
--- Info Label
-function Components.createLabel(parent, text)
-	local label = Instance.new("TextLabel")
-	label.Name = "InfoLabel"
-	label.Size = UDim2.new(1, -20, 0, 28)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = Colors.TextDim
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Font = Enum.Font.Gotham
-	label.TextSize = 12
-	label.TextWrapped = true
-	label.Parent = parent
-	
-	return label
-end
-
-_G.Components = Components
-return Components
