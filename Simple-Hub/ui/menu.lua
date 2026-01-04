@@ -61,6 +61,9 @@ return function(deps)
 	local Dash = loadModule("movement/dash.lua")
 	local AirControl = loadModule("movement/air-control.lua")
 	
+	-- Combat modules - Silent Aim now has hooks built in!
+	local SilentAim = loadModule("combat/silent_aim.lua")
+	
 	-- Extra modules
 	local Fullbright = loadModule("extra/fullbright.lua")
 	local RemoveGrass = loadModule("extra/remove-grass.lua")
@@ -69,15 +72,12 @@ return function(deps)
 	local Invisibility = loadModule("extra/invisibility.lua")
 	local WalkOnWater = loadModule("extra/walk-on-water.lua")
 	
-	-- Load silent aim module (for state storage)
-	local SilentAimModule = loadModule("combat/silent_aim.lua")
-	
 	-- Local state
 	local walkSpeedValue = 16
 	local jumpPowerValue = 50
 	
 	-- ============================================
-	-- AIM ASSIST - BUILT IN (replaces module)
+	-- AIM ASSIST - BUILT IN
 	-- ============================================
 	local AimAssist = {
 		enabled = false,
@@ -111,98 +111,6 @@ return function(deps)
 		
 		return closest
 	end
-	
-	-- ============================================
-	-- SILENT AIM - WITH ACTUAL HOOKS
-	-- ============================================
-	local SilentAim = {
-		enabled = false,
-		fov = 150,
-		hitChance = 100
-	}
-	
-	local function getSilentTarget()
-		local closest, closestDist = nil, math.huge
-		local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-		
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= player and plr.Character then
-				local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-				local head = plr.Character:FindFirstChild("Head")
-				
-				if humanoid and humanoid.Health > 0 and head then
-					local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
-					
-					if onScreen then
-						local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-						
-						if dist < SilentAim.fov and dist < closestDist then
-							closestDist = dist
-							closest = head
-						end
-					end
-				end
-			end
-		end
-		
-		return closest
-	end
-	
-	-- Set up Silent Aim hooks (only if executor supports it)
-	pcall(function()
-		-- Hook mouse.Hit and mouse.Target
-		local oldIndex
-		oldIndex = hookmetamethod(game, "__index", function(self, key)
-			if SilentAim.enabled then
-				if self == mouse then
-					if key == "Hit" then
-						if math.random(1, 100) <= SilentAim.hitChance then
-							local target = getSilentTarget()
-							if target then
-								return CFrame.new(target.Position)
-							end
-						end
-					elseif key == "Target" then
-						if math.random(1, 100) <= SilentAim.hitChance then
-							local target = getSilentTarget()
-							if target then
-								return target
-							end
-						end
-					end
-				end
-			end
-			return oldIndex(self, key)
-		end)
-		print("[SimpleHub] Silent Aim hooks installed")
-	end)
-	
-	-- Alternative hook for raycast-based games
-	pcall(function()
-		local oldNamecall
-		oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-			local method = getnamecallmethod()
-			local args = {...}
-			
-			if SilentAim.enabled and self == workspace then
-				if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
-					if math.random(1, 100) <= SilentAim.hitChance then
-						local target = getSilentTarget()
-						if target and args[1] then
-							local ray = args[1]
-							local origin = ray.Origin
-							local newDirection = (target.Position - origin).Unit * 1000
-							args[1] = Ray.new(origin, newDirection)
-							return oldNamecall(self, unpack(args))
-						end
-					end
-				end
-			end
-			
-			return oldNamecall(self, ...)
-		end)
-		print("[SimpleHub] Raycast hooks installed")
-	end)
 	
 	-- ============================================
 	-- FOV CIRCLE
@@ -268,7 +176,6 @@ return function(deps)
 						local scaleFactor = 1 / (pos.Z * 0.04)
 						scaleFactor = math.clamp(scaleFactor, 0.2, 2)
 						
-						-- Name ESP
 						if ESPState.NameESP then
 							pcall(function()
 								local nameTag = Drawing.new("Text")
@@ -283,7 +190,6 @@ return function(deps)
 							end)
 						end
 						
-						-- Health ESP
 						if ESPState.HealthESP then
 							pcall(function()
 								local healthTag = Drawing.new("Text")
@@ -299,7 +205,6 @@ return function(deps)
 							end)
 						end
 						
-						-- Distance ESP
 						if ESPState.DistanceESP then
 							pcall(function()
 								local distTag = Drawing.new("Text")
@@ -314,7 +219,6 @@ return function(deps)
 							end)
 						end
 						
-						-- Box ESP
 						if ESPState.BoxESP then
 							pcall(function()
 								local box = Drawing.new("Square")
@@ -329,7 +233,6 @@ return function(deps)
 							end)
 						end
 						
-						-- Tracers
 						if ESPState.Tracers then
 							pcall(function()
 								local tracer = Drawing.new("Line")
@@ -347,7 +250,6 @@ return function(deps)
 		end
 	end
 	
-	-- Chams
 	local function updateChams()
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= player and plr.Character then
@@ -382,10 +284,9 @@ return function(deps)
 		local root = char:FindFirstChild("HumanoidRootPart")
 		local humanoid = char:FindFirstChildOfClass("Humanoid")
 		
-		-- Update camera reference
 		camera = workspace.CurrentCamera
 		
-		-- Aim Assist
+		-- Aim Assist (hold RMB)
 		if AimAssist.enabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
 			local target = getClosestPlayer()
 			if target then
@@ -424,12 +325,10 @@ return function(deps)
 			end
 		end
 		
-		-- Anti AFK
 		if AntiAFK and AntiAFK.update and AntiAFK.enabled then
 			AntiAFK.update(dt)
 		end
 		
-		-- ESP
 		updateESP()
 	end)
 	
@@ -614,7 +513,6 @@ return function(deps)
 	local espContent = createTabContent("ESP")
 	local extraContent = createTabContent("Extra")
 	
-	-- Create tabs
 	local movementTab = Tabs.create(tabBar, "Movement", "⚡")
 	local combatTab = Tabs.create(tabBar, "Combat", "🎯")
 	local espTab = Tabs.create(tabBar, "ESP", "👁")
@@ -704,7 +602,7 @@ return function(deps)
 	end)
 	
 	-- ============================================
-	-- COMBAT TAB - WORKING AIM ASSIST & SILENT AIM
+	-- COMBAT TAB
 	-- ============================================
 	Components.createSection(combatContent, "Aim Assist")
 	
@@ -712,15 +610,14 @@ return function(deps)
 		AimAssist.enabled = state
 	end)
 	
-	-- Smoothness: 1 = very smooth (slow), 100 = very snappy (fast)
 	Components.createSlider(combatContent, "Smoothness", 1, 100, 15, function(value)
-		-- Map 1-100 to 0.01-0.5
+		-- 1 = very smooth (0.005), 100 = very snappy (0.5)
 		AimAssist.smoothness = value / 200
 	end)
 	
 	Components.createSlider(combatContent, "FOV", 50, 500, 150, function(value)
 		AimAssist.fov = value
-		SilentAim.fov = value
+		if SilentAim then SilentAim.fov = value end
 	end)
 	
 	Components.createToggle(combatContent, "Show FOV Circle", function(state)
@@ -731,22 +628,19 @@ return function(deps)
 	Components.createSection(combatContent, "Silent Aim")
 	
 	Components.createToggle(combatContent, "Silent Aim", function(state)
-		SilentAim.enabled = state
-		-- Also update module state if loaded
-		if SilentAimModule then
-			SilentAimModule.enabled = state
+		if SilentAim then
+			SilentAim.enabled = state
 		end
 	end)
 	
 	Components.createSlider(combatContent, "Hit Chance", 0, 100, 100, function(value)
-		SilentAim.hitChance = value
-		if SilentAimModule then
-			SilentAimModule.hitChance = value
+		if SilentAim then
+			SilentAim.hitChance = value
 		end
 	end)
 	
 	-- ============================================
-	-- ESP TAB - WORKING
+	-- ESP TAB
 	-- ============================================
 	Components.createSection(espContent, "Player ESP")
 	
@@ -892,7 +786,6 @@ return function(deps)
 		if ESPState.Chams then updateChams() end
 	end)
 	
-	-- Watch for new players (for chams)
 	Players.PlayerAdded:Connect(function(plr)
 		plr.CharacterAdded:Connect(function()
 			task.wait(0.5)
@@ -902,5 +795,4 @@ return function(deps)
 	
 	print("[SimpleHub] Premium UI loaded successfully")
 	print("[SimpleHub] Press M to toggle menu")
-	print("[SimpleHub] Silent Aim uses hookmetamethod - requires supported executor")
 end
