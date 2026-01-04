@@ -6,10 +6,7 @@
 return function(Tabs, Components, Animations)
 	-- ---------------------------------------------------------------------------
 	-- BUILT-IN: Tabs, Components, Animations (no external deps needed)
-	-- ---------------------------------------------------------------------------
-	local Tabs = nil -- Will be created below
-	local Components = nil -- Will be created below
-	local Animations = nil -- Will be created below
+	-- --------------------------------------------------------------------------
 	
 	-- ---------------------------------------------------------------------------
 	-- SERVICES
