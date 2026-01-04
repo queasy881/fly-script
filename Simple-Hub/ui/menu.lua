@@ -3,7 +3,12 @@
 -- No require(), No script.Parent, No undefined dependencies
 -- ---------------------------------------------------------------------------
 
-return function(Tabs, Components, Animations)
+return function(Tabs, Components, Animations
+
+		warn("mouse1click:", mouse1click)
+warn("firetouchinterest:", firetouchinterest)
+warn("hookmetamethod:", hookmetamethod)
+
 	-- ---------------------------------------------------------------------------
 	-- BUILT-IN: Tabs, Components, Animations (no external deps needed)
 	-- --------------------------------------------------------------------------
