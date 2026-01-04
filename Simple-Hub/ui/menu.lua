@@ -3,33 +3,24 @@
 -- No require(), No script.Parent, No undefined dependencies
 -- ---------------------------------------------------------------------------
 
-return function(depsOrTabs, Components, Animations)
-	-- Handle both: func({Tabs, Components, Animations}) and func(Tabs, Components, Animations)
-	local Tabs
-	if type(depsOrTabs) == "table" and depsOrTabs.Tabs then
-		-- Called with deps table
-		Tabs = depsOrTabs.Tabs
-		Components = depsOrTabs.Components
-		Animations = depsOrTabs.Animations
+return function(arg1, arg2, arg3)
+	-- Handle both: func({Tabs=..., Components=..., Animations=...}) AND func(Tabs, Components, Animations)
+	local Tabs, Components, Animations
+	if type(arg1) == "table" and arg1.Tabs then
+		Tabs = arg1.Tabs
+		Components = arg1.Components
+		Animations = arg1.Animations
 	else
-		-- Called with individual args
-		Tabs = depsOrTabs
+		Tabs = arg1
+		Components = arg2
+		Animations = arg3
 	end
-	
-	-- Fallback to _G if not provided
 	Tabs = Tabs or _G.VertexTabs
 	Components = Components or _G.VertexComponents
 	Animations = Animations or _G.VertexAnimations
 	
 	-- ---------------------------------------------------------------------------
-	-- EXECUTOR API DETECTION (Safe checks before using)
-	-- ---------------------------------------------------------------------------
-	local hasHookmetamethod = typeof(hookmetamethod) == "function"
-	local hasGetnamecallmethod = typeof(getnamecallmethod) == "function"
-	local hasFiretouchinterest = typeof(firetouchinterest) == "function"
-	local hasMouse1click = typeof(mouse1click) == "function"
-	local hasMouse2click = typeof(mouse2click) == "function"
-	
+	-- BUILT-IN: Tabs, Components, Animations (no external deps needed)
 	-- ---------------------------------------------------------------------------
 	
 	-- ---------------------------------------------------------------------------
@@ -509,6 +500,23 @@ return function(depsOrTabs, Components, Animations)
 	end
 	
 	-- ---------------------------------------------------------------------------
+	-- EXECUTOR API SAFETY CHECK
+	-- ---------------------------------------------------------------------------
+	local function safeGetGlobal(name)
+		local ok, val = pcall(function() return getfenv()[name] end)
+		if ok and val then return val end
+		ok, val = pcall(function() return _G[name] end)
+		if ok and val then return val end
+		return nil
+	end
+	
+	local hookmetamethod = safeGetGlobal("hookmetamethod")
+	local getnamecallmethod = safeGetGlobal("getnamecallmethod")
+	local firetouchinterest = safeGetGlobal("firetouchinterest")
+	local mouse1click = safeGetGlobal("mouse1click")
+	local mouse2click = safeGetGlobal("mouse2click")
+	
+	-- ---------------------------------------------------------------------------
 	-- KILLAURA - SERVER VALIDATED (Per spec: modify reported position only)
 	-- NO teleporting, NO spamming remotes, NO fake damage
 	-- Hook the legitimate attack, modify reported self position
@@ -519,11 +527,11 @@ return function(depsOrTabs, Components, Animations)
 	
 	local function hookKillAura()
 		if KillAuraHooked then return end
-		if not hasHookmetamethod or not hasGetnamecallmethod then return end
+		if not hookmetamethod or not getnamecallmethod then return end
 		KillAuraHooked = true
 		
 		-- Hook remote events that handle combat
-		local ok, err = pcall(function()
+		pcall(function()
 			local oldNamecall
 			oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
 				local method = getnamecallmethod()
@@ -572,16 +580,14 @@ return function(depsOrTabs, Components, Animations)
 				return oldNamecall(self, unpack(args))
 			end)
 		end)
-		if not ok then
-			warn("[Vertex Hub] KillAura hook failed:", err)
-		end
 	end
 	
-	-- DEFERRED: Initialize hook after script fully loads
+	-- Initialize hook
+	-- DEFERRED: Hook after script fully loads
 	task.defer(hookKillAura)
 	
 	-- ---------------------------------------------------------------------------
-	-- SILENT AIM HOOKS (Deferred initialization)
+	-- SILENT AIM HOOKS
 	-- ---------------------------------------------------------------------------
 	local function getAimTarget()
 		return getBestTarget({
@@ -591,9 +597,8 @@ return function(depsOrTabs, Components, Animations)
 	end
 	
 	local function initSilentAimHooks()
-		if not hasHookmetamethod or not hasGetnamecallmethod then return end
+		if not hookmetamethod or not getnamecallmethod then return end
 		
-		-- Hook __index for mouse properties
 		pcall(function()
 			local oldIndex
 			oldIndex = hookmetamethod(game, "__index", function(self, key)
@@ -616,7 +621,6 @@ return function(depsOrTabs, Components, Animations)
 			end)
 		end)
 		
-		-- Hook __namecall for raycast methods
 		pcall(function()
 			local oldNamecall
 			oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
