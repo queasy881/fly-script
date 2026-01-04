@@ -1,19 +1,19 @@
--- ═══════════════════════════════════════════════════════════════════════════
+-- ---------------------------------------------------------------------------
 -- VERTEX HUB - FULLY LOADSTRING COMPATIBLE
 -- No require(), No script.Parent, No undefined dependencies
--- ═══════════════════════════════════════════════════════════════════════════
+-- ---------------------------------------------------------------------------
 
 return function()
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- BUILT-IN: Tabs, Components, Animations (no external deps needed)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local Tabs = nil -- Will be created below
 	local Components = nil -- Will be created below
 	local Animations = nil -- Will be created below
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- SERVICES
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local Players = game:GetService("Players")
 	local UIS = game:GetService("UserInputService")
 	local RunService = game:GetService("RunService")
@@ -29,9 +29,9 @@ return function()
 	local camera = workspace.CurrentCamera
 	local mouse = player:GetMouse()
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- UTILITY FUNCTIONS
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local function getCharacter() return player.Character end
 	local function getRoot() local c = getCharacter() return c and c:FindFirstChild("HumanoidRootPart") end
 	local function getHumanoid() local c = getCharacter() return c and c:FindFirstChildOfClass("Humanoid") end
@@ -58,9 +58,9 @@ return function()
 	end
 	_G.VertexAnimations = Animations
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- ENTITY CACHE (Updated every 0.5s, not every frame)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local EntityCache = { players = {}, npcs = {}, items = {} }
 	
 	local function updateEntityCache()
@@ -127,9 +127,9 @@ return function()
 		end
 	end
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- DRAWING OBJECT POOL (Reuse drawings, don't recreate)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local DrawingPool = { text = {}, square = {}, line = {}, triangle = {}, circle = {} }
 	local ActiveDrawings = {}
 	
@@ -188,9 +188,9 @@ return function()
 		ActiveDrawings = {}
 	end
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- STATIC HUD DRAWINGS (Created once, reused)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local HUD = {}
 	pcall(function()
 		HUD.FOVCircle = Drawing.new("Circle")
@@ -214,9 +214,9 @@ return function()
 		HUD.Keybinds = Drawing.new("Text") HUD.Keybinds.Size = 14 HUD.Keybinds.Outline = true HUD.Keybinds.Visible = false
 	end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- ALL STATE VARIABLES
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local State = {
 		ESP = {
 			NameESP = false, BoxESP = false, HealthESP = false, DistanceESP = false,
@@ -269,9 +269,9 @@ return function()
 		Settings = { MenuKey = Enum.KeyCode.M, AccentColor = Color3.fromRGB(60, 120, 255) }
 	}
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- STORAGE
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local BacktrackPositions = {}
 	local CurrentTarget = nil
 	local LastAttackTime = 0
@@ -289,9 +289,9 @@ return function()
 	}
 	local OriginalGravity = workspace.Gravity
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- TARGET ACQUISITION SYSTEM
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local function getBestTarget(options)
 		options = options or {}
 		local range = options.Range or 150
@@ -368,9 +368,9 @@ return function()
 		return targets[1].Entity
 	end
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- FLY SYSTEM
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local FlySystem = { enabled = false, bodyGyro = nil, bodyVelocity = nil, currentVel = Vector3.new() }
 	
 	function FlySystem:Enable()
@@ -417,11 +417,11 @@ return function()
 		end
 	end
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- HITBOX-ONLY INVISIBILITY (NO TRANSPARENCY - per spec)
 	-- Model moves away, HumanoidRootPart stays at real position
 	-- Camera/movement/physics stay on hitbox
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local InvisSystem = {
 		enabled = false,
 		movedParts = {},
@@ -487,11 +487,11 @@ return function()
 		self.movedParts = {}
 	end
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- KILLAURA - SERVER VALIDATED (Per spec: modify reported position only)
 	-- NO teleporting, NO spamming remotes, NO fake damage
 	-- Hook the legitimate attack, modify reported self position
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local LEGIT_RANGE = 14.4 -- Default sword range
 	local OriginalRemotes = {}
 	local KillAuraHooked = false
@@ -555,9 +555,9 @@ return function()
 	-- Initialize hook
 	hookKillAura()
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- SILENT AIM HOOKS
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local function getAimTarget()
 		return getBestTarget({
 			Range = 1000, Players = true, NPCs = true,
@@ -615,9 +615,9 @@ return function()
 		end)
 	end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- BACKGROUND LOOPS (Spawned once, not per-frame)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	
 	-- Chat Spam (runs in background, respects delay)
 	task.spawn(function()
@@ -649,9 +649,9 @@ return function()
 		end
 	end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- CHAMS UPDATE (Called when needed, not every frame)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local function updateChams()
 		for name, data in pairs(EntityCache.players) do
 			if data.Character then
@@ -689,9 +689,9 @@ return function()
 		end
 	end
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- SINGLE MAIN UPDATE LOOP (Per spec: ONE RenderStepped, not multiple)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local lastCacheUpdate = 0
 	
 	RunService.RenderStepped:Connect(function(dt)
@@ -714,9 +714,9 @@ return function()
 			FPSData.lastTime = tick()
 		end
 		
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		-- MOVEMENT
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		if State.Movement.Fly then
 			if not FlySystem.enabled then FlySystem:Enable() end
 			FlySystem:Update()
@@ -774,9 +774,9 @@ return function()
 			if dir.Magnitude > 0 then root.Velocity = Vector3.new(dir.Unit.X * 50, root.Velocity.Y, dir.Unit.Z * 50) end
 		end
 		
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		-- COMBAT
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		if State.Combat.AimAssist and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
 			local target = getBestTarget({ Range = 1000, Players = true, NPCs = true, UseFOV = true, FOV = State.Combat.AimFOV, Sort = "Angle" })
 			if target and (target.Head or target.RootPart) then
@@ -877,9 +877,9 @@ return function()
 			end
 		end
 		
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		-- PLAYER
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		if State.Player.GodMode and hum then hum.Health = hum.MaxHealth end
 		
 		if State.Player.NoRagdoll and hum then
@@ -895,9 +895,9 @@ return function()
 			end)
 		end
 		
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		-- TROLL
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		if State.Troll.AnnoyPlayer and State.Troll.AnnoyTarget ~= "" and root then
 			local tp = Players:FindFirstChild(State.Troll.AnnoyTarget)
 			if tp and tp.Character then
@@ -931,9 +931,9 @@ return function()
 			end
 		end
 		
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		-- VISUALS
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		if State.Visuals.Freecam then
 			local spd = State.Visuals.FreecamSpeed * 2
 			local dir = Vector3.new()
@@ -956,9 +956,9 @@ return function()
 			end
 		end
 		
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		-- HUD
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		if HUD.FOVCircle then
 			HUD.FOVCircle.Visible = State.Combat.ShowFOVCircle
 			HUD.FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
@@ -1003,9 +1003,9 @@ return function()
 			HUD.Keybinds.Color = Color3.new(1, 1, 1)
 		end
 		
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		-- ESP RENDERING (Uses pooled drawings)
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		releaseAllDrawings()
 		
 		local anyESP = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or State.ESP.DistanceESP or State.ESP.Tracers or State.ESP.SkeletonESP or State.ESP.OffscreenArrows or State.ESP.ItemESP or State.ESP.NPCESP
@@ -1080,9 +1080,9 @@ return function()
 			end
 		end
 		
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		-- MISC
-		-- ═══════════════════════════════════════════════════════════════════════
+		-- -----------------------------------------------------------------------
 		if State.Misc.AntiAFK then
 			pcall(function()
 				local vu = game:GetService("VirtualUser")
@@ -1092,9 +1092,9 @@ return function()
 		end
 	end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- INPUT HANDLING
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	UIS.InputBegan:Connect(function(input, gp)
 		if gp then return end
 		
@@ -1156,9 +1156,9 @@ return function()
 		end
 	end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- GUI COLORS
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local Colors = {
 		Background = Color3.fromRGB(12, 12, 18),
 		Panel = Color3.fromRGB(18, 18, 26),
@@ -1174,9 +1174,9 @@ return function()
 		SliderBg = Color3.fromRGB(22, 24, 32)
 	}
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- BUILT-IN COMPONENTS (No external dependency)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	if not Components then
 		Components = {}
 		
@@ -1250,9 +1250,9 @@ return function()
 	end
 	_G.VertexComponents = Components
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- BUILT-IN TABS (No external dependency)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	if not Tabs then
 		Tabs = {}
 		local tabButtons = {}
@@ -1306,9 +1306,9 @@ return function()
 	end
 	_G.VertexTabs = Tabs
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- GUI CREATION
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local gui = Instance.new("ScreenGui") gui.Name = "VertexHub" gui.ResetOnSpawn = false gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling gui.Parent = player:WaitForChild("PlayerGui")
 	
 	local main = Instance.new("Frame") main.Name = "Main" main.Size = UDim2.new(0, 950, 0, 650) main.Position = UDim2.new(0.5, 0, 0.5, 0) main.AnchorPoint = Vector2.new(0.5, 0.5) main.BackgroundColor3 = Colors.Background main.BorderSizePixel = 0 main.ClipsDescendants = true main.Visible = false main.Parent = gui
@@ -1321,7 +1321,7 @@ return function()
 	local acc = Instance.new("Frame") acc.Size = UDim2.new(0, 60, 0, 3) acc.Position = UDim2.new(0, 15, 1, -3) acc.BackgroundColor3 = Colors.Accent acc.BorderSizePixel = 0 acc.Parent = hdr local ac = Instance.new("UICorner") ac.CornerRadius = UDim.new(1, 0) ac.Parent = acc
 	
 	-- Close button
-	local cls = Instance.new("TextButton") cls.Size = UDim2.new(0, 30, 0, 30) cls.Position = UDim2.new(1, -40, 0.5, 0) cls.AnchorPoint = Vector2.new(0, 0.5) cls.BackgroundColor3 = Color3.fromRGB(30, 30, 40) cls.Text = "×" cls.TextColor3 = Colors.Text cls.Font = Enum.Font.GothamBold cls.TextSize = 20 cls.AutoButtonColor = false cls.Parent = hdr
+	local cls = Instance.new("TextButton") cls.Size = UDim2.new(0, 30, 0, 30) cls.Position = UDim2.new(1, -40, 0.5, 0) cls.AnchorPoint = Vector2.new(0, 0.5) cls.BackgroundColor3 = Color3.fromRGB(30, 30, 40) cls.Text = "X" cls.TextColor3 = Colors.Text cls.Font = Enum.Font.GothamBold cls.TextSize = 20 cls.AutoButtonColor = false cls.Parent = hdr
 	local clc = Instance.new("UICorner") clc.CornerRadius = UDim.new(0, 6) clc.Parent = cls
 	cls.MouseButton1Click:Connect(function()
 		main.Visible = false
@@ -1355,14 +1355,14 @@ return function()
 	local trollC = makeTab("Troll")
 	local miscC = makeTab("Misc")
 	
-	local combatT = Tabs.create(tabBar, "Combat", "🎯")
-	local moveT = Tabs.create(tabBar, "Move", "🏃")
-	local espT = Tabs.create(tabBar, "ESP", "👁")
-	local visT = Tabs.create(tabBar, "Visual", "🎨")
-	local worldT = Tabs.create(tabBar, "World", "🌍")
-	local playerT = Tabs.create(tabBar, "Player", "👤")
-	local trollT = Tabs.create(tabBar, "Troll", "🎭")
-	local miscT = Tabs.create(tabBar, "Misc", "⚙")
+	local combatT = Tabs.create(tabBar, "Combat", "*")
+	local moveT = Tabs.create(tabBar, "Move", ">")
+	local espT = Tabs.create(tabBar, "ESP", "o")
+	local visT = Tabs.create(tabBar, "Visual", "#")
+	local worldT = Tabs.create(tabBar, "World", "@")
+	local playerT = Tabs.create(tabBar, "Player", "U")
+	local trollT = Tabs.create(tabBar, "Troll", "T")
+	local miscT = Tabs.create(tabBar, "Misc", "S")
 	
 	Tabs.connectTab(combatT, combatC)
 	Tabs.connectTab(moveT, moveC)
@@ -1373,9 +1373,9 @@ return function()
 	Tabs.connectTab(trollT, trollC)
 	Tabs.connectTab(miscT, miscC)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- COMBAT TAB
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	Components.createSection(combatC, "Aim Assist")
 	Components.createToggle(combatC, "Aim Assist", function(v) State.Combat.AimAssist = v end)
 	Components.createSlider(combatC, "Smoothness", 1, 100, 15, function(v) State.Combat.AimSmoothness = v / 200 end)
@@ -1416,9 +1416,9 @@ return function()
 	Components.createSlider(combatC, "Strafe Speed", 1, 20, 5, function(v) State.Combat.StrafeSpeed = v end)
 	Components.createSlider(combatC, "Strafe Radius", 5, 30, 10, function(v) State.Combat.StrafeRadius = v end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- MOVEMENT TAB
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	Components.createSection(moveC, "Flight")
 	Components.createToggle(moveC, "Fly", function(v) State.Movement.Fly = v end)
 	Components.createSlider(moveC, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
@@ -1456,9 +1456,9 @@ return function()
 	Components.createToggle(moveC, "Fake Lag", function(v) State.Movement.FakeLag = v end)
 	Components.createSlider(moveC, "Lag Intensity", 1, 10, 5, function(v) State.Movement.LagIntensity = v end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- ESP TAB
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	Components.createSection(espC, "Player ESP")
 	Components.createToggle(espC, "Name ESP", function(v) State.ESP.NameESP = v end)
 	Components.createToggle(espC, "Box ESP", function(v) State.ESP.BoxESP = v end)
@@ -1479,9 +1479,9 @@ return function()
 	Components.createSlider(espC, "Max Distance", 100, 2000, 1000, function(v) State.ESP.MaxDistance = v end)
 	Components.createToggle(espC, "Team Check", function(v) State.ESP.TeamCheck = v end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- VISUALS TAB
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	Components.createSection(visC, "Lighting")
 	Components.createToggle(visC, "Fullbright", function(v) State.Visuals.Fullbright = v if v then Lighting.Ambient = Color3.new(1,1,1) Lighting.Brightness = 2 Lighting.OutdoorAmbient = Color3.new(1,1,1) else Lighting.Ambient = OriginalLighting.Ambient Lighting.Brightness = OriginalLighting.Brightness Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient end end)
 	Components.createToggle(visC, "No Fog", function(v) State.Visuals.NoFog = v if v then Lighting.FogEnd = 1e10 Lighting.FogStart = 1e10 else Lighting.FogEnd = OriginalLighting.FogEnd Lighting.FogStart = OriginalLighting.FogStart end end)
@@ -1502,9 +1502,9 @@ return function()
 	Components.createToggle(visC, "X-Ray", function(v) State.Visuals.XRay = v end)
 	Components.createSlider(visC, "X-Ray Transparency", 0, 100, 50, function(v) State.Visuals.XRayTransparency = v / 100 end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- WORLD TAB
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	Components.createSection(worldC, "Environment")
 	Components.createSlider(worldC, "Time of Day", 0, 24, 14, function(v) State.World.TimeOfDay = v Lighting.ClockTime = v end)
 	Components.createSlider(worldC, "Gravity", 0, 500, 196, function(v) State.World.Gravity = v workspace.Gravity = v end)
@@ -1515,9 +1515,9 @@ return function()
 	Components.createSection(worldC, "Tools")
 	Components.createToggle(worldC, "Delete Mode (Click)", function(v) State.World.DeleteMode = v end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- PLAYER TAB
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	Components.createSection(playerC, "Character")
 	Components.createToggle(playerC, "God Mode", function(v) State.Player.GodMode = v end)
 	Components.createToggle(playerC, "No Ragdoll", function(v) State.Player.NoRagdoll = v end)
@@ -1534,9 +1534,9 @@ return function()
 	Components.createToggle(playerC, "No Spread", function(v) State.Player.NoSpread = v end)
 	Components.createToggle(playerC, "Infinite Stamina", function(v) State.Player.InfiniteStamina = v end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- TROLL TAB
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	Components.createSection(trollC, "Follow / Orbit")
 	Components.createToggle(trollC, "Annoy Player", function(v) State.Troll.AnnoyPlayer = v end)
 	Components.createToggle(trollC, "Orbit Player", function(v) State.Troll.OrbitPlayer = v end)
@@ -1551,9 +1551,9 @@ return function()
 	Components.createSection(trollC, "Info")
 	Components.createLabel(trollC, "Type /target [name] in chat to set target")
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- MISC TAB
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	Components.createSection(miscC, "HUD Elements")
 	Components.createToggle(miscC, "Watermark", function(v) State.Misc.Watermark = v end)
 	Components.createToggle(miscC, "FPS Counter", function(v) State.Misc.FPSCounter = v end)
@@ -1575,9 +1575,9 @@ return function()
 	-- Activate first tab
 	Tabs.activate(combatT, combatC)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- MENU TOGGLE (M KEY) - WITH MOUSE UNLOCK
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	UIS.InputBegan:Connect(function(input, gp)
 		if gp then return end
 		if input.KeyCode == State.Settings.MenuKey then
@@ -1604,9 +1604,9 @@ return function()
 		end
 	end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- DRAGGING
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	local dragging, dragStart, startPos = false, nil, nil
 	hdr.InputBegan:Connect(function(inp)
 		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -1625,9 +1625,9 @@ return function()
 		end
 	end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- CHARACTER EVENTS (Reapply features on respawn)
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	player.CharacterAdded:Connect(function(c)
 		task.wait(0.5)
 		local h = c:FindFirstChildOfClass("Humanoid")
@@ -1652,8 +1652,8 @@ return function()
 		BacktrackPositions[p.Name] = nil
 	end)
 	
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	-- INITIALIZATION COMPLETE
-	-- ═══════════════════════════════════════════════════════════════════════════
+	-- ---------------------------------------------------------------------------
 	print("[Vertex Hub] Loaded successfully! Press M to toggle menu.")
 end
