@@ -3,7 +3,7 @@
 -- No require(), No script.Parent, No undefined dependencies
 -- ---------------------------------------------------------------------------
 
-return function()
+return function(Tabs, Components, Animations)
 	-- ---------------------------------------------------------------------------
 	-- BUILT-IN: Tabs, Components, Animations (no external deps needed)
 	-- ---------------------------------------------------------------------------
