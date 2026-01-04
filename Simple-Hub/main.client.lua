@@ -81,12 +81,8 @@ load("settings/presets.lua")
 -- 6. START MENU (last, with all dependencies)
 -- ============================================
 local startMenu = load("ui/menu.lua")
-
-if type(startMenu) ~= "function" then
-    error("menu.lua did not return a function")
-end
-
 startMenu()
+
 
 print("[Simple Hub] ✓ All features loaded and integrated")
 print("[Simple Hub] ✓ Press M to open menu")
