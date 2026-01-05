@@ -1635,7 +1635,7 @@ return function(arg1, arg2, arg3)
 			lbl.Parent = parent
 		end
 		
-		function Components.createToggle(parent, text, callback)
+function Components.createToggle(parent, text, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 160, 0, 28)
     btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
@@ -1656,6 +1656,33 @@ return function(arg1, arg2, arg3)
             btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
         end
     end
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        applyVisual()
+        if callback then
+            callback(state)
+        end
+    end)
+
+    -- ✅ ADD THESE (THIS IS THE IMPORTANT PART)
+    function btn:SetState(value)
+        if typeof(value) ~= "boolean" then return end
+        state = value
+        applyVisual()
+        if callback then
+            callback(state)
+        end
+    end
+
+    function btn:GetState()
+        return state
+    end
+
+    applyVisual()
+    return btn
+end
+
 
     btn.MouseButton1Click:Connect(function()
         state = not state
