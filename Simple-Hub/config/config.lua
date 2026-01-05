@@ -1,461 +1,257 @@
-
--- ===========================================================================
--- VERTEX HUB - CONFIG SYSTEM
--- File: Config.lua
--- Persistent configuration saving/loading with file and memory fallback
--- ===========================================================================
+-- config.lua
+-- Configuration management for Simple Hub
+-- Save/Load system for user preferences
 
 local HttpService = game:GetService("HttpService")
-
 local Config = {}
-Config.__index = Config
 
--- Storage
-Config.configFolder = "VertexHub"
-Config.memoryFallback = {}
-Config.currentConfig = "default"
+-- Default configuration
+local Defaults = {
+	-- UI Settings
+	MenuKey = "M",
+	AccentColor = {60, 120, 255},
+	DefaultTab = "Combat",
+	
+	-- HUD Defaults
+	Watermark = true,
+	FPSCounter = true,
+	PingDisplay = true,
+	PlayerCount = false,
+	VelocityDisplay = false,
+	KeybindsDisplay = false,
+	TargetInfo = false,
+	
+	-- Feature Defaults
+	FlySpeed = 50,
+	WalkSpeed = 32,
+	JumpPower = 100,
+	AimFOV = 150,
+	AimSmoothness = 15,
+	KillAuraRange = 15,
+	KillAuraCPS = 10,
+	
+	-- ESP Settings
+	ESP_MaxDistance = 1000,
+	ESP_TeamCheck = false,
+	NameESP = false,
+	BoxESP = false,
+	HealthESP = false,
+	DistanceESP = false,
+	Tracers = false,
+	SkeletonESP = false,
+	OffscreenArrows = false,
+	Chams = false,
+	ItemESP = false,
+	NPCESP = false,
+	
+	-- Visual Settings
+	Fullbright = false,
+	Crosshair = true,
+	CrosshairSize = 10,
+	CrosshairGap = 5,
+	CameraFOV = 70,
+	ThirdPerson = false,
+	Freecam = false,
+	XRay = false,
+	
+	-- Movement Defaults
+	FlyLegit = false,
+	SpeedLegit = false,
+	Noclip = false,
+	InfiniteJump = false,
+	BunnyHop = false,
+	LongJump = false,
+	SpeedGlide = false,
+	Dash = false,
+	ClickTP = false,
+	AntiVoid = false,
+	Anchor = false,
+	SpinBot = false,
+	FakeLag = false,
+	AirControl = false,
+	
+	-- Combat Defaults
+	AimAssist = false,
+	AimPrediction = false,
+	PredictionAmount = 10,
+	ShowFOVCircle = false,
+	SilentAim = false,
+	SilentAimHitChance = 100,
+	KillAura = false,
+	KillAuraPlayers = true,
+	KillAuraNPCs = false,
+	KillAuraWallCheck = true,
+	KillAuraLegit = false,
+	Reach = false,
+	ReachDistance = 18,
+	ReachLegit = false,
+	Triggerbot = false,
+	TriggerbotDelay = 10,
+	AutoParry = false,
+	HitboxExpander = false,
+	HitboxSize = 5,
+	Backtrack = false,
+	BacktrackTime = 20,
+	TargetStrafe = false,
+	StrafeSpeed = 5,
+	StrafeRadius = 10,
+	
+	-- World Defaults
+	TimeOfDay = 14,
+	Gravity = 196,
+	DeleteMode = false,
+	RemoveGrass = false,
+	
+	-- Player Defaults
+	GodMode = false,
+	NoRagdoll = false,
+	AutoRespawn = false,
+	CharScale = 100,
+	Invisibility = false,
+	InvisMode = "Safe",
+	InvisOffset = 100,
+	NoRecoil = false,
+	NoSpread = false,
+	InfiniteStamina = false,
+	
+	-- Troll Defaults
+	AnnoyPlayer = false,
+	AnnoyTarget = "",
+	OrbitPlayer = false,
+	OrbitTarget = "",
+	OrbitRadius = 10,
+	OrbitSpeed = 2,
+	Fling = false,
+	FlingPower = 500,
+	Headless = false,
+	
+	-- Misc Defaults
+	AntiAFK = false,
+	ChatSpam = false,
+	SpamMsg = "Vertex Hub!",
+	SpamDelay = 2
+}
 
--- Executor file system functions (auto-detected)
-local writefile = writefile or nil
-local readfile = readfile or nil
-local isfile = isfile or nil
-local isfolder = isfolder or nil
-local makefolder = makefolder or nil
-local listfiles = listfiles or nil
-local delfile = delfile or nil
-
--- ===========================================================================
--- FILE SYSTEM UTILITIES
--- ===========================================================================
-function Config.HasFileSystem()
-	return writefile ~= nil and readfile ~= nil and isfile ~= nil
-end
-
-function Config.EnsureFolder()
-	if not Config.HasFileSystem() then return false end
-	local success = pcall(function()
-		if isfolder and not isfolder(Config.configFolder) then
-			if makefolder then
-				makefolder(Config.configFolder)
-			end
-		end
-	end)
-	return success
-end
-
-function Config.GetPath(name)
-	return Config.configFolder .. "/" .. name .. ".json"
-end
-
--- ===========================================================================
--- SERIALIZATION: State -> Saveable Table
--- ===========================================================================
-function Config.Serialize(State)
-	local data = {}
+-- Load config from file
+local function loadFromFile()
+	if not (isfolder and isfile) then return end
 	
-	-- Combat (KillAura, Reach, Targeting - REQUIRED)
-	data.Combat = {
-		-- Kill Aura
-		KillAura = State.Combat.KillAura,
-		KillAuraRange = State.Combat.KillAuraRange,
-		KillAuraCPS = State.Combat.KillAuraCPS,
-		KillAuraLegit = State.Combat.KillAuraLegit,
-		KillAuraPlayers = State.Combat.KillAuraPlayers,
-		KillAuraNPCs = State.Combat.KillAuraNPCs,
-		KillAuraWallCheck = State.Combat.KillAuraWallCheck,
-		
-		-- Reach
-		Reach = State.Combat.Reach,
-		ReachDistance = State.Combat.ReachDistance,
-		ReachLegit = State.Combat.ReachLegit,
-		
-		-- Targeting
-		TargetSortMode = State.Combat.TargetSortMode or "Distance",
-		
-		-- Prediction
-		AimPrediction = State.Combat.AimPrediction,
-		PredictionAmount = State.Combat.PredictionAmount,
-		
-		-- Aim Assist
-		AimAssist = State.Combat.AimAssist,
-		AimSmoothness = State.Combat.AimSmoothness,
-		AimFOV = State.Combat.AimFOV,
-		ShowFOVCircle = State.Combat.ShowFOVCircle,
-		
-		-- Silent Aim
-		SilentAim = State.Combat.SilentAim,
-		SilentAimHitChance = State.Combat.SilentAimHitChance,
-		
-		-- Other Combat
-		Triggerbot = State.Combat.Triggerbot,
-		TriggerbotDelay = State.Combat.TriggerbotDelay,
-		AutoParry = State.Combat.AutoParry,
-		HitboxExpander = State.Combat.HitboxExpander,
-		HitboxSize = State.Combat.HitboxSize,
-		Backtrack = State.Combat.Backtrack,
-		BacktrackTime = State.Combat.BacktrackTime,
-		TargetStrafe = State.Combat.TargetStrafe,
-		StrafeSpeed = State.Combat.StrafeSpeed,
-		StrafeRadius = State.Combat.StrafeRadius
-	}
-	
-	-- ESP
-	data.ESP = {
-		NameESP = State.ESP.NameESP,
-		BoxESP = State.ESP.BoxESP,
-		HealthESP = State.ESP.HealthESP,
-		DistanceESP = State.ESP.DistanceESP,
-		Tracers = State.ESP.Tracers,
-		SkeletonESP = State.ESP.SkeletonESP,
-		OffscreenArrows = State.ESP.OffscreenArrows,
-		Chams = State.ESP.Chams,
-		ItemESP = State.ESP.ItemESP,
-		NPCESP = State.ESP.NPCESP,
-		MaxDistance = State.ESP.MaxDistance,
-		TeamCheck = State.ESP.TeamCheck
-	}
-	
-	-- Movement
-	data.Movement = {
-		Fly = State.Movement.Fly,
-		FlySpeed = State.Movement.FlySpeed,
-		FlyLegit = State.Movement.FlyLegit,
-		Noclip = State.Movement.Noclip,
-		Speed = State.Movement.Speed,
-		SpeedValue = State.Movement.SpeedValue,
-		SpeedLegit = State.Movement.SpeedLegit,
-		JumpPower = State.Movement.JumpPower,
-		JumpValue = State.Movement.JumpValue,
-		InfiniteJump = State.Movement.InfiniteJump,
-		BunnyHop = State.Movement.BunnyHop,
-		LongJump = State.Movement.LongJump,
-		LongJumpForce = State.Movement.LongJumpForce,
-		SpeedGlide = State.Movement.SpeedGlide,
-		GlideSpeed = State.Movement.GlideSpeed,
-		Dash = State.Movement.Dash,
-		DashForce = State.Movement.DashForce,
-		DashCooldown = State.Movement.DashCooldown,
-		ClickTP = State.Movement.ClickTP,
-		AntiVoid = State.Movement.AntiVoid,
-		VoidHeight = State.Movement.VoidHeight,
-		Anchor = State.Movement.Anchor,
-		SpinBot = State.Movement.SpinBot,
-		SpinSpeed = State.Movement.SpinSpeed,
-		FakeLag = State.Movement.FakeLag,
-		LagIntensity = State.Movement.LagIntensity,
-		AirControl = State.Movement.AirControl
-	}
-	
-	-- Visuals
-	data.Visuals = {
-		Fullbright = State.Visuals.Fullbright,
-		NoFog = State.Visuals.NoFog,
-		NoShadows = State.Visuals.NoShadows,
-		Crosshair = State.Visuals.Crosshair,
-		CrosshairSize = State.Visuals.CrosshairSize,
-		CrosshairGap = State.Visuals.CrosshairGap,
-		CameraFOV = State.Visuals.CameraFOV,
-		ThirdPerson = State.Visuals.ThirdPerson,
-		Freecam = State.Visuals.Freecam,
-		FreecamSpeed = State.Visuals.FreecamSpeed,
-		XRay = State.Visuals.XRay,
-		XRayTransparency = State.Visuals.XRayTransparency
-	}
-	
-	-- Player (includes Invisibility)
-	data.Player = {
-		GodMode = State.Player.GodMode,
-		NoRagdoll = State.Player.NoRagdoll,
-		AutoRespawn = State.Player.AutoRespawn,
-		CharScale = State.Player.CharScale,
-		Invisibility = State.Player.Invisibility,
-		InvisMode = State.Player.InvisMode,
-		InvisOffset = State.Player.InvisOffset,
-		NoRecoil = State.Player.NoRecoil,
-		NoSpread = State.Player.NoSpread,
-		InfiniteStamina = State.Player.InfiniteStamina
-	}
-	
-	-- World
-	data.World = {
-		TimeOfDay = State.World.TimeOfDay,
-		Gravity = State.World.Gravity,
-		DeleteMode = State.World.DeleteMode,
-		RemoveGrass = State.World.RemoveGrass
-	}
-	
-	-- Troll
-	data.Troll = {
-		AnnoyPlayer = State.Troll.AnnoyPlayer,
-		AnnoyTarget = State.Troll.AnnoyTarget,
-		OrbitPlayer = State.Troll.OrbitPlayer,
-		OrbitTarget = State.Troll.OrbitTarget,
-		OrbitRadius = State.Troll.OrbitRadius,
-		OrbitSpeed = State.Troll.OrbitSpeed,
-		Fling = State.Troll.Fling,
-		FlingPower = State.Troll.FlingPower,
-		Headless = State.Troll.Headless
-	}
-	
-	-- Misc
-	data.Misc = {
-		AntiAFK = State.Misc.AntiAFK,
-		ChatSpam = State.Misc.ChatSpam,
-		SpamMsg = State.Misc.SpamMsg,
-		SpamDelay = State.Misc.SpamDelay,
-		Watermark = State.Misc.Watermark,
-		FPSCounter = State.Misc.FPSCounter,
-		PingDisplay = State.Misc.PingDisplay,
-		PlayerCount = State.Misc.PlayerCount,
-		VelocityDisplay = State.Misc.VelocityDisplay,
-		TargetInfo = State.Misc.TargetInfo,
-		KeybindsDisplay = State.Misc.KeybindsDisplay
-	}
-	
-	-- Settings (Color3 needs special handling)
-	data.Settings = {
-		AccentColor = {
-			R = State.Settings.AccentColor.R,
-			G = State.Settings.AccentColor.G,
-			B = State.Settings.AccentColor.B
-		}
-	}
-	
-	return data
-end
-
--- ===========================================================================
--- DESERIALIZATION: Saveable Table -> State
--- ===========================================================================
-function Config.Deserialize(data, State)
-	if not data then return false end
-	
-	local function applyCat(source, target)
-		if not source or not target then return end
-		for key, value in pairs(source) do
-			if target[key] ~= nil then
-				target[key] = value
-			end
-		end
+	-- Reset to defaults first
+	for k, v in pairs(Defaults) do
+		Config[k] = v
 	end
 	
-	-- Apply all categories
-	applyCat(data.Combat, State.Combat)
-	applyCat(data.ESP, State.ESP)
-	applyCat(data.Movement, State.Movement)
-	applyCat(data.Visuals, State.Visuals)
-	applyCat(data.Player, State.Player)
-	applyCat(data.World, State.World)
-	applyCat(data.Troll, State.Troll)
-	applyCat(data.Misc, State.Misc)
-	
-	-- Handle Color3
-	if data.Settings and data.Settings.AccentColor then
-		State.Settings.AccentColor = Color3.new(
-			data.Settings.AccentColor.R or 0.235,
-			data.Settings.AccentColor.G or 0.47,
-			data.Settings.AccentColor.B or 1
-		)
-	end
-	
-	return true
-end
-
--- ===========================================================================
--- SAVE CONFIG
--- ===========================================================================
-function Config.SaveConfig(name, State)
-	name = name or "default"
-	
-	-- Serialize state
-	local data = Config.Serialize(State)
-	
-	-- Encode to JSON
-	local success, json = pcall(function()
-		return HttpService:JSONEncode(data)
-	end)
-	
-	if not success then
-		warn("[Vertex Config] Encode failed: " .. tostring(json))
-		return false
-	end
-	
-	-- Try file system
-	if Config.HasFileSystem() then
-		Config.EnsureFolder()
-		local writeOk = pcall(function()
-			writefile(Config.GetPath(name), json)
+	if isfolder("SimpleHub") and isfile("SimpleHub/config.json") then
+		local success, data = pcall(function()
+			local content = readfile("SimpleHub/config.json")
+			return HttpService:JSONDecode(content)
 		end)
-		if writeOk then
-			Config.currentConfig = name
-			print("[Vertex Config] Saved to file: " .. name)
+		
+		if success and data and type(data) == "table" then
+			-- Merge loaded config with defaults
+			for k, v in pairs(data) do
+				Config[k] = v
+			end
+			print("[CONFIG] Loaded from file")
 			return true
 		end
 	end
 	
-	-- Fallback to memory
-	Config.memoryFallback[name] = json
-	Config.currentConfig = name
-	print("[Vertex Config] Saved to memory: " .. name)
+	print("[CONFIG] Using defaults")
+	return false
+end
+
+-- Save config to file
+local function saveToFile()
+	if not writefile then return false end
+	
+	-- Create folder if it doesn't exist
+	if not isfolder("SimpleHub") then
+		pcall(function() makefolder("SimpleHub") end)
+	end
+	
+	local success = pcall(function()
+		local configJson = HttpService:JSONEncode(Config)
+		writefile("SimpleHub/config.json", configJson)
+	end)
+	
+	if success then
+		print("[CONFIG] Saved to file")
+		return true
+	end
+	
+	return false
+end
+
+-- Get a config value
+local function get(key, default)
+	return Config[key] or default
+end
+
+-- Set a config value
+local function set(key, value)
+	Config[key] = value
+	saveToFile()
 	return true
 end
 
--- ===========================================================================
--- LOAD CONFIG
--- ===========================================================================
-function Config.LoadConfig(name, State)
-	name = name or "default"
-	local json = nil
-	
-	-- Try file system
-	if Config.HasFileSystem() then
-		pcall(function()
-			local path = Config.GetPath(name)
-			if isfile(path) then
-				json = readfile(path)
-			end
-		end)
+-- Set multiple values at once
+local function setMultiple(values)
+	for k, v in pairs(values) do
+		Config[k] = v
 	end
-	
-	-- Fallback to memory
-	if not json then
-		json = Config.memoryFallback[name]
-	end
-	
-	-- Not found
-	if not json then
-		warn("[Vertex Config] Not found: " .. name)
-		return false
-	end
-	
-	-- Decode JSON
-	local success, data = pcall(function()
-		return HttpService:JSONDecode(json)
-	end)
-	
-	if not success or not data then
-		warn("[Vertex Config] Decode failed: " .. name)
-		return false
-	end
-	
-	-- Apply to state
-	Config.Deserialize(data, State)
-	Config.currentConfig = name
-	print("[Vertex Config] Loaded: " .. name)
+	saveToFile()
 	return true
 end
 
--- ===========================================================================
--- GET CONFIG LIST
--- ===========================================================================
-function Config.GetConfigList()
-	local list = {}
-	
-	-- From file system
-	if Config.HasFileSystem() and listfiles then
-		Config.EnsureFolder()
-		pcall(function()
-			local files = listfiles(Config.configFolder)
-			if files then
-				for _, filepath in ipairs(files) do
-					local name = filepath:match("([^/\\]+)%.json$")
-					if name then
-						table.insert(list, name)
-					end
-				end
-			end
-		end)
+-- Reset to defaults
+local function reset()
+	for k, v in pairs(Defaults) do
+		Config[k] = v
 	end
-	
-	-- From memory (avoid duplicates)
-	for name, _ in pairs(Config.memoryFallback) do
-		local exists = false
-		for _, n in ipairs(list) do
-			if n == name then exists = true break end
-		end
-		if not exists then
-			table.insert(list, name)
-		end
-	end
-	
-	return list
-end
-
--- ===========================================================================
--- DELETE CONFIG
--- ===========================================================================
-function Config.DeleteConfig(name)
-	-- Delete from file system
-	if Config.HasFileSystem() and delfile then
-		pcall(function()
-			local path = Config.GetPath(name)
-			if isfile(path) then
-				delfile(path)
-			end
-		end)
-	end
-	
-	-- Delete from memory
-	Config.memoryFallback[name] = nil
-	print("[Vertex Config] Deleted: " .. name)
+	saveToFile()
+	print("[CONFIG] Reset to defaults")
 	return true
 end
 
--- ===========================================================================
--- EXPORT CONFIG (Returns JSON string, copies to clipboard if available)
--- ===========================================================================
-function Config.ExportConfig(State)
-	local data = Config.Serialize(State)
-	local success, json = pcall(function()
-		return HttpService:JSONEncode(data)
-	end)
-	
-	if not success then return nil end
-	
-	-- Try clipboard
-	local setclipboard = setclipboard or toclipboard or set_clipboard
-	if setclipboard then
-		pcall(function() setclipboard(json) end)
-		print("[Vertex Config] Exported to clipboard")
+-- Export all config
+local function getAll()
+	local copy = {}
+	for k, v in pairs(Config) do
+		copy[k] = v
 	end
-	
-	return json
+	return copy
 end
 
--- ===========================================================================
--- IMPORT CONFIG (From JSON string)
--- ===========================================================================
-function Config.ImportConfig(json, State)
-	local success, data = pcall(function()
-		return HttpService:JSONDecode(json)
-	end)
-	
-	if not success or not data then
-		warn("[Vertex Config] Import failed")
-		return false
-	end
-	
-	Config.Deserialize(data, State)
-	print("[Vertex Config] Imported successfully")
-	return true
+-- Convert to menu-ready format
+local function toMenuFormat()
+	return {
+		MenuKey = Enum.KeyCode[Config.MenuKey or "M"],
+		AccentColor = Color3.fromRGB(
+			Config.AccentColor and Config.AccentColor[1] or 60,
+			Config.AccentColor and Config.AccentColor[2] or 120,
+			Config.AccentColor and Config.AccentColor[3] or 255
+		),
+		DefaultTab = Config.DefaultTab or "Combat",
+		Settings = getAll()
+	}
 end
 
--- ===========================================================================
--- AUTO-SAVE LOOP (Call this to start auto-saving)
--- ===========================================================================
-function Config.StartAutoSave(State, interval)
-	interval = interval or 60
-	
-	task.spawn(function()
-		while true do
-			task.wait(interval)
-			if State.Config and State.Config.AutoSave then
-				Config.SaveConfig(Config.currentConfig, State)
-			end
-		end
-	end)
-end
+-- Initialize
+loadFromFile()
 
--- Export
-_G.VertexConfig = Config
-return Config
+-- Module exports
+return {
+	get = get,
+	set = set,
+	setMultiple = setMultiple,
+	reset = reset,
+	getAll = getAll,
+	save = saveToFile,
+	load = loadFromFile,
+	toMenuFormat = toMenuFormat,
+	
+	-- Constants
+	DEFAULTS = Defaults,
+	VERSION = "1.0.0"
+}
