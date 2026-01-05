@@ -1636,68 +1636,48 @@ return function(arg1, arg2, arg3)
 		end
 		
 		function Components.createToggle(parent, text, callback)
-			local btn = Instance.new("TextButton")
-			btn.Size = UDim2.new(1, -16, 0, 32)
-			btn.BackgroundColor3 = Colors.Btn
-			btn.BorderSizePixel = 0
-			btn.AutoButtonColor = false
-			btn.Text = ""
-			btn.Parent = parent
-			corner(btn)
-			stroke(btn)
-			local lbl = Instance.new("TextLabel")
-			lbl.Size = UDim2.new(1, -50, 1, 0)
-			lbl.Position = UDim2.new(0, 12, 0, 0)
-			lbl.BackgroundTransparency = 1
-			lbl.Text = text
-			lbl.TextColor3 = Colors.Dim
-			lbl.TextXAlignment = Enum.TextXAlignment.Left
-			lbl.Font = Enum.Font.GothamMedium
-			lbl.TextSize = 12
-			lbl.Parent = btn
-			local ind = Instance.new("Frame")
-			ind.Size = UDim2.new(0, 0, 0, 2)
-			ind.Position = UDim2.new(0, 0, 1, -2)
-			ind.BackgroundColor3 = Colors.Accent
-			ind.BorderSizePixel = 0
-			ind.Parent = btn
-			corner(ind, 1)
-			local tbg = Instance.new("Frame")
-			tbg.Size = UDim2.new(0, 34, 0, 18)
-			tbg.Position = UDim2.new(1, -44, 0.5, 0)
-			tbg.AnchorPoint = Vector2.new(0, 0.5)
-			tbg.BackgroundColor3 = Colors.SliderBg
-			tbg.BorderSizePixel = 0
-			tbg.Parent = btn
-			corner(tbg, 9)
-			local tc = Instance.new("Frame")
-			tc.Size = UDim2.new(0, 14, 0, 14)
-			tc.Position = UDim2.new(0, 2, 0.5, 0)
-			tc.AnchorPoint = Vector2.new(0, 0.5)
-			tc.BackgroundColor3 = Colors.Dim
-			tc.BorderSizePixel = 0
-			tc.Parent = tbg
-			corner(tc, 7)
-			local state = false
-			btn.MouseButton1Click:Connect(function()
-				state = not state
-				if state then
-					tween(btn, {BackgroundColor3 = Color3.fromRGB(35, 50, 80)})
-					tween(lbl, {TextColor3 = Color3.new(1, 1, 1)})
-					tween(ind, {Size = UDim2.new(1, 0, 0, 2)})
-					tween(tbg, {BackgroundColor3 = Colors.Accent})
-					tween(tc, {Position = UDim2.new(1, -16, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1)})
-				else
-					tween(btn, {BackgroundColor3 = Colors.Btn})
-					tween(lbl, {TextColor3 = Colors.Dim})
-					tween(ind, {Size = UDim2.new(0, 0, 0, 2)})
-					tween(tbg, {BackgroundColor3 = Colors.SliderBg})
-					tween(tc, {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Colors.Dim})
-				end
-				if callback then task.spawn(callback, state) end
-			end)
-			return btn
-		end
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 160, 0, 28)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    btn.Text = text .. " : OFF"
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.Parent = parent
+
+    local state = false
+
+    local function applyVisual()
+        if state then
+            btn.Text = text .. " : ON"
+            btn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
+        else
+            btn.Text = text .. " : OFF"
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        end
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        applyVisual()
+        if callback then callback(state) end
+    end)
+
+    -- 🔥 ADD THESE (this fixes your error)
+    btn.SetState = function(_, value)
+        state = not not value
+        applyVisual()
+        if callback then callback(state) end
+    end
+
+    btn.GetState = function()
+        return state
+    end
+
+    applyVisual()
+    return btn
+end
+
 		
 		function Components.createSlider(parent, text, min, max, default, callback)
 			local cont = Instance.new("Frame")
