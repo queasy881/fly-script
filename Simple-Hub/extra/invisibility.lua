@@ -1,321 +1,141 @@
--- ===========================================================================
--- VERTEX HUB - DESYNC INVISIBILITY
--- File: DesyncInvis.lua
--- ===========================================================================
--- PROPERTIES:
--- ❌ NO Transparency changes (not using Transparency = 1)
--- ❌ NO destroying parts
--- ❌ NO breaking hit detection
--- ✅ Real hitbox (HumanoidRootPart) stays at real position
--- ✅ Visual model moves ~100+ studs away
--- ✅ Camera stays locked to real hitbox position
--- ✅ Server registers hits correctly
--- ✅ KillAura continues to work normally
--- ✅ Animations preserved
--- ===========================================================================
+-- ============================================================================
+-- VERTEX HUB - STABLE HITBOX INVISIBILITY (VISUAL CLONE METHOD)
+-- Loadstring safe | No script.Parent | No require
+-- ============================================================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
-local DesyncInvis = {}
-DesyncInvis.__index = DesyncInvis
+local InvisSystem = {}
+InvisSystem.__index = InvisSystem
 
--- ===========================================================================
+-- ============================================================================
 -- STATE
--- ===========================================================================
-DesyncInvis.enabled = false
-DesyncInvis.visualOffset = Vector3.new(0, 100, 0)
-DesyncInvis.connections = {}
-DesyncInvis.relativeCFrames = {}
-DesyncInvis.originalAutoRotate = true
+-- ============================================================================
+InvisSystem.Enabled = false
+InvisSystem.VisualClone = nil
+InvisSystem.Connection = nil
+InvisSystem.Offset = 100
 
--- Parts that define the HITBOX (stay at real position - server sees these)
-DesyncInvis.hitboxParts = {
-	"HumanoidRootPart"
-}
-
--- ===========================================================================
--- UTILITY FUNCTIONS
--- ===========================================================================
+-- ============================================================================
+-- HELPERS
+-- ============================================================================
 local function getCharacter()
 	return player.Character
 end
 
 local function getRoot()
-	local char = getCharacter()
-	return char and char:FindFirstChild("HumanoidRootPart")
+	local c = getCharacter()
+	return c and c:FindFirstChild("HumanoidRootPart")
 end
 
-local function getHumanoid()
+-- ============================================================================
+-- CREATE VISUAL CLONE
+-- ============================================================================
+local function createVisualClone(offset)
 	local char = getCharacter()
-	return char and char:FindFirstChildOfClass("Humanoid")
-end
+	local root = getRoot()
+	if not char or not root then return nil end
 
-local function isHitboxPart(partName)
-	for _, name in ipairs(DesyncInvis.hitboxParts) do
-		if partName == name then
-			return true
+	local clone = char:Clone()
+	clone.Name = "VertexVisualClone"
+
+	-- Remove scripts & humanoid from clone
+	for _, v in ipairs(clone:GetDescendants()) do
+		if v:IsA("Script") or v:IsA("LocalScript") then
+			v:Destroy()
+		elseif v:IsA("Humanoid") then
+			v:Destroy()
+		elseif v:IsA("BasePart") then
+			v.Anchored = true
+			v.CanCollide = false
+			v.CastShadow = false
 		end
 	end
-	return false
+
+	clone.Parent = workspace
+
+	-- Initial position
+	clone:SetPrimaryPartCFrame(
+		root.CFrame * CFrame.new(0, offset, 0)
+	)
+
+	return clone
 end
 
--- ===========================================================================
--- GET ALL VISUAL PARTS (Everything except hitbox parts)
--- ===========================================================================
-function DesyncInvis.GetVisualParts()
-	local char = getCharacter()
-	if not char then return {} end
-	
-	local parts = {}
-	for _, obj in ipairs(char:GetDescendants()) do
-		if obj:IsA("BasePart") and not isHitboxPart(obj.Name) then
-			table.insert(parts, obj)
-		end
-	end
-	return parts
-end
+-- ============================================================================
+-- ENABLE
+-- ============================================================================
+function InvisSystem:Enable(State)
+	if self.Enabled then return end
 
--- ===========================================================================
--- STORE RELATIVE POSITIONS OF ALL PARTS
--- ===========================================================================
-function DesyncInvis.StoreRelativePositions()
 	local root = getRoot()
 	if not root then return end
-	
-	DesyncInvis.relativeCFrames = {}
-	
-	for _, part in ipairs(DesyncInvis.GetVisualParts()) do
-		-- Store each part's position RELATIVE to HumanoidRootPart
-		DesyncInvis.relativeCFrames[part] = root.CFrame:ToObjectSpace(part.CFrame)
-	end
-end
 
--- ===========================================================================
--- ENABLE DESYNC INVISIBILITY
--- ===========================================================================
-function DesyncInvis.Enable(State)
-	local char = getCharacter()
-	local root = getRoot()
-	local humanoid = getHumanoid()
-	local camera = workspace.CurrentCamera
-	
-	if not char or not root or not humanoid then
-		warn("[DesyncInvis] No character available")
-		return false
+	self.Enabled = true
+	self.Offset = (State and State.Player and State.Player.InvisOffset) or 100
+
+	-- Create visual clone
+	self.VisualClone = createVisualClone(self.Offset)
+	if not self.VisualClone then
+		self.Enabled = false
+		return
 	end
-	
-	-- Disable if already running
-	if DesyncInvis.enabled then
-		DesyncInvis.Disable()
-	end
-	
-	DesyncInvis.enabled = true
-	
-	-- Get offset from State or use default
-	local offset = 100
-	if State and State.Player and State.Player.InvisOffset then
-		offset = State.Player.InvisOffset
-	end
-	DesyncInvis.visualOffset = Vector3.new(0, offset, 0)
-	
-	-- Store relative positions
-	DesyncInvis.StoreRelativePositions()
-	
-	-- Store and disable auto-rotate (prevents visual snapping)
-	DesyncInvis.originalAutoRotate = humanoid.AutoRotate
-	humanoid.AutoRotate = false
-	
-	-- ===========================================================================
-	-- MAIN DESYNC LOOP (Heartbeat - runs on physics step)
-	-- ===========================================================================
-	local heartbeatConn = RunService.Heartbeat:Connect(function(deltaTime)
-		if not DesyncInvis.enabled then return end
-		
-		local hrp = getRoot()
-		local char = getCharacter()
-		
-		if not hrp or not char then
-			DesyncInvis.Disable()
-			return
-		end
-		
-		-- HumanoidRootPart stays at REAL position (this is the hitbox)
-		-- The server only cares about HumanoidRootPart for hit registration
-		
-		-- Move all VISUAL parts away from the real position
-		for part, relativeCFrame in pairs(DesyncInvis.relativeCFrames) do
-			if part and part.Parent then
-				-- Calculate where part SHOULD be (relative to real root position)
-				local realPosition = hrp.CFrame * relativeCFrame
-				
-				-- Apply offset to move visual away
-				local offsetPosition = CFrame.new(DesyncInvis.visualOffset) * realPosition
-				
-				-- Set the visual part's position
-				pcall(function()
-					part.CFrame = offsetPosition
-				end)
-			end
-		end
+
+	-- Keep visual clone synced (WITHOUT TOUCHING REAL CHARACTER)
+	self.Connection = RunService.RenderStepped:Connect(function()
+		if not self.Enabled then return end
+		if not self.VisualClone or not self.VisualClone.Parent then return end
+
+		local r = getRoot()
+		if not r then return end
+
+		self.VisualClone:SetPrimaryPartCFrame(
+			r.CFrame * CFrame.new(0, self.Offset, 0)
+		)
 	end)
-	table.insert(DesyncInvis.connections, heartbeatConn)
-	
-	-- ===========================================================================
-	-- CAMERA CONTROL (RenderStepped - runs before render)
-	-- ===========================================================================
-	local renderConn = RunService.RenderStepped:Connect(function(deltaTime)
-		if not DesyncInvis.enabled then return end
-		
-		local cam = workspace.CurrentCamera
-		local hum = getHumanoid()
-		
-		-- Ensure camera follows the Humanoid (which follows HumanoidRootPart)
-		-- Since HumanoidRootPart isn't moved, camera stays at real position
-		if cam and hum and cam.CameraSubject ~= hum then
-			cam.CameraSubject = hum
-		end
-	end)
-	table.insert(DesyncInvis.connections, renderConn)
-	
-	-- ===========================================================================
-	-- HANDLE NEW PARTS (When accessories load, etc)
-	-- ===========================================================================
-	local descendantConn = char.DescendantAdded:Connect(function(obj)
-		if not DesyncInvis.enabled then return end
-		
-		if obj:IsA("BasePart") and not isHitboxPart(obj.Name) then
-			local root = getRoot()
-			if root then
-				-- Store relative position of new part
-				task.wait() -- Wait for part to be positioned
-				DesyncInvis.relativeCFrames[obj] = root.CFrame:ToObjectSpace(obj.CFrame)
-			end
-		end
-	end)
-	table.insert(DesyncInvis.connections, descendantConn)
-	
-	-- ===========================================================================
-	-- HANDLE CHARACTER RESPAWN
-	-- ===========================================================================
-	local respawnConn = player.CharacterAdded:Connect(function(newChar)
-		DesyncInvis.Disable()
-	end)
-	table.insert(DesyncInvis.connections, respawnConn)
-	
-	print("[DesyncInvis] Enabled - Offset: " .. tostring(offset) .. " studs")
-	print("[DesyncInvis] Hitbox stays at real position, visuals moved away")
-	return true
+
+	print("[Invisibility] Enabled (visual clone mode)")
 end
 
--- ===========================================================================
--- DISABLE DESYNC INVISIBILITY
--- ===========================================================================
-function DesyncInvis.Disable()
-	if not DesyncInvis.enabled then return end
-	
-	DesyncInvis.enabled = false
-	
-	-- Disconnect all connections
-	for _, conn in ipairs(DesyncInvis.connections) do
-		if conn then
-			pcall(function() conn:Disconnect() end)
-		end
+-- ============================================================================
+-- DISABLE
+-- ============================================================================
+function InvisSystem:Disable()
+	if not self.Enabled then return end
+	self.Enabled = false
+
+	if self.Connection then
+		self.Connection:Disconnect()
+		self.Connection = nil
 	end
-	DesyncInvis.connections = {}
-	
-	-- Restore character
-	local char = getCharacter()
-	local root = getRoot()
-	local humanoid = getHumanoid()
-	
-	-- Restore auto-rotate
-	if humanoid then
-		humanoid.AutoRotate = DesyncInvis.originalAutoRotate
+
+	if self.VisualClone then
+		self.VisualClone:Destroy()
+		self.VisualClone = nil
 	end
-	
-	-- Restore visual parts to correct positions
-	if root then
-		for part, relativeCFrame in pairs(DesyncInvis.relativeCFrames) do
-			if part and part.Parent then
-				pcall(function()
-					part.CFrame = root.CFrame * relativeCFrame
-				end)
-			end
-		end
-	end
-	
-	-- Clear stored data
-	DesyncInvis.relativeCFrames = {}
-	
-	print("[DesyncInvis] Disabled - Character restored")
+
+	print("[Invisibility] Disabled")
 end
 
--- ===========================================================================
--- UPDATE OFFSET (Can be called while enabled)
--- ===========================================================================
-function DesyncInvis.SetOffset(offset)
-	DesyncInvis.visualOffset = Vector3.new(0, offset, 0)
+-- ============================================================================
+-- UPDATE OFFSET LIVE
+-- ============================================================================
+function InvisSystem:SetOffset(v)
+	self.Offset = tonumber(v) or self.Offset
 end
 
--- ===========================================================================
--- CHECK IF ENABLED
--- ===========================================================================
-function DesyncInvis.IsEnabled()
-	return DesyncInvis.enabled
+-- ============================================================================
+-- STATUS
+-- ============================================================================
+function InvisSystem:IsEnabled()
+	return self.Enabled
 end
 
--- ===========================================================================
--- GET REAL POSITION (For combat systems - returns hitbox position)
--- ===========================================================================
-function DesyncInvis.GetRealPosition()
-	local root = getRoot()
-	return root and root.Position or nil
-end
-
--- ===========================================================================
--- GET REAL CFRAME (For combat systems)
--- ===========================================================================
-function DesyncInvis.GetRealCFrame()
-	local root = getRoot()
-	return root and root.CFrame or nil
-end
-
--- ===========================================================================
--- TOGGLE
--- ===========================================================================
-function DesyncInvis.Toggle(State)
-	if DesyncInvis.enabled then
-		DesyncInvis.Disable()
-	else
-		DesyncInvis.Enable(State)
-	end
-	return DesyncInvis.enabled
-end
-
--- ===========================================================================
--- COMPATIBILITY NOTES
--- ===========================================================================
---[[
-This desync invisibility works with KillAura and other combat systems because:
-
-1. HumanoidRootPart (the hitbox) NEVER moves from the real position
-2. Server hit detection uses HumanoidRootPart position
-3. Tool:Activate() fires from HumanoidRootPart position
-4. Raycasts hit the real HumanoidRootPart
-5. Touch events register on HumanoidRootPart
-
-The visual model (Head, Torso, Arms, Legs, etc.) moves far away,
-but the server doesn't care about those for combat - only HumanoidRootPart matters.
-
-Camera stays focused on the real position because:
-1. Camera.CameraSubject = Humanoid
-2. Humanoid's position is tied to HumanoidRootPart
-3. HumanoidRootPart stays at real position
-]]
-
--- Export
-_G.VertexDesyncInvis = DesyncInvis
-return DesyncInvis
+-- ============================================================================
+-- EXPORT
+-- ============================================================================
+_G.VertexInvisibility = InvisSystem
+return InvisSystem
