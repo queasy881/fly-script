@@ -1660,19 +1660,14 @@ function Components.createToggle(parent, text, callback)
     btn.MouseButton1Click:Connect(function()
         state = not state
         applyVisual()
-        if callback then
-            callback(state)
-        end
+        if callback then callback(state) end
     end)
 
-    -- ✅ ADD THESE (THIS IS THE IMPORTANT PART)
     function btn:SetState(value)
         if typeof(value) ~= "boolean" then return end
         state = value
         applyVisual()
-        if callback then
-            callback(state)
-        end
+        if callback then callback(state) end
     end
 
     function btn:GetState()
@@ -1683,27 +1678,6 @@ function Components.createToggle(parent, text, callback)
     return btn
 end
 
-
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        applyVisual()
-        if callback then callback(state) end
-    end)
-
-    -- 🔥 ADD THESE (this fixes your error)
-    btn.SetState = function(_, value)
-        state = not not value
-        applyVisual()
-        if callback then callback(state) end
-    end
-
-    btn.GetState = function()
-        return state
-    end
-
-    applyVisual()
-    return btn
-end
 
 		
 		function Components.createSlider(parent, text, min, max, default, callback)
