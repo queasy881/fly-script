@@ -69,6 +69,7 @@ return function(arg1, arg2, arg3)
 		Animations = { tween = tween }
 	end
 	_G.VertexAnimations = Animations
+	_G.VertexTween = tween -- Expose globally for UI components
 	
 	-- ---------------------------------------------------------------------------
 	-- ENTITY CACHE (Updated every 0.5s, not every frame)
@@ -1594,17 +1595,21 @@ return function(arg1, arg2, arg3)
 			local state = false
 			local function updateVisual()
 				if state then
-					tween(btn, {BackgroundColor3 = Color3.fromRGB(35, 50, 80)})
-					tween(lbl, {TextColor3 = Color3.new(1, 1, 1)})
-					tween(ind, {Size = UDim2.new(1, 0, 0, 2)})
-					tween(tbg, {BackgroundColor3 = Colors.Accent})
-					tween(tc, {Position = UDim2.new(1, -16, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1)})
+					if tween then
+						tween(btn, {BackgroundColor3 = Color3.fromRGB(35, 50, 80)})
+						tween(lbl, {TextColor3 = Color3.new(1, 1, 1)})
+						tween(ind, {Size = UDim2.new(1, 0, 0, 2)})
+						tween(tbg, {BackgroundColor3 = Colors.Accent})
+						tween(tc, {Position = UDim2.new(1, -16, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1)})
+					end
 				else
-					tween(btn, {BackgroundColor3 = Colors.Btn})
-					tween(lbl, {TextColor3 = Colors.Dim})
-					tween(ind, {Size = UDim2.new(0, 0, 0, 2)})
-					tween(tbg, {BackgroundColor3 = Colors.SliderBg})
-					tween(tc, {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Colors.Dim})
+					if tween then
+						tween(btn, {BackgroundColor3 = Colors.Btn})
+						tween(lbl, {TextColor3 = Colors.Dim})
+						tween(ind, {Size = UDim2.new(0, 0, 0, 2)})
+						tween(tbg, {BackgroundColor3 = Colors.SliderBg})
+						tween(tc, {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Colors.Dim})
+					end
 				end
 			end
 			btn.MouseButton1Click:Connect(function()
@@ -1687,8 +1692,10 @@ return function(arg1, arg2, arg3)
 				local p = math.clamp((inp.Position.X - sbg.AbsolutePosition.X) / sbg.AbsoluteSize.X, 0, 1)
 				local v = math.floor(min + (max - min) * p)
 				val.Text = tostring(v)
-				tween(fill, {Size = UDim2.new(p, 0, 1, 0)}, {Time = 0.08})
-				tween(handle, {Position = UDim2.new(p, 0, 0.5, 0)}, {Time = 0.08})
+				if tween then
+					tween(fill, {Size = UDim2.new(p, 0, 1, 0)}, {Time = 0.08})
+					tween(handle, {Position = UDim2.new(p, 0, 0.5, 0)}, {Time = 0.08})
+				end
 				if callback then callback(v) end
 			end
 			sbg.InputBegan:Connect(function(i)
@@ -1895,21 +1902,30 @@ return function(arg1, arg2, arg3)
 					totalHeight = totalHeight + (layout.Padding.Offset * (#contentInner:GetChildren() - 1))
 					
 					-- Animate expansion
-					tween(content, {Size = UDim2.new(1, 0, 0, totalHeight)}, 0.3)
-					tween(sectionContainer, {Size = UDim2.new(1, -16, 0, 45 + totalHeight)}, 0.3)
-					tween(header, {BackgroundColor3 = Color3.fromRGB(35, 40, 55)})
-					tween(icon, {TextColor3 = Color3.new(1, 0.5, 0.5)})
+					if tween then
+						tween(content, {Size = UDim2.new(1, 0, 0, totalHeight)}, 0.3)
+						tween(sectionContainer, {Size = UDim2.new(1, -16, 0, 45 + totalHeight)}, 0.3)
+						tween(header, {BackgroundColor3 = Color3.fromRGB(35, 40, 55)})
+						tween(icon, {TextColor3 = Color3.new(1, 0.5, 0.5)})
+					end
 				else
 					-- Collapse
 					icon.Text = "+"
-					tween(content, {Size = UDim2.new(1, 0, 0, 0)}, 0.3)
-					tween(sectionContainer, {Size = UDim2.new(1, -16, 0, 40)}, 0.3)
-					tween(header, {BackgroundColor3 = Colors.Btn})
-					tween(icon, {TextColor3 = Colors.Accent})
-					
-					task.delay(0.3, function()
+					if tween then
+						tween(content, {Size = UDim2.new(1, 0, 0, 0)}, 0.3)
+						tween(sectionContainer, {Size = UDim2.new(1, -16, 0, 40)}, 0.3)
+						tween(header, {BackgroundColor3 = Colors.Btn})
+						tween(icon, {TextColor3 = Colors.Accent})
+						
+						task.delay(0.3, function()
+							content.Visible = false
+						end)
+					else
 						content.Visible = false
-					end)
+						sectionContainer.Size = UDim2.new(1, -16, 0, 40)
+						header.BackgroundColor3 = Colors.Btn
+						icon.TextColor3 = Colors.Accent
+					end
 				end
 			end
 			
@@ -1917,10 +1933,12 @@ return function(arg1, arg2, arg3)
 			
 			-- Hover effects
 			header.MouseEnter:Connect(function()
-				tween(header, {BackgroundColor3 = Color3.fromRGB(35, 38, 48)})
+				if tween then
+					tween(header, {BackgroundColor3 = Color3.fromRGB(35, 38, 48)})
+				end
 			end)
 			header.MouseLeave:Connect(function()
-				if not isOpen then
+				if not isOpen and tween then
 					tween(header, {BackgroundColor3 = Colors.Btn})
 				end
 			end)
@@ -2438,7 +2456,11 @@ return function(arg1, arg2, arg3)
 				
 				-- Animate open
 				main.Size = UDim2.new(0, 0, 0, 0)
-				tween(main, {Size = UDim2.new(0, 1000, 0, 700)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+				if tween then
+					tween(main, {Size = UDim2.new(0, 1000, 0, 700)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+				else
+					main.Size = UDim2.new(0, 1000, 0, 700)
+				end
 			else
 				-- Restore previous mouse state
 				UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
