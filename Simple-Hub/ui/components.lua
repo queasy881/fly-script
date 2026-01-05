@@ -1,5 +1,5 @@
--- components_redesigned.lua - GLASSMORPHISM MODERN DESIGN
--- Floating cards, blur effects, minimal aesthetic
+-- components_redesigned.lua - GLASSMORPHISM WITH DROPDOWN CATEGORIES
+-- Floating cards, blur effects, collapsible sections
 
 local Components = {}
 
@@ -48,6 +48,174 @@ local function tween(obj, props, duration)
     local t = TweenService:Create(obj, info, props)
     t:Play()
     return t
+end
+
+-- ============================================
+-- DROPDOWN CATEGORY - NEW COLLAPSIBLE SECTION
+-- ============================================
+function Components.createCategory(parent, text)
+    local categoryContainer = Instance.new("Frame")
+    categoryContainer.Name = "Category_" .. (text or "Unknown")
+    categoryContainer.Size = UDim2.new(1, 0, 0, 56)
+    categoryContainer.BackgroundTransparency = 1
+    categoryContainer.Parent = parent
+    
+    -- Header button
+    local header = Instance.new("TextButton")
+    header.Size = UDim2.new(1, 0, 0, 56)
+    header.BackgroundColor3 = Colors.Glass
+    header.BackgroundTransparency = 0.2
+    header.BorderSizePixel = 0
+    header.AutoButtonColor = false
+    header.Text = ""
+    header.Parent = categoryContainer
+    
+    corner(header, 16)
+    glassBorder(header)
+    
+    -- Gradient overlay
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 220))
+    }
+    gradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0.92),
+        NumberSequenceKeypoint.new(1, 0.96)
+    }
+    gradient.Rotation = 135
+    gradient.Parent = header
+    
+    -- Color accent bar
+    local accentBar = Instance.new("Frame")
+    accentBar.Size = UDim2.new(0, 4, 1, 0)
+    accentBar.BackgroundColor3 = Colors.Accent
+    accentBar.BorderSizePixel = 0
+    accentBar.Parent = header
+    local accentCorner = Instance.new("UICorner")
+    accentCorner.CornerRadius = UDim.new(0, 16)
+    accentCorner.Parent = accentBar
+    
+    -- Icon
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 24, 0, 24)
+    icon.Position = UDim2.new(0, 20, 0.5, 0)
+    icon.AnchorPoint = Vector2.new(0, 0.5)
+    icon.BackgroundTransparency = 1
+    icon.Text = "◆"
+    icon.TextColor3 = Colors.Accent
+    icon.Font = Enum.Font.GothamBold
+    icon.TextSize = 14
+    icon.Parent = header
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -120, 1, 0)
+    title.Position = UDim2.new(0, 52, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = (text or "CATEGORY"):upper()
+    title.TextColor3 = Colors.Text
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 13
+    title.Parent = header
+    
+    -- Dropdown arrow/cross
+    local arrow = Instance.new("TextLabel")
+    arrow.Size = UDim2.new(0, 32, 0, 32)
+    arrow.Position = UDim2.new(1, -44, 0.5, 0)
+    arrow.AnchorPoint = Vector2.new(0, 0.5)
+    arrow.BackgroundTransparency = 1
+    arrow.Text = "+"
+    arrow.TextColor3 = Colors.TextSoft
+    arrow.Font = Enum.Font.GothamBold
+    arrow.TextSize = 20
+    arrow.Rotation = 0
+    arrow.Parent = header
+    
+    -- Content container (starts hidden)
+    local content = Instance.new("Frame")
+    content.Name = "Content"
+    content.Size = UDim2.new(1, 0, 0, 0)
+    content.Position = UDim2.new(0, 0, 0, 56)
+    content.BackgroundTransparency = 1
+    content.ClipsDescendants = true
+    content.Visible = false
+    content.Parent = categoryContainer
+    
+    -- Content inner (for proper sizing)
+    local contentInner = Instance.new("Frame")
+    contentInner.Name = "Inner"
+    contentInner.Size = UDim2.new(1, 0, 1, 0)
+    contentInner.BackgroundTransparency = 1
+    contentInner.Parent = content
+    
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.Padding = UDim.new(0, 8)
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Parent = contentInner
+    
+    local contentPadding = Instance.new("UIPadding")
+    contentPadding.PaddingTop = UDim.new(0, 12)
+    contentPadding.PaddingBottom = UDim.new(0, 12)
+    contentPadding.Parent = contentInner
+    
+    -- State
+    local isOpen = false
+    
+    -- Toggle function
+    local function toggle()
+        isOpen = not isOpen
+        
+        if isOpen then
+            -- Open animation
+            content.Visible = true
+            
+            -- Calculate content height
+            local totalHeight = contentPadding.PaddingTop.Offset + contentPadding.PaddingBottom.Offset
+            for _, child in ipairs(contentInner:GetChildren()) do
+                if child:IsA("GuiObject") and child.Visible then
+                    totalHeight = totalHeight + child.AbsoluteSize.Y
+                end
+            end
+            totalHeight = totalHeight + (contentLayout.Padding.Offset * (#contentInner:GetChildren() - 1))
+            
+            -- Animate
+            tween(content, {Size = UDim2.new(1, 0, 0, totalHeight)}, 0.4)
+            tween(categoryContainer, {Size = UDim2.new(1, 0, 0, 56 + totalHeight)}, 0.4)
+            tween(arrow, {Rotation = 45, TextColor3 = Colors.Accent})
+            tween(header, {BackgroundTransparency = 0.15})
+        else
+            -- Close animation
+            tween(content, {Size = UDim2.new(1, 0, 0, 0)}, 0.3)
+            tween(categoryContainer, {Size = UDim2.new(1, 0, 0, 56)}, 0.3)
+            tween(arrow, {Rotation = 0, TextColor3 = Colors.TextSoft})
+            tween(header, {BackgroundTransparency = 0.2})
+            
+            task.delay(0.3, function()
+                content.Visible = false
+            end)
+        end
+    end
+    
+    -- Click handler
+    header.MouseButton1Click:Connect(toggle)
+    
+    -- Hover effects
+    header.MouseEnter:Connect(function()
+        tween(header, {BackgroundTransparency = 0.1})
+        tween(title, {TextColor3 = Colors.Accent})
+    end)
+    
+    header.MouseLeave:Connect(function()
+        if not isOpen then
+            tween(header, {BackgroundTransparency = 0.2})
+        end
+        tween(title, {TextColor3 = Colors.Text})
+    end)
+    
+    -- Return the content container for adding items
+    return contentInner
 end
 
 -- ============================================
@@ -323,7 +491,7 @@ function Components.createSlider(parent, text, min, max, defaultValue, callback)
 end
 
 -- ============================================
--- SECTION
+-- SECTION (Deprecated - use createCategory instead)
 -- ============================================
 function Components.createSection(parent, text)
     local section = Instance.new("Frame")
