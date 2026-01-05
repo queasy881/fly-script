@@ -498,8 +498,6 @@ return function(arg1, arg2, arg3)
 	
 	-- ---------------------------------------------------------------------------
 	-- HITBOX-ONLY INVISIBILITY (NO TRANSPARENCY - per spec)
-	-- Model moves away, HumanoidRootPart stays at real position
-	-- Camera/movement/physics stay on hitbox
 	-- ---------------------------------------------------------------------------
 	local InvisSystem = {
 		enabled = false,
@@ -515,21 +513,17 @@ return function(arg1, arg2, arg3)
 		self.enabled = true
 		self.movedParts = {}
 		
-		-- Determine offset based on mode
 		local offset = State.Player.InvisOffset
 		if State.Player.InvisMode == "Extreme" then
 			offset = math.max(offset, 300)
 		end
 		
-		-- Move ALL parts EXCEPT HumanoidRootPart far away
-		-- HumanoidRootPart stays at real position for hitbox
 		for _, part in ipairs(char:GetDescendants()) do
 			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
 				self.movedParts[part] = true
 			end
 		end
 		
-		-- Continuous update to keep parts offset
 		if self.connection then self.connection:Disconnect() end
 		self.connection = RunService.Heartbeat:Connect(function()
 			if not self.enabled then return end
@@ -538,7 +532,6 @@ return function(arg1, arg2, arg3)
 			local offsetVec = Vector3.new(0, offset, 0)
 			for part, _ in pairs(self.movedParts) do
 				if part and part.Parent then
-					-- Keep part far away from root
 					part.CFrame = CFrame.new(r.Position + offsetVec) * (part.CFrame - part.Position)
 				end
 			end
@@ -552,14 +545,11 @@ return function(arg1, arg2, arg3)
 			self.connection = nil
 		end
 		
-		-- Restore parts to normal position relative to root
 		local char = getCharacter()
 		local root = getRoot()
 		if char and root then
-			-- Force respawn-like reset by setting parts back
 			for part, _ in pairs(self.movedParts) do
 				if part and part.Parent then
-					-- Parts will naturally re-attach via Motor6D
 				end
 			end
 		end
@@ -595,7 +585,6 @@ return function(arg1, arg2, arg3)
 				local method = getnamecallmethod()
 				local args = {...}
 				
-				-- Combat remotes
 				if method == "FireServer" and (State.Combat.KillAura or State.Combat.Reach) then
 					local remoteName = self.Name:lower()
 					
@@ -607,7 +596,6 @@ return function(arg1, arg2, arg3)
 							local distance = (myRoot.Position - target.RootPart.Position).Magnitude
 							local LEGIT_RANGE = 14.4
 							
-							-- KillAura range check
 							if State.Combat.KillAura and distance <= State.Combat.KillAuraRange and distance > LEGIT_RANGE then
 								local lookVector = (target.RootPart.Position - myRoot.Position).Unit
 								local offsetDistance = math.max(distance - LEGIT_RANGE, 0)
@@ -632,7 +620,6 @@ return function(arg1, arg2, arg3)
 								end
 							end
 							
-							-- Reach range check
 							if State.Combat.Reach and distance <= State.Combat.ReachDistance and distance > LEGIT_RANGE then
 								local reportedPosition = applyReachOffset(myRoot, target.RootPart)
 								if reportedPosition then
@@ -656,7 +643,6 @@ return function(arg1, arg2, arg3)
 					end
 				end
 				
-				-- Raycast hooks
 				if (State.Combat.KillAura or State.Combat.Reach) and self == workspace then
 					if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
 						local myRoot = getRoot()
@@ -686,7 +672,6 @@ return function(arg1, arg2, arg3)
 		end)
 	end
 	
-	-- DEFERRED: Initialize hooks after script fully loads
 	task.defer(initCombatHooks)
 	
 	-- ---------------------------------------------------------------------------
@@ -753,14 +738,11 @@ return function(arg1, arg2, arg3)
 		end)
 	end
 	
-	-- DEFERRED: Initialize hooks after script fully loads
 	task.defer(initSilentAimHooks)
 	
 	-- ---------------------------------------------------------------------------
-	-- BACKGROUND LOOPS (Spawned once, not per-frame)
+	-- BACKGROUND LOOPS
 	-- ---------------------------------------------------------------------------
-	
-	-- Chat Spam (runs in background, respects delay)
 	task.spawn(function()
 		while true do
 			if State.Misc.ChatSpam then
@@ -778,7 +760,6 @@ return function(arg1, arg2, arg3)
 		end
 	end)
 	
-	-- Auto Respawn (runs in background)
 	task.spawn(function()
 		while true do
 			if State.Player.AutoRespawn then
@@ -793,7 +774,7 @@ return function(arg1, arg2, arg3)
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- CHAMS UPDATE (Called when needed, not every frame)
+	-- CHAMS UPDATE
 	-- ---------------------------------------------------------------------------
 	local function updateChams()
 		for name, data in pairs(EntityCache.players) do
@@ -833,7 +814,7 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- SINGLE MAIN UPDATE LOOP (Per spec: ONE RenderStepped, not multiple)
+	-- SINGLE MAIN UPDATE LOOP
 	-- ---------------------------------------------------------------------------
 	local lastCacheUpdate = 0
 	
@@ -843,13 +824,11 @@ return function(arg1, arg2, arg3)
 		local root = getRoot()
 		local hum = getHumanoid()
 		
-		-- Update cache every 0.5s (not every frame)
 		if tick() - lastCacheUpdate > 0.5 then
 			lastCacheUpdate = tick()
 			updateEntityCache()
 		end
 		
-		-- FPS counter
 		FPSData.frames = FPSData.frames + 1
 		if tick() - FPSData.lastTime >= 1 then
 			FPSData.fps = FPSData.frames
@@ -969,7 +948,6 @@ return function(arg1, arg2, arg3)
 					if tool then
 						pcall(function() tool:Activate() end)
 						
-						-- Optional touch interest
 						pcall(function()
 							local handle = tool:FindFirstChild("Handle")
 							if handle and firetouchinterest then
@@ -1206,21 +1184,24 @@ return function(arg1, arg2, arg3)
 		end
 		
 		-- -----------------------------------------------------------------------
-		-- ESP RENDERING (Uses pooled drawings)
+		-- ESP RENDERING (FIXED VERSION)
 		-- -----------------------------------------------------------------------
 		releaseAllDrawings()
 		
 		local anyESP = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or State.ESP.DistanceESP or State.ESP.Tracers or State.ESP.SkeletonESP or State.ESP.OffscreenArrows or State.ESP.ItemESP or State.ESP.NPCESP
 		
-		if anyESP then
+		if anyESP and camera then
+			-- Player ESP
 			for name, data in pairs(EntityCache.players) do
 				if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
 					local dist = root and (root.Position - data.RootPart.Position).Magnitude or 0
 					if dist <= State.ESP.MaxDistance then
-						local pos, onScreen = camera:WorldToViewportPoint(data.RootPart.Position)
-						local sc = math.clamp(1 / (pos.Z * 0.04), 0.2, 2)
+						local head = data.Head or data.RootPart
+						local pos, onScreen = camera:WorldToViewportPoint(head.Position)
 						
 						if onScreen then
+							local sc = math.clamp(1 / (pos.Z * 0.04), 0.2, 2)
+							
 							if State.ESP.NameESP then
 								local t = getDrawing("text")
 								if t then
@@ -1228,17 +1209,22 @@ return function(arg1, arg2, arg3)
 									t.Position = Vector2.new(pos.X, pos.Y - 50 * sc)
 									t.Color = Color3.new(1, 1, 1)
 									t.Size = 14
+									t.Outline = true
 								end
 							end
+							
 							if State.ESP.HealthESP then
 								local t = getDrawing("text")
 								if t then
-									t.Text = math.floor((data.Humanoid.Health / data.Humanoid.MaxHealth) * 100) .. "%"
+									local healthPercent = math.floor((data.Humanoid.Health / data.Humanoid.MaxHealth) * 100)
+									t.Text = healthPercent .. "%"
 									t.Position = Vector2.new(pos.X, pos.Y - 35 * sc)
 									t.Color = Color3.fromRGB(100, 255, 100)
 									t.Size = 12
+									t.Outline = true
 								end
 							end
+							
 							if State.ESP.DistanceESP then
 								local t = getDrawing("text")
 								if t then
@@ -1246,61 +1232,85 @@ return function(arg1, arg2, arg3)
 									t.Position = Vector2.new(pos.X, pos.Y + 40 * sc)
 									t.Color = Color3.fromRGB(200, 200, 200)
 									t.Size = 12
+									t.Outline = true
 								end
 							end
+							
 							if State.ESP.BoxESP then
 								local b = getDrawing("square")
 								if b then
-									local sz = Vector2.new(50 * sc, 70 * sc)
-									b.Size = sz
-									b.Position = Vector2.new(pos.X - sz.X / 2, pos.Y - sz.Y / 2)
+									local width = 50 * sc
+									local height = 70 * sc
+									b.Size = Vector2.new(width, height)
+									b.Position = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
 									b.Color = Color3.fromRGB(255, 0, 0)
+									b.Thickness = 1
+									b.Filled = false
 								end
 							end
+							
 							if State.ESP.Tracers then
 								local l = getDrawing("line")
 								if l then
-									l.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+									local screenBottom = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+									l.From = screenBottom
 									l.To = Vector2.new(pos.X, pos.Y)
 									l.Color = Color3.fromRGB(255, 255, 0)
+									l.Thickness = 1
 								end
 							end
 							
 							if State.ESP.SkeletonESP and data.Character then
-								local joints = data.Character:FindFirstChild("UpperTorso") and {
-									{"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"}, {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-									{"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"}, {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"},
-									{"LeftLowerLeg", "LeftFoot"}, {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"}
-								} or {{"Head", "Torso"}, {"Torso", "Left Arm"}, {"Torso", "Right Arm"}, {"Torso", "Left Leg"}, {"Torso", "Right Leg"}}
-								for _, j in ipairs(joints) do
-									local p1, p2 = data.Character:FindFirstChild(j[1]), data.Character:FindFirstChild(j[2])
-									if p1 and p2 then
-										local s1, v1 = camera:WorldToViewportPoint(p1.Position)
-										local s2, v2 = camera:WorldToViewportPoint(p2.Position)
-										if v1 and v2 then
-											local ln = getDrawing("line")
-											if ln then
-												ln.From = Vector2.new(s1.X, s1.Y)
-												ln.To = Vector2.new(s2.X, s2.Y)
-												ln.Color = Color3.new(1, 1, 1)
+								local function drawBone(part1, part2)
+									if part1 and part2 then
+										local p1 = camera:WorldToViewportPoint(part1.Position)
+										local p2 = camera:WorldToViewportPoint(part2.Position)
+										if p1.Z > 0 and p2.Z > 0 then
+											local l = getDrawing("line")
+											if l then
+												l.From = Vector2.new(p1.X, p1.Y)
+												l.To = Vector2.new(p2.X, p2.Y)
+												l.Color = Color3.new(1, 1, 1)
+												l.Thickness = 1
 											end
 										end
 									end
 								end
+								
+								local torso = data.Character:FindFirstChild("Torso") or data.Character:FindFirstChild("UpperTorso")
+								local head = data.Character:FindFirstChild("Head")
+								local leftArm = data.Character:FindFirstChild("Left Arm") or data.Character:FindFirstChild("LeftUpperArm")
+								local rightArm = data.Character:FindFirstChild("Right Arm") or data.Character:FindFirstChild("RightUpperArm")
+								local leftLeg = data.Character:FindFirstChild("Left Leg") or data.Character:FindFirstChild("LeftUpperLeg")
+								local rightLeg = data.Character:FindFirstChild("Right Leg") or data.Character:FindFirstChild("RightUpperLeg")
+								
+								if torso then
+									if head then drawBone(torso, head) end
+									if leftArm then drawBone(torso, leftArm) end
+									if rightArm then drawBone(torso, rightArm) end
+									if leftLeg then drawBone(torso, leftLeg) end
+									if rightLeg then drawBone(torso, rightLeg) end
+								end
 							end
 						else
 							if State.ESP.OffscreenArrows then
-								local ctr = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-								local dir = (Vector2.new(pos.X, pos.Y) - ctr).Unit
-								local ap = ctr + dir * 300
-								ap = Vector2.new(math.clamp(ap.X, 50, camera.ViewportSize.X - 50), math.clamp(ap.Y, 50, camera.ViewportSize.Y - 50))
+								local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+								local dir = (Vector2.new(pos.X, pos.Y) - screenCenter).Unit
+								local arrowPos = screenCenter + dir * 300
+								arrowPos = Vector2.new(
+									math.clamp(arrowPos.X, 50, camera.ViewportSize.X - 50),
+									math.clamp(arrowPos.Y, 50, camera.ViewportSize.Y - 50)
+								)
+								
 								local arr = getDrawing("triangle")
 								if arr then
-									local ang = math.atan2(dir.Y, dir.X)
-									arr.PointA = ap + Vector2.new(math.cos(ang) * 15, math.sin(ang) * 15)
-									arr.PointB = ap + Vector2.new(math.cos(ang + 2.5) * 15, math.sin(ang + 2.5) * 15)
-									arr.PointC = ap + Vector2.new(math.cos(ang - 2.5) * 15, math.sin(ang - 2.5) * 15)
+									local angle = math.atan2(dir.Y, dir.X)
+									local size = 15
+									arr.PointA = arrowPos + Vector2.new(math.cos(angle) * size, math.sin(angle) * size)
+									arr.PointB = arrowPos + Vector2.new(math.cos(angle + 2.5) * size, math.sin(angle + 2.5) * size)
+									arr.PointC = arrowPos + Vector2.new(math.cos(angle - 2.5) * size, math.sin(angle - 2.5) * size)
 									arr.Color = Color3.fromRGB(255, 0, 0)
+									arr.Filled = true
 								end
 							end
 						end
@@ -1308,33 +1318,37 @@ return function(arg1, arg2, arg3)
 				end
 			end
 			
+			-- NPC ESP
 			if State.ESP.NPCESP then
 				for _, data in ipairs(EntityCache.npcs) do
-					if data.RootPart then
-						local p, v = camera:WorldToViewportPoint(data.RootPart.Position)
-						if v then
+					if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
+						local pos, onScreen = camera:WorldToViewportPoint(data.RootPart.Position)
+						if onScreen then
 							local t = getDrawing("text")
 							if t then
 								t.Text = "[NPC] " .. data.Name
-								t.Position = Vector2.new(p.X, p.Y - 30)
+								t.Position = Vector2.new(pos.X, pos.Y - 30)
 								t.Color = Color3.fromRGB(0, 200, 255)
 								t.Size = 12
+								t.Outline = true
 							end
 						end
 					end
 				end
 			end
 			
+			-- Item ESP
 			if State.ESP.ItemESP then
 				for _, data in ipairs(EntityCache.items) do
-					local p, v = camera:WorldToViewportPoint(data.Position)
-					if v then
+					local pos, onScreen = camera:WorldToViewportPoint(data.Position)
+					if onScreen then
 						local t = getDrawing("text")
 						if t then
 							t.Text = "[Item] " .. data.Name
-							t.Position = Vector2.new(p.X, p.Y)
+							t.Position = Vector2.new(pos.X, pos.Y)
 							t.Color = Color3.fromRGB(255, 200, 0)
 							t.Size = 12
+							t.Outline = true
 						end
 					end
 				end
@@ -1572,9 +1586,6 @@ return function(arg1, arg2, arg3)
 				updateVisual()
 				if callback then task.spawn(callback, state) end
 			end)
-			-- FIXED: Return a TABLE with methods, not the TextButton
-						-- FIXED: Return a TABLE with methods, not the TextButton
-						-- FIXED: Return a TABLE with methods, not the TextButton
 			local toggleObject = {
 				Button = btn,
 				SetState = function(self, newState)
@@ -2193,19 +2204,15 @@ return function(arg1, arg2, arg3)
 			main.Visible = show
 			
 			if show then
-				-- Store previous mouse state
 				PrevMouseState.behavior = UIS.MouseBehavior
 				PrevMouseState.icon = UIS.MouseIconEnabled
 				
-				-- UNLOCK MOUSE (Required per spec)
 				UIS.MouseBehavior = Enum.MouseBehavior.Default
 				UIS.MouseIconEnabled = true
 				
-				-- Animate open
 				main.Size = UDim2.new(0, 0, 0, 0)
 				tween(main, {Size = UDim2.new(0, 950, 0, 650)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
 			else
-				-- Restore previous mouse state
 				UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
 				UIS.MouseIconEnabled = PrevMouseState.icon ~= false
 			end
