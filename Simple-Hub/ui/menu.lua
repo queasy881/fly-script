@@ -1700,63 +1700,61 @@ return function(arg1, arg2, arg3)
 		
 		-- FIXED TOGGLE COMPONENT - Now returns a table with UpdateState method
 		function Components.createToggle(parent, text, callback)
-			local toggleObj = {}
-			local state = false
-			
-			local btn = Instance.new("TextButton")
-			btn.Size = UDim2.new(0, 160, 0, 28)
-			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-			btn.Text = text .. " : OFF"
-			btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-			btn.Font = Enum.Font.Gotham
-			btn.TextSize = 14
-			btn.Parent = parent
-			
-			local function applyVisual()
-				if state then
-					btn.Text = text .. " : ON"
-					btn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
-				else
-					btn.Text = text .. " : OFF"
-					btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-				end
-			end
-			
-			btn.MouseButton1Click:Connect(function()
-				state = not state
-				applyVisual()
-				if callback then callback(state) end
-			end)
-			
-			-- Add methods to toggleObj
-			function toggleObj.UpdateState(value)
-				if typeof(value) ~= "boolean" then return end
-				state = value
-				applyVisual()
-				if callback then callback(state) end
-			end
-			
-			function toggleObj.GetState()
-				return state
-			end
-			
-			-- Store the button reference
-			-- Store the button reference
-toggleObj.Button = btn
+	local state = false
 
--- 🔥 CRITICAL COMPATIBILITY FIX
--- Allow legacy code to call btn:SetState(...)
-btn.SetState = function(_, value)
-	if typeof(value) ~= "boolean" then return end
-	state = value
+	local btn = Instance.new("TextButton")
+	btn.Name = "Toggle_" .. text:gsub("%s+", "_")
+	btn.Size = UDim2.new(0, 160, 0, 28)
+	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	btn.Text = text .. " : OFF"
+	btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 14
+	btn.Parent = parent
+
+	local function applyVisual()
+		if state then
+			btn.Text = text .. " : ON"
+			btn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
+		else
+			btn.Text = text .. " : OFF"
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+		end
+	end
+
+	-- ✅ CLICK
+	btn.MouseButton1Click:Connect(function()
+		state = not state
+		applyVisual()
+		if callback then callback(state) end
+	end)
+
+	-- ✅ CRITICAL: PATCH THE BUTTON ITSELF
+	function btn:SetState(value)
+		if typeof(value) ~= "boolean" then return end
+		state = value
+		applyVisual()
+		if callback then callback(state) end
+	end
+
+	function btn:GetState()
+		return state
+	end
+
 	applyVisual()
-	if callback then callback(state) end
+
+	-- ✅ ALSO RETURN A WRAPPER (for new code)
+	return {
+		Button = btn,
+		UpdateState = function(_, v)
+			btn:SetState(v)
+		end,
+		GetState = function()
+			return state
+		end
+	}
 end
 
-applyVisual()
-return toggleObj
-
-		end
 		
 		function Components.createSlider(parent, text, min, max, default, callback)
 			local cont = Instance.new("Frame")
