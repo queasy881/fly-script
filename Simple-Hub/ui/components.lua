@@ -1,6 +1,15 @@
 -- components.lua - EXECUTOR SAFE UI COMPONENTS
 
 local Components = {}
+-- SAFE FALLBACK: ensures SetState never errors
+local function ensureSetState(obj)
+    if obj and typeof(obj) == "Instance" and not obj.SetState then
+        function obj:SetState(v)
+            if typeof(v) ~= "boolean" then return end
+            self._state = v
+        end
+    end
+end
 
 local TweenService = game:GetService("TweenService")
 local TextService = game:GetService("TextService")
