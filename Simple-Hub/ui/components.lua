@@ -1,25 +1,10 @@
 -- components.lua - EXECUTOR SAFE UI COMPONENTS
+-- FIXED: Added UpdateState alias for SetState compatibility
 
 local Components = {}
--- SAFE FALLBACK: ensures SetState never errors
-local function ensureSetState(obj)
-    if obj and typeof(obj) == "Instance" and not obj.SetState then
-        function obj:SetState(v)
-            if typeof(v) ~= "boolean" then return end
-            self._state = v
-        end
-    end
-end
 
 local TweenService = game:GetService("TweenService")
-local TextService = game:GetService("TextService")
-
--- GLOBAL SAFETY PATCH FOR CONFIG SYSTEM
--- Makes SetState safe on ANY button-like object
-
-
-
-
+local UIS = game:GetService("UserInputService")
 
 -- Colors (executor safe)
 local Colors = {
@@ -62,7 +47,7 @@ local function tween(obj, props, duration)
 end
 
 -- ============================================
--- TOGGLE COMPONENT
+-- TOGGLE COMPONENT - RETURNS TABLE, NOT INSTANCE
 -- ============================================
 function Components.createToggle(parent, text, callback, initialState)
     local container = Instance.new("TextButton")
@@ -171,20 +156,37 @@ function Components.createToggle(parent, text, callback, initialState)
         end
     end)
     
-    -- Setter function
-    function container:SetState(newState)
-        if state ~= newState then
+    -- RETURN A TABLE OBJECT, NOT THE TEXTBUTTON
+    local toggleObject = {
+        Button = container,
+        Label = label,
+        
+        -- SetState for backwards compatibility
+        SetState = function(self, newState)
+            if typeof(newState) ~= "boolean" then return end
+            if state ~= newState then
+                state = newState
+                updateVisual()
+            end
+        end,
+        
+        -- UpdateState as alias (menu.lua uses this)
+        UpdateState = function(self, newState)
+            if typeof(newState) ~= "boolean" then return end
             state = newState
             updateVisual()
+            if callback then
+                task.spawn(callback, state)
+            end
+        end,
+        
+        -- GetState
+        GetState = function(self)
+            return state
         end
-    end
+    }
     
-    -- Getter function
-    function container:GetState()
-        return state
-    end
-    
-    return container
+    return toggleObject
 end
 
 -- ============================================
@@ -223,7 +225,7 @@ function Components.createSlider(parent, text, min, max, defaultValue, callback)
     valueLabel.Text = tostring(defaultValue or min)
     valueLabel.TextColor3 = Colors.Accent
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    label.Font = Enum.Font.GothamBold
+    valueLabel.Font = Enum.Font.GothamBold
     valueLabel.TextSize = 11
     valueLabel.Parent = container
     
@@ -240,7 +242,7 @@ function Components.createSlider(parent, text, min, max, defaultValue, callback)
     -- Fill
     local fill = Instance.new("Frame")
     fill.Name = "Fill"
-    local initialPercent = (defaultValue - min) / (max - min)
+    local initialPercent = ((defaultValue or min) - min) / (max - min)
     fill.Size = UDim2.new(initialPercent, 0, 1, 0)
     fill.BackgroundColor3 = Colors.Accent
     fill.BorderSizePixel = 0
@@ -278,17 +280,11 @@ function Components.createSlider(parent, text, min, max, defaultValue, callback)
     end
     
     -- Handle input
-    local function onInput(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local relativeX = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
-            updateVisual(relativeX)
-        end
-    end
-    
     track.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
-            onInput(input)
+            local relativeX = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
+            updateVisual(relativeX)
         end
     end)
     
@@ -298,245 +294,18 @@ function Components.createSlider(parent, text, min, max, defaultValue, callback)
         end
     end)
     
-    game:GetService("UserInputService").InputEnded:Connect(function(input)
+    UIS.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
     
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
+    UIS.InputChanged:Connect(function(input)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local relativeX = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
             updateVisual(relativeX)
         end
     end)
-    
-    -- Setter function
-    function container:SetValue(newValue)
-        newValue = math.clamp(newValue, min, max)
-        value = newValue
-        local percent = (value - min) / (max - min)
-        valueLabel.Text = tostring(value)
-        fill.Size = UDim2.new(percent, 0, 1, 0)
-        handle.Position = UDim2.new(percent, 0, 0.5, 0)
-    end
-    
-    -- Getter function
-    function container:GetValue()
-        return value
-    end
-    
-    return container
-end
-
--- ============================================
--- DROPDOWN COMPONENT
--- ============================================
-function Components.createDropdown(parent, text, options, defaultIndex, callback)
-    local container = Instance.new("Frame")
-    container.Name = "Dropdown_" .. (text or "Unknown")
-    container.Size = UDim2.new(1, -16, 0, 32)
-    container.BackgroundColor3 = Colors.Surface
-    container.BorderSizePixel = 0
-    container.ClipsDescendants = true
-    container.Parent = parent
-    
-    createCorner(container, 6)
-    createStroke(container)
-    
-    -- Main button
-    local mainButton = Instance.new("TextButton")
-    mainButton.Name = "MainButton"
-    mainButton.Size = UDim2.new(1, 0, 0, 32)
-    mainButton.BackgroundTransparency = 1
-    mainButton.AutoButtonColor = false
-    mainButton.Text = ""
-    mainButton.Parent = container
-    
-    -- Label
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(1, -40, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text or "Dropdown"
-    label.TextColor3 = Colors.TextDim
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Font = Enum.Font.GothamMedium
-    label.TextSize = 12
-    label.Parent = mainButton
-    
-    -- Selected value
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Name = "Value"
-    valueLabel.Size = UDim2.new(0.4, 0, 1, 0)
-    valueLabel.Position = UDim2.new(0.6, 0, 0, 0)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = options[defaultIndex or 1] or ""
-    valueLabel.TextColor3 = Colors.Text
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valueLabel.Font = Enum.Font.GothamMedium
-    valueLabel.TextSize = 11
-    valueLabel.Parent = mainButton
-    
-    -- Arrow
-    local arrow = Instance.new("TextLabel")
-    arrow.Name = "Arrow"
-    arrow.Size = UDim2.new(0, 20, 1, 0)
-    arrow.Position = UDim2.new(1, -20, 0, 0)
-    arrow.BackgroundTransparency = 1
-    arrow.Text = "▼"
-    arrow.TextColor3 = Colors.TextDim
-    arrow.TextXAlignment = Enum.TextXAlignment.Center
-    arrow.Font = Enum.Font.GothamBold
-    arrow.TextSize = 10
-    arrow.Parent = mainButton
-    
-    -- Dropdown list
-    local listFrame = Instance.new("Frame")
-    listFrame.Name = "List"
-    listFrame.Size = UDim2.new(1, 0, 0, 0)
-    listFrame.Position = UDim2.new(0, 0, 1, 2)
-    listFrame.BackgroundColor3 = Colors.Panel
-    listFrame.BorderSizePixel = 0
-    listFrame.Visible = false
-    listFrame.Parent = container
-    createCorner(listFrame, 6)
-    createStroke(listFrame)
-    
-    local listLayout = Instance.new("UIListLayout")
-    listLayout.Padding = UDim.new(0, 1)
-    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    listLayout.Parent = listFrame
-    
-    -- State
-    local selectedIndex = defaultIndex or 1
-    local isOpen = false
-    local optionButtons = {}
-    
-    -- Create option buttons
-    for i, option in ipairs(options) do
-        local optionBtn = Instance.new("TextButton")
-        optionBtn.Name = "Option_" .. i
-        optionBtn.Size = UDim2.new(1, 0, 0, 28)
-        optionBtn.BackgroundColor3 = Colors.Panel
-        optionBtn.BorderSizePixel = 0
-        optionBtn.AutoButtonColor = false
-        optionBtn.Text = option
-        optionBtn.TextColor3 = Colors.TextDim
-        optionBtn.Font = Enum.Font.Gotham
-        optionBtn.TextSize = 11
-        optionBtn.LayoutOrder = i
-        optionBtn.Parent = listFrame
-        
-        createCorner(optionBtn, 4)
-        
-        optionBtn.MouseEnter:Connect(function()
-            if i ~= selectedIndex then
-                tween(optionBtn, {BackgroundColor3 = Color3.fromRGB(35, 35, 45)})
-            end
-        end)
-        
-        optionBtn.MouseLeave:Connect(function()
-            if i ~= selectedIndex then
-                tween(optionBtn, {BackgroundColor3 = Colors.Panel})
-            end
-        end)
-        
-        optionBtn.MouseButton1Click:Connect(function()
-            selectedIndex = i
-            valueLabel.Text = option
-            
-            -- Update all buttons
-            for j, btn in ipairs(optionButtons) do
-                if j == i then
-                    tween(btn, {
-                        BackgroundColor3 = Colors.Accent,
-                        TextColor3 = Color3.fromRGB(255, 255, 255)
-                    })
-                else
-                    tween(btn, {
-                        BackgroundColor3 = Colors.Panel,
-                        TextColor3 = Colors.TextDim
-                    })
-                end
-            end
-            
-            -- Close dropdown
-            isOpen = false
-            tween(listFrame, {Size = UDim2.new(1, 0, 0, 0)}, 0.15)
-            task.wait(0.15)
-            listFrame.Visible = false
-            
-            if callback then
-                task.spawn(callback, i, option)
-            end
-        end)
-        
-        table.insert(optionButtons, optionBtn)
-    end
-    
-    -- Update list size
-    listFrame.Size = UDim2.new(1, 0, 0, #options * 28 + (#options - 1))
-    
-    -- Highlight selected
-    if selectedIndex >= 1 and selectedIndex <= #options then
-        tween(optionButtons[selectedIndex], {
-            BackgroundColor3 = Colors.Accent,
-            TextColor3 = Color3.fromRGB(255, 255, 255)
-        })
-    end
-    
-    -- Toggle dropdown
-    mainButton.MouseButton1Click:Connect(function()
-        isOpen = not isOpen
-        
-        if isOpen then
-            listFrame.Visible = true
-            tween(listFrame, {Size = UDim2.new(1, 0, 0, #options * 28 + (#options - 1))}, 0.15)
-            tween(arrow, {Text = "▲"}, 0.15)
-        else
-            tween(listFrame, {Size = UDim2.new(1, 0, 0, 0)}, 0.15)
-            tween(arrow, {Text = "▼"}, 0.15)
-            task.wait(0.15)
-            listFrame.Visible = false
-        end
-    end)
-    
-    -- Close when clicking outside
-    local function closeDropdown()
-        if isOpen then
-            isOpen = false
-            tween(listFrame, {Size = UDim2.new(1, 0, 0, 0)}, 0.15)
-            tween(arrow, {Text = "▼"}, 0.15)
-            task.wait(0.15)
-            listFrame.Visible = false
-        end
-    end
-    
-    -- Getter function
-    function container:GetSelected()
-        return selectedIndex, options[selectedIndex]
-    end
-    
-    -- Setter function
-    function container:SetSelected(index)
-        if index >= 1 and index <= #options then
-            selectedIndex = index
-            valueLabel.Text = options[index]
-            
-            -- Update button colors
-            for i, btn in ipairs(optionButtons) do
-                if i == index then
-                    btn.BackgroundColor3 = Colors.Accent
-                    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                else
-                    btn.BackgroundColor3 = Colors.Panel
-                    btn.TextColor3 = Colors.TextDim
-                end
-            end
-        end
-    end
     
     return container
 end
@@ -627,145 +396,11 @@ function Components.createTextInput(parent, text, placeholder, callback)
     createCorner(input, 4)
     createStroke(input)
     
-    -- Focus events
-    input.Focused:Connect(function()
-        tween(input, {
-            BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-        })
-    end)
-    
     input.FocusLost:Connect(function(enterPressed)
-        tween(input, {
-            BackgroundColor3 = Colors.Background
-        })
-        
         if enterPressed and callback then
             task.spawn(callback, input.Text)
         end
     end)
-    
-    -- Setter function
-    function container:SetText(newText)
-        input.Text = newText or ""
-    end
-    
-    -- Getter function
-    function container:GetText()
-        return input.Text
-    end
-    
-    return container
-end
-
--- ============================================
--- SCROLL LIST COMPONENT
--- ============================================
-function Components.createScrollList(parent, height, itemHeight)
-    local container = Instance.new("Frame")
-    container.Name = "ScrollList"
-    container.Size = UDim2.new(1, -16, 0, height or 150)
-    container.BackgroundColor3 = Colors.Panel
-    container.BorderSizePixel = 0
-    container.ClipsDescendants = true
-    container.Parent = parent
-    
-    createCorner(container, 6)
-    createStroke(container)
-    
-    -- Scrolling frame
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Name = "Scroll"
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.BackgroundTransparency = 1
-    scroll.BorderSizePixel = 0
-    scroll.ScrollBarThickness = 4
-    scroll.ScrollBarImageColor3 = Colors.Accent
-    scroll.ScrollBarImageTransparency = 0.6
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scroll.Parent = container
-    
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 2)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = scroll
-    
-    local padding = Instance.new("UIPadding")
-    padding.PaddingTop = UDim.new(0, 4)
-    padding.PaddingBottom = UDim.new(0, 4)
-    padding.PaddingLeft = UDim.new(0, 4)
-    padding.PaddingRight = UDim.new(0, 4)
-    padding.Parent = scroll
-    
-    -- Items storage
-    local items = {}
-    
-    -- Add item function
-    function container:AddItem(text, data)
-        local item = Instance.new("TextButton")
-        item.Name = "Item_" .. (#items + 1)
-        item.Size = UDim2.new(1, -8, 0, itemHeight or 28)
-        item.BackgroundColor3 = Colors.Surface
-        item.BorderSizePixel = 0
-        item.AutoButtonColor = false
-        item.Text = text or "Item"
-        item.TextColor3 = Colors.TextDim
-        item.Font = Enum.Font.Gotham
-        item.TextSize = 11
-        item.LayoutOrder = #items + 1
-        item.Parent = scroll
-        
-        createCorner(item, 4)
-        
-        item.Data = data or {}
-        
-        item.MouseEnter:Connect(function()
-            tween(item, {
-                BackgroundColor3 = Color3.fromRGB(35, 35, 45),
-                TextColor3 = Colors.Text
-            })
-        end)
-        
-        item.MouseLeave:Connect(function()
-            tween(item, {
-                BackgroundColor3 = Colors.Surface,
-                TextColor3 = Colors.TextDim
-            })
-        end)
-        
-        table.insert(items, item)
-        return item
-    end
-    
-    -- Clear function
-    function container:Clear()
-        for _, item in ipairs(items) do
-            item:Destroy()
-        end
-        items = {}
-    end
-    
-    -- Get items function
-    function container:GetItems()
-        return items
-    end
-    
-    -- Select item function
-    function container:SelectItem(index)
-        for i, item in ipairs(items) do
-            if i == index then
-                tween(item, {
-                    BackgroundColor3 = Colors.Accent,
-                    TextColor3 = Color3.fromRGB(255, 255, 255)
-                })
-            else
-                tween(item, {
-                    BackgroundColor3 = Colors.Surface,
-                    TextColor3 = Colors.TextDim
-                })
-            end
-        end
-    end
     
     return container
 end
@@ -793,7 +428,7 @@ function Components.createSection(parent, text)
     label.Size = UDim2.new(1, -10, 1, 0)
     label.Position = UDim2.new(0, 10, 0, 0)
     label.BackgroundTransparency = 1
-    label.Text = text:upper() or "SECTION"
+    label.Text = (text or "SECTION"):upper()
     label.TextColor3 = Colors.Text
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Font = Enum.Font.GothamBold
@@ -816,6 +451,30 @@ function Components.createDivider(parent)
     divider.BorderSizePixel = 0
     divider.Parent = parent
     return divider
+end
+
+-- ============================================
+-- LABEL
+-- ============================================
+function Components.createLabel(parent, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -16, 0, 22)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text or ""
+    lbl.TextColor3 = Colors.TextDim
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 11
+    lbl.TextWrapped = true
+    lbl.Parent = parent
+    return lbl
+end
+
+-- ============================================
+-- INPUT (alias for createTextInput)
+-- ============================================
+function Components.createInput(parent, text, placeholder, callback)
+    return Components.createTextInput(parent, text, placeholder, callback)
 end
 
 -- Export
