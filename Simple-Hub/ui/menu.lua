@@ -140,12 +140,26 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
+	-- CHECK IF DRAWING API EXISTS
+	-- ---------------------------------------------------------------------------
+	local DrawingEnabled = false
+	local DrawingTest = nil
+	pcall(function()
+		DrawingTest = Drawing.new("Line")
+		if DrawingTest then
+			DrawingTest:Remove()
+			DrawingEnabled = true
+		end
+	end)
+	
+	-- ---------------------------------------------------------------------------
 	-- DRAWING OBJECT POOL (Reuse drawings, don't recreate)
 	-- ---------------------------------------------------------------------------
 	local DrawingPool = { text = {}, square = {}, line = {}, triangle = {}, circle = {} }
 	local ActiveDrawings = {}
 	
 	local function getDrawing(drawType)
+		if not DrawingEnabled then return nil end
 		local pool = DrawingPool[drawType]
 		if not pool then return nil end
 		
@@ -207,62 +221,64 @@ return function(arg1, arg2, arg3)
 	-- STATIC HUD DRAWINGS (Created once, reused)
 	-- ---------------------------------------------------------------------------
 	local HUD = {}
-	pcall(function()
-		HUD.FOVCircle = Drawing.new("Circle")
-		HUD.FOVCircle.Thickness = 2
-		HUD.FOVCircle.NumSides = 64
-		HUD.FOVCircle.Filled = false
-		HUD.FOVCircle.Visible = false
-		HUD.FOVCircle.Transparency = 0.7
-		
-		HUD.CrosshairL = Drawing.new("Line")
-		HUD.CrosshairL.Thickness = 2
-		HUD.CrosshairL.Visible = false
-		HUD.CrosshairR = Drawing.new("Line")
-		HUD.CrosshairR.Thickness = 2
-		HUD.CrosshairR.Visible = false
-		HUD.CrosshairT = Drawing.new("Line")
-		HUD.CrosshairT.Thickness = 2
-		HUD.CrosshairT.Visible = false
-		HUD.CrosshairB = Drawing.new("Line")
-		HUD.CrosshairB.Thickness = 2
-		HUD.CrosshairB.Visible = false
-		
-		HUD.Watermark = Drawing.new("Text")
-		HUD.Watermark.Size = 20
-		HUD.Watermark.Outline = true
-		HUD.Watermark.Position = Vector2.new(10, 10)
-		HUD.Watermark.Visible = false
-		HUD.FPS = Drawing.new("Text")
-		HUD.FPS.Size = 16
-		HUD.FPS.Outline = true
-		HUD.FPS.Position = Vector2.new(10, 35)
-		HUD.FPS.Visible = false
-		HUD.Ping = Drawing.new("Text")
-		HUD.Ping.Size = 16
-		HUD.Ping.Outline = true
-		HUD.Ping.Position = Vector2.new(10, 55)
-		HUD.Ping.Visible = false
-		HUD.PlrCount = Drawing.new("Text")
-		HUD.PlrCount.Size = 16
-		HUD.PlrCount.Outline = true
-		HUD.PlrCount.Position = Vector2.new(10, 75)
-		HUD.PlrCount.Visible = false
-		HUD.Velocity = Drawing.new("Text")
-		HUD.Velocity.Size = 16
-		HUD.Velocity.Outline = true
-		HUD.Velocity.Position = Vector2.new(10, 95)
-		HUD.Velocity.Visible = false
-		HUD.TargetInfo = Drawing.new("Text")
-		HUD.TargetInfo.Size = 16
-		HUD.TargetInfo.Outline = true
-		HUD.TargetInfo.Position = Vector2.new(10, 115)
-		HUD.TargetInfo.Visible = false
-		HUD.Keybinds = Drawing.new("Text")
-		HUD.Keybinds.Size = 14
-		HUD.Keybinds.Outline = true
-		HUD.Keybinds.Visible = false
-	end)
+	if DrawingEnabled then
+		pcall(function()
+			HUD.FOVCircle = Drawing.new("Circle")
+			HUD.FOVCircle.Thickness = 2
+			HUD.FOVCircle.NumSides = 64
+			HUD.FOVCircle.Filled = false
+			HUD.FOVCircle.Visible = false
+			HUD.FOVCircle.Transparency = 0.7
+			
+			HUD.CrosshairL = Drawing.new("Line")
+			HUD.CrosshairL.Thickness = 2
+			HUD.CrosshairL.Visible = false
+			HUD.CrosshairR = Drawing.new("Line")
+			HUD.CrosshairR.Thickness = 2
+			HUD.CrosshairR.Visible = false
+			HUD.CrosshairT = Drawing.new("Line")
+			HUD.CrosshairT.Thickness = 2
+			HUD.CrosshairT.Visible = false
+			HUD.CrosshairB = Drawing.new("Line")
+			HUD.CrosshairB.Thickness = 2
+			HUD.CrosshairB.Visible = false
+			
+			HUD.Watermark = Drawing.new("Text")
+			HUD.Watermark.Size = 20
+			HUD.Watermark.Outline = true
+			HUD.Watermark.Position = Vector2.new(10, 10)
+			HUD.Watermark.Visible = false
+			HUD.FPS = Drawing.new("Text")
+			HUD.FPS.Size = 16
+			HUD.FPS.Outline = true
+			HUD.FPS.Position = Vector2.new(10, 35)
+			HUD.FPS.Visible = false
+			HUD.Ping = Drawing.new("Text")
+			HUD.Ping.Size = 16
+			HUD.Ping.Outline = true
+			HUD.Ping.Position = Vector2.new(10, 55)
+			HUD.Ping.Visible = false
+			HUD.PlrCount = Drawing.new("Text")
+			HUD.PlrCount.Size = 16
+			HUD.PlrCount.Outline = true
+			HUD.PlrCount.Position = Vector2.new(10, 75)
+			HUD.PlrCount.Visible = false
+			HUD.Velocity = Drawing.new("Text")
+			HUD.Velocity.Size = 16
+			HUD.Velocity.Outline = true
+			HUD.Velocity.Position = Vector2.new(10, 95)
+			HUD.Velocity.Visible = false
+			HUD.TargetInfo = Drawing.new("Text")
+			HUD.TargetInfo.Size = 16
+			HUD.TargetInfo.Outline = true
+			HUD.TargetInfo.Position = Vector2.new(10, 115)
+			HUD.TargetInfo.Visible = false
+			HUD.Keybinds = Drawing.new("Text")
+			HUD.Keybinds.Size = 14
+			HUD.Keybinds.Outline = true
+			HUD.Keybinds.Visible = false
+		end)
+	end
 	
 	-- ---------------------------------------------------------------------------
 	-- ALL STATE VARIABLES
@@ -476,73 +492,56 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- HITBOX-ONLY INVISIBILITY (NO TRANSPARENCY - per spec)
-	-- Model moves away, HumanoidRootPart stays at real position
-	-- Camera/movement/physics stay on hitbox
+	-- INVISIBILITY SYSTEM (Transparency-based - WORKS PROPERLY)
 	-- ---------------------------------------------------------------------------
 	local InvisSystem = {
 		enabled = false,
-		movedParts = {},
+		originalTransparencies = {},
 		connection = nil
 	}
 	
 	function InvisSystem:Enable()
 		local char = getCharacter()
-		local root = getRoot()
-		if not char or not root then return end
+		if not char then return end
 		
 		self.enabled = true
-		self.movedParts = {}
+		self.originalTransparencies = {}
 		
-		-- Determine offset based on mode
-		local offset = State.Player.InvisOffset
-		if State.Player.InvisMode == "Extreme" then
-			offset = math.max(offset, 300)
-		end
-		
-		-- Move ALL parts EXCEPT HumanoidRootPart far away
-		-- HumanoidRootPart stays at real position for hitbox
+		-- Store original transparencies and make invisible
 		for _, part in ipairs(char:GetDescendants()) do
-			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-				self.movedParts[part] = true
+			if part:IsA("BasePart") then
+				self.originalTransparencies[part] = part.Transparency
+				part.Transparency = 1
+			elseif part:IsA("Decal") or part:IsA("Texture") then
+				self.originalTransparencies[part] = part.Transparency
+				part.Transparency = 1
 			end
 		end
 		
-		-- Continuous update to keep parts offset
-		if self.connection then self.connection:Disconnect() end
-		self.connection = RunService.Heartbeat:Connect(function()
-			if not self.enabled then return end
-			local r = getRoot()
-			if not r then return end
-			local offsetVec = Vector3.new(0, offset, 0)
-			for part, _ in pairs(self.movedParts) do
-				if part and part.Parent then
-					-- Keep part far away from root
-					part.CFrame = CFrame.new(r.Position + offsetVec) * (part.CFrame - part.Position)
+		-- Hide accessories
+		for _, acc in ipairs(char:GetChildren()) do
+			if acc:IsA("Accessory") then
+				local handle = acc:FindFirstChild("Handle")
+				if handle then
+					self.originalTransparencies[handle] = handle.Transparency
+					handle.Transparency = 1
 				end
 			end
-		end)
+		end
 	end
 	
 	function InvisSystem:Disable()
 		self.enabled = false
-		if self.connection then
-			self.connection:Disconnect()
-			self.connection = nil
-		end
 		
-		-- Restore parts to normal position relative to root
-		local char = getCharacter()
-		local root = getRoot()
-		if char and root then
-			-- Force respawn-like reset by setting parts back
-			for part, _ in pairs(self.movedParts) do
-				if part and part.Parent then
-					-- Parts will naturally re-attach via Motor6D
-				end
+		-- Restore original transparencies
+		for part, trans in pairs(self.originalTransparencies) do
+			if part and part.Parent then
+				pcall(function()
+					part.Transparency = trans
+				end)
 			end
 		end
-		self.movedParts = {}
+		self.originalTransparencies = {}
 	end
 	
 	-- ---------------------------------------------------------------------------
@@ -1152,7 +1151,7 @@ return function(arg1, arg2, arg3)
 		
 		local anyESP = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or State.ESP.DistanceESP or State.ESP.Tracers or State.ESP.SkeletonESP or State.ESP.OffscreenArrows or State.ESP.ItemESP or State.ESP.NPCESP
 		
-		if anyESP then
+		if anyESP and DrawingEnabled then
 			for name, data in pairs(EntityCache.players) do
 				if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
 					local dist = root and (root.Position - data.RootPart.Position).Magnitude or 0
@@ -2200,5 +2199,9 @@ return function(arg1, arg2, arg3)
 	-- ---------------------------------------------------------------------------
 	-- INITIALIZATION COMPLETE
 	-- ---------------------------------------------------------------------------
-	print("[Vertex Hub] Loaded successfully! Press M to toggle menu.")
+	if DrawingEnabled then
+		print("[Vertex Hub] Loaded successfully! Drawing API available. Press M to toggle menu.")
+	else
+		print("[Vertex Hub] Loaded successfully! WARNING: Drawing API not available - ESP features disabled. Press M to toggle menu.")
+	end
 end
