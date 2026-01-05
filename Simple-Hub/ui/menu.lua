@@ -1741,10 +1741,21 @@ return function(arg1, arg2, arg3)
 			end
 			
 			-- Store the button reference
-			toggleObj.Button = btn
-			
-			applyVisual()
-			return toggleObj
+			-- Store the button reference
+toggleObj.Button = btn
+
+-- 🔥 CRITICAL COMPATIBILITY FIX
+-- Allow legacy code to call btn:SetState(...)
+btn.SetState = function(_, value)
+	if typeof(value) ~= "boolean" then return end
+	state = value
+	applyVisual()
+	if callback then callback(state) end
+end
+
+applyVisual()
+return toggleObj
+
 		end
 		
 		function Components.createSlider(parent, text, min, max, default, callback)
