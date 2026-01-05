@@ -153,26 +153,34 @@ return function(arg1, arg2, arg3)
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- DRAWING OBJECT POOL (Reuse drawings, don't recreate)
+	-- FIXED DRAWING OBJECT POOL (Wrapper table system - NO custom properties)
 	-- ---------------------------------------------------------------------------
-	local DrawingPool = { text = {}, square = {}, line = {}, triangle = {}, circle = {} }
-	local ActiveDrawings = {}
+	local DrawingPool = { 
+		text = {}, 
+		square = {}, 
+		line = {}, 
+		triangle = {}, 
+		circle = {} 
+	}
+	local ActiveDrawings = {}  -- Stores wrapper tables
 	
 	local function getDrawing(drawType)
 		if not DrawingEnabled then return nil end
 		local pool = DrawingPool[drawType]
 		if not pool then return nil end
 		
-		for _, obj in ipairs(pool) do
-			if not obj._inUse then
-				obj._inUse = true
-				obj.Visible = true
-				table.insert(ActiveDrawings, obj)
-				return obj
+		-- Find an available wrapper
+		for _, wrapper in ipairs(pool) do
+			if not wrapper.inUse then
+				wrapper.inUse = true
+				wrapper.draw.Visible = true
+				table.insert(ActiveDrawings, wrapper)
+				return wrapper.draw
 			end
 		end
 		
-		local newDraw
+		-- Create new Drawing object with wrapper
+		local newDraw = nil
 		local ok = pcall(function()
 			if drawType == "text" then
 				newDraw = Drawing.new("Text")
@@ -198,20 +206,24 @@ return function(arg1, arg2, arg3)
 		end)
 		
 		if ok and newDraw then
-			newDraw._inUse = true
+			local wrapper = {
+				draw = newDraw,
+				inUse = true,
+				drawType = drawType
+			}
 			newDraw.Visible = true
-			table.insert(pool, newDraw)
-			table.insert(ActiveDrawings, newDraw)
+			table.insert(pool, wrapper)
+			table.insert(ActiveDrawings, wrapper)
 			return newDraw
 		end
 		return nil
 	end
 	
 	local function releaseAllDrawings()
-		for _, obj in ipairs(ActiveDrawings) do
-			if obj then 
-				obj.Visible = false 
-				obj._inUse = false 
+		for _, wrapper in ipairs(ActiveDrawings) do
+			if wrapper and wrapper.draw then 
+				wrapper.draw.Visible = false 
+				wrapper.inUse = false
 			end
 		end
 		ActiveDrawings = {}
@@ -279,6 +291,55 @@ return function(arg1, arg2, arg3)
 			HUD.Keybinds.Visible = false
 		end)
 	end
+	
+	-- ---------------------------------------------------------------------------
+	-- KEYBIND SYSTEM - GLOBAL
+	-- ---------------------------------------------------------------------------
+	local KeybindSystem = {
+		binds = {},  -- featureName -> {keyCode, toggleFunction, displayName}
+		enabled = true
+	}
+	
+	function KeybindSystem:register(featureName, defaultKey, toggleFunc, displayName)
+		self.binds[featureName] = {
+			key = defaultKey,
+			func = toggleFunc,
+			display = displayName or featureName,
+			active = false
+		}
+	end
+	
+	function KeybindSystem:setKey(featureName, newKey)
+		if self.binds[featureName] then
+			self.binds[featureName].key = newKey
+			return true
+		end
+		return false
+	end
+	
+	function KeybindSystem:getKey(featureName)
+		return self.binds[featureName] and self.binds[featureName].key
+	end
+	
+	function KeybindSystem:getDisplayText(featureName)
+		local bind = self.binds[featureName]
+		if not bind then return "" end
+		return " [" .. tostring(bind.key.Name):gsub("^%l", string.upper) .. "]"
+	end
+	
+	-- Listen for key presses
+	UIS.InputBegan:Connect(function(input, gp)
+		if gp or not KeybindSystem.enabled then return end
+		
+		for featureName, bind in pairs(KeybindSystem.binds) do
+			if input.KeyCode == bind.key and bind.func then
+				-- Toggle the feature
+				bind.active = not bind.active
+				bind.func(bind.active)
+				break
+			end
+		end
+	end)
 	
 	-- ---------------------------------------------------------------------------
 	-- ALL STATE VARIABLES
@@ -354,6 +415,46 @@ return function(arg1, arg2, arg3)
 		ClockTime = Lighting.ClockTime
 	}
 	local OriginalGravity = workspace.Gravity
+	
+	-- Register keybinds for all toggleable features
+	KeybindSystem:register("AimAssist", Enum.KeyCode.C, function(state)
+		State.Combat.AimAssist = state
+		-- Update UI if needed
+	end, "Aim Assist")
+	
+	KeybindSystem:register("KillAura", Enum.KeyCode.V, function(state)
+		State.Combat.KillAura = state
+	end, "Kill Aura")
+	
+	KeybindSystem:register("Fly", Enum.KeyCode.F, function(state)
+		State.Movement.Fly = state
+	end, "Fly")
+	
+	KeybindSystem:register("Noclip", Enum.KeyCode.N, function(state)
+		State.Movement.Noclip = state
+	end, "Noclip")
+	
+	KeybindSystem:register("Speed", Enum.KeyCode.Z, function(state)
+		State.Movement.Speed = state
+		if not state then
+			local h = getHumanoid()
+			if h then h.WalkSpeed = 16 end
+		end
+	end, "Speed")
+	
+	KeybindSystem:register("ESP", Enum.KeyCode.X, function(state)
+		State.ESP.NameESP = state
+		State.ESP.BoxESP = state
+		State.ESP.HealthESP = state
+	end, "ESP")
+	
+	KeybindSystem:register("SilentAim", Enum.KeyCode.B, function(state)
+		State.Combat.SilentAim = state
+	end, "Silent Aim")
+	
+	KeybindSystem:register("Triggerbot", Enum.KeyCode.T, function(state)
+		State.Combat.Triggerbot = state
+	end, "Triggerbot")
 	
 	-- ---------------------------------------------------------------------------
 	-- TARGET ACQUISITION SYSTEM
@@ -1095,7 +1196,7 @@ return function(arg1, arg2, arg3)
 		
 		if HUD.Watermark then
 			HUD.Watermark.Visible = State.Misc.Watermark
-			HUD.Watermark.Text = "Vertex Hub"
+			HUD.Watermark.Text = "Vertex Hub" .. (State.Misc.KeybindsDisplay and " | Keybinds Active" or "")
 			HUD.Watermark.Color = State.Settings.AccentColor
 		end
 		if HUD.FPS then
@@ -1135,17 +1236,17 @@ return function(arg1, arg2, arg3)
 			HUD.Keybinds.Visible = State.Misc.KeybindsDisplay
 			HUD.Keybinds.Position = Vector2.new(camera.ViewportSize.X - 150, 10)
 			local k = {}
-			if State.Movement.Fly then table.insert(k, "Fly") end
-			if State.Movement.Noclip then table.insert(k, "Noclip") end
-			if State.Combat.AimAssist then table.insert(k, "Aim") end
-			if State.Combat.SilentAim then table.insert(k, "Silent") end
-			if State.Combat.KillAura then table.insert(k, "Aura") end
-			HUD.Keybinds.Text = "[Active]\n" .. (#k > 0 and table.concat(k, "\n") or "None")
+			for featureName, bind in pairs(KeybindSystem.binds) do
+				if bind.active then
+					table.insert(k, bind.display .. " [" .. tostring(bind.key.Name):gsub("^%l", string.upper) .. "]")
+				end
+			end
+			HUD.Keybinds.Text = "[Active Keybinds]\n" .. (#k > 0 and table.concat(k, "\n") or "None")
 			HUD.Keybinds.Color = Color3.new(1, 1, 1)
 		end
 		
 		-- -----------------------------------------------------------------------
-		-- ESP RENDERING (Uses pooled drawings)
+		-- ESP RENDERING (Uses fixed pooled drawings)
 		-- -----------------------------------------------------------------------
 		releaseAllDrawings()
 		
@@ -1617,7 +1718,7 @@ return function(arg1, arg2, arg3)
 	_G.VertexComponents = Components
 	
 	-- ---------------------------------------------------------------------------
-	-- BUILT-IN TABS (No external dependency)
+	-- BUILT-IN TABS WITH EXPANDABLE SECTIONS
 	-- ---------------------------------------------------------------------------
 	if not Tabs then
 		Tabs = {}
@@ -1693,6 +1794,144 @@ return function(arg1, arg2, arg3)
 			if btn._indicator then btn._indicator.BackgroundTransparency = 0 end
 			currentTab = btn
 		end
+		
+		-- NEW: Expandable/Collapsible Section Creator
+		function Tabs.createExpandableSection(parent, title, initialState)
+			local sectionContainer = Instance.new("Frame")
+			sectionContainer.Name = "Section_" .. (title or "Untitled")
+			sectionContainer.Size = UDim2.new(1, -16, 0, 40)
+			sectionContainer.BackgroundTransparency = 1
+			sectionContainer.Parent = parent
+			
+			-- Header
+			local header = Instance.new("TextButton")
+			header.Size = UDim2.new(1, 0, 0, 40)
+			header.BackgroundColor3 = Colors.Btn
+			header.BorderSizePixel = 0
+			header.AutoButtonColor = false
+			header.Text = ""
+			header.Parent = sectionContainer
+			corner(header, 6)
+			stroke(header)
+			
+			-- Icon (expands/collapses)
+			local icon = Instance.new("TextLabel")
+			icon.Size = UDim2.new(0, 24, 0, 24)
+			icon.Position = UDim2.new(0, 10, 0.5, 0)
+			icon.AnchorPoint = Vector2.new(0, 0.5)
+			icon.BackgroundTransparency = 1
+			icon.Text = "+"
+			icon.TextColor3 = Colors.Accent
+			icon.Font = Enum.Font.GothamBold
+			icon.TextSize = 18
+			icon.Parent = header
+			
+			-- Title
+			local titleLabel = Instance.new("TextLabel")
+			titleLabel.Size = UDim2.new(1, -60, 1, 0)
+			titleLabel.Position = UDim2.new(0, 40, 0, 0)
+			titleLabel.BackgroundTransparency = 1
+			titleLabel.Text = title or "Section"
+			titleLabel.TextColor3 = Colors.Text
+			titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+			titleLabel.Font = Enum.Font.GothamMedium
+			titleLabel.TextSize = 13
+			titleLabel.Parent = header
+			
+			-- Content container (starts collapsed)
+			local content = Instance.new("Frame")
+			content.Name = "Content"
+			content.Size = UDim2.new(1, 0, 0, 0)
+			content.Position = UDim2.new(0, 0, 0, 45)
+			content.BackgroundTransparency = 1
+			content.ClipsDescendants = true
+			content.Visible = false
+			content.Parent = sectionContainer
+			
+			local contentInner = Instance.new("Frame")
+			contentInner.Name = "Inner"
+			contentInner.Size = UDim2.new(1, 0, 0, 0)
+			contentInner.BackgroundTransparency = 1
+			contentInner.Parent = content
+			
+			local layout = Instance.new("UIListLayout")
+			layout.Padding = UDim.new(0, 6)
+			layout.SortOrder = Enum.SortOrder.LayoutOrder
+			layout.Parent = contentInner
+			
+			local pad = Instance.new("UIPadding")
+			pad.PaddingTop = UDim.new(0, 8)
+			pad.PaddingBottom = UDim.new(0, 8)
+			pad.PaddingLeft = UDim.new(0, 5)
+			pad.PaddingRight = UDim.new(0, 5)
+			pad.Parent = contentInner
+			
+			local isOpen = initialState or false
+			
+			local function toggle()
+				isOpen = not isOpen
+				
+				if isOpen then
+					-- Expand
+					content.Visible = true
+					icon.Text = "×"
+					
+					-- Calculate total height
+					local totalHeight = 8 + 8 + 4  -- padding top + bottom + extra
+					for _, child in ipairs(contentInner:GetChildren()) do
+						if child:IsA("GuiObject") and child.Visible then
+							totalHeight = totalHeight + child.AbsoluteSize.Y
+							if child:IsA("Frame") and child.Name == "Content" then
+								-- Nested section
+								for _, nested in ipairs(child:GetChildren()) do
+									if nested:IsA("GuiObject") and nested.Visible then
+										totalHeight = totalHeight + nested.AbsoluteSize.Y
+									end
+								end
+							end
+						end
+					end
+					
+					totalHeight = totalHeight + (layout.Padding.Offset * (#contentInner:GetChildren() - 1))
+					
+					-- Animate expansion
+					tween(content, {Size = UDim2.new(1, 0, 0, totalHeight)}, 0.3)
+					tween(sectionContainer, {Size = UDim2.new(1, -16, 0, 45 + totalHeight)}, 0.3)
+					tween(header, {BackgroundColor3 = Color3.fromRGB(35, 40, 55)})
+					tween(icon, {TextColor3 = Color3.new(1, 0.5, 0.5)})
+				else
+					-- Collapse
+					icon.Text = "+"
+					tween(content, {Size = UDim2.new(1, 0, 0, 0)}, 0.3)
+					tween(sectionContainer, {Size = UDim2.new(1, -16, 0, 40)}, 0.3)
+					tween(header, {BackgroundColor3 = Colors.Btn})
+					tween(icon, {TextColor3 = Colors.Accent})
+					
+					task.delay(0.3, function()
+						content.Visible = false
+					end)
+				end
+			end
+			
+			header.MouseButton1Click:Connect(toggle)
+			
+			-- Hover effects
+			header.MouseEnter:Connect(function()
+				tween(header, {BackgroundColor3 = Color3.fromRGB(35, 38, 48)})
+			end)
+			header.MouseLeave:Connect(function()
+				if not isOpen then
+					tween(header, {BackgroundColor3 = Colors.Btn})
+				end
+			end)
+			
+			-- Open if initial state is true
+			if initialState then
+				task.delay(0.1, toggle)
+			end
+			
+			return contentInner
+		end
 	end
 	_G.VertexTabs = Tabs
 	
@@ -1707,7 +1946,7 @@ return function(arg1, arg2, arg3)
 	
 	local main = Instance.new("Frame")
 	main.Name = "Main"
-	main.Size = UDim2.new(0, 950, 0, 650)
+	main.Size = UDim2.new(0, 1000, 0, 700)
 	main.Position = UDim2.new(0.5, 0, 0.5, 0)
 	main.AnchorPoint = Vector2.new(0.5, 0.5)
 	main.BackgroundColor3 = Colors.Background
@@ -1716,7 +1955,7 @@ return function(arg1, arg2, arg3)
 	main.Visible = false
 	main.Parent = gui
 	local mc = Instance.new("UICorner")
-	mc.CornerRadius = UDim.new(0, 10)
+	mc.CornerRadius = UDim.new(0, 12)
 	mc.Parent = main
 	local ms = Instance.new("UIStroke")
 	ms.Color = Colors.Border
@@ -1725,7 +1964,7 @@ return function(arg1, arg2, arg3)
 	
 	-- Header
 	local hdr = Instance.new("Frame")
-	hdr.Size = UDim2.new(1, 0, 0, 45)
+	hdr.Size = UDim2.new(1, 0, 0, 50)
 	hdr.BackgroundColor3 = Colors.Panel
 	hdr.BorderSizePixel = 0
 	hdr.Parent = main
@@ -1733,14 +1972,14 @@ return function(arg1, arg2, arg3)
 	ttl.Size = UDim2.new(0, 300, 1, 0)
 	ttl.Position = UDim2.new(0, 15, 0, 0)
 	ttl.BackgroundTransparency = 1
-	ttl.Text = "VERTEX HUB"
+	ttl.Text = "VERTEX HUB v2.0"
 	ttl.TextColor3 = Colors.Text
 	ttl.TextXAlignment = Enum.TextXAlignment.Left
 	ttl.Font = Enum.Font.GothamBold
-	ttl.TextSize = 18
+	ttl.TextSize = 20
 	ttl.Parent = hdr
 	local acc = Instance.new("Frame")
-	acc.Size = UDim2.new(0, 60, 0, 3)
+	acc.Size = UDim2.new(0, 80, 0, 3)
 	acc.Position = UDim2.new(0, 15, 1, -3)
 	acc.BackgroundColor3 = Colors.Accent
 	acc.BorderSizePixel = 0
@@ -1751,18 +1990,18 @@ return function(arg1, arg2, arg3)
 	
 	-- Close button
 	local cls = Instance.new("TextButton")
-	cls.Size = UDim2.new(0, 30, 0, 30)
-	cls.Position = UDim2.new(1, -40, 0.5, 0)
+	cls.Size = UDim2.new(0, 35, 0, 35)
+	cls.Position = UDim2.new(1, -45, 0.5, 0)
 	cls.AnchorPoint = Vector2.new(0, 0.5)
 	cls.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-	cls.Text = "X"
+	cls.Text = "✕"
 	cls.TextColor3 = Colors.Text
 	cls.Font = Enum.Font.GothamBold
-	cls.TextSize = 20
+	cls.TextSize = 22
 	cls.AutoButtonColor = false
 	cls.Parent = hdr
 	local clc = Instance.new("UICorner")
-	clc.CornerRadius = UDim.new(0, 6)
+	clc.CornerRadius = UDim.new(0, 8)
 	clc.Parent = cls
 	cls.MouseButton1Click:Connect(function()
 		main.Visible = false
@@ -1774,8 +2013,8 @@ return function(arg1, arg2, arg3)
 	
 	-- Tab bar
 	local tabBar = Instance.new("Frame")
-	tabBar.Size = UDim2.new(1, 0, 0, 45)
-	tabBar.Position = UDim2.new(0, 0, 0, 45)
+	tabBar.Size = UDim2.new(1, 0, 0, 50)
+	tabBar.Position = UDim2.new(0, 0, 0, 50)
 	tabBar.BackgroundColor3 = Colors.Surface
 	tabBar.BorderSizePixel = 0
 	tabBar.Parent = main
@@ -1783,23 +2022,25 @@ return function(arg1, arg2, arg3)
 	
 	-- Content
 	local cArea = Instance.new("Frame")
-	cArea.Size = UDim2.new(1, 0, 1, -90)
-	cArea.Position = UDim2.new(0, 0, 0, 90)
+	cArea.Size = UDim2.new(1, 0, 1, -100)
+	cArea.Position = UDim2.new(0, 0, 0, 100)
 	cArea.BackgroundColor3 = Colors.Content
 	cArea.BorderSizePixel = 0
 	cArea.Parent = main
-	local cCont = Instance.new("Frame")
-	cCont.Size = UDim2.new(1, -20, 1, -12)
-	cCont.Position = UDim2.new(0, 10, 0, 6)
+	local cCont = Instance.new("ScrollingFrame")
+	cCont.Size = UDim2.new(1, 0, 1, 0)
 	cCont.BackgroundTransparency = 1
+	cCont.ScrollBarThickness = 4
+	cCont.ScrollBarImageColor3 = Colors.Accent
+	cCont.CanvasSize = UDim2.new(0, 0, 0, 0)
+	cCont.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	cCont.Parent = cArea
 	
 	local function makeTab(nm)
 		local scr = Instance.new("ScrollingFrame")
 		scr.Name = nm
 		scr.Size = UDim2.new(1, 0, 1, 0)
-		scr.BackgroundColor3 = Colors.Scroll
-		scr.BackgroundTransparency = 0
+		scr.BackgroundTransparency = 1
 		scr.BorderSizePixel = 0
 		scr.ScrollBarThickness = 4
 		scr.ScrollBarImageColor3 = Colors.Accent
@@ -1808,13 +2049,13 @@ return function(arg1, arg2, arg3)
 		scr.Visible = false
 		scr.Parent = cCont
 		local lay = Instance.new("UIListLayout")
-		lay.Padding = UDim.new(0, 6)
+		lay.Padding = UDim.new(0, 8)
 		lay.SortOrder = Enum.SortOrder.LayoutOrder
 		lay.Parent = scr
 		local pad = Instance.new("UIPadding")
-		pad.PaddingTop = UDim.new(0, 4)
+		pad.PaddingTop = UDim.new(0, 8)
 		pad.PaddingBottom = UDim.new(0, 8)
-		pad.PaddingLeft = UDim.new(0, 4)
+		pad.PaddingLeft = UDim.new(0, 8)
 		pad.PaddingRight = UDim.new(0, 8)
 		pad.Parent = scr
 		return scr
@@ -1829,14 +2070,14 @@ return function(arg1, arg2, arg3)
 	local trollC = makeTab("Troll")
 	local miscC = makeTab("Misc")
 	
-	local combatT = Tabs.create(tabBar, "Combat", "*")
-	local moveT = Tabs.create(tabBar, "Move", ">")
-	local espT = Tabs.create(tabBar, "ESP", "o")
-	local visT = Tabs.create(tabBar, "Visual", "#")
-	local worldT = Tabs.create(tabBar, "World", "@")
-	local playerT = Tabs.create(tabBar, "Player", "U")
-	local trollT = Tabs.create(tabBar, "Troll", "T")
-	local miscT = Tabs.create(tabBar, "Misc", "S")
+	local combatT = Tabs.create(tabBar, "Combat", "⚔️")
+	local moveT = Tabs.create(tabBar, "Move", "🏃")
+	local espT = Tabs.create(tabBar, "ESP", "👁️")
+	local visT = Tabs.create(tabBar, "Visual", "🎨")
+	local worldT = Tabs.create(tabBar, "World", "🌍")
+	local playerT = Tabs.create(tabBar, "Player", "👤")
+	local trollT = Tabs.create(tabBar, "Troll", "😈")
+	local miscT = Tabs.create(tabBar, "Misc", "⚙️")
 	
 	Tabs.connectTab(combatT, combatC)
 	Tabs.connectTab(moveT, moveC)
@@ -1848,273 +2089,331 @@ return function(arg1, arg2, arg3)
 	Tabs.connectTab(miscT, miscC)
 	
 	-- ---------------------------------------------------------------------------
-	-- COMBAT TAB
+	-- COMBAT TAB WITH EXPANDABLE SECTIONS
 	-- ---------------------------------------------------------------------------
-	Components.createSection(combatC, "Aim Assist")
-	Components.createToggle(combatC, "Aim Assist", function(v) State.Combat.AimAssist = v end)
-	Components.createSlider(combatC, "Smoothness", 1, 100, 15, function(v) State.Combat.AimSmoothness = v / 200 end)
-	Components.createSlider(combatC, "FOV", 50, 600, 150, function(v) State.Combat.AimFOV = v end)
-	Components.createToggle(combatC, "Show FOV Circle", function(v) State.Combat.ShowFOVCircle = v end)
-	Components.createToggle(combatC, "Prediction", function(v) State.Combat.AimPrediction = v end)
-	Components.createSlider(combatC, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Silent Aim")
-	Components.createToggle(combatC, "Silent Aim", function(v) State.Combat.SilentAim = v end)
-	Components.createSlider(combatC, "Hit Chance", 0, 100, 100, function(v) State.Combat.SilentAimHitChance = v end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Kill Aura")
-	Components.createToggle(combatC, "Kill Aura", function(v) State.Combat.KillAura = v end)
-	Components.createSlider(combatC, "Range", 5, 50, 15, function(v) State.Combat.KillAuraRange = v end)
-	Components.createSlider(combatC, "CPS", 1, 20, 10, function(v) State.Combat.KillAuraCPS = v end)
-	Components.createToggle(combatC, "Target Players", function(v) State.Combat.KillAuraPlayers = v end)
-	Components.createToggle(combatC, "Target NPCs", function(v) State.Combat.KillAuraNPCs = v end)
-	Components.createToggle(combatC, "Wall Check", function(v) State.Combat.KillAuraWallCheck = v end)
-	Components.createToggle(combatC, "Legit Mode", function(v) State.Combat.KillAuraLegit = v end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Reach")
-	Components.createToggle(combatC, "Reach", function(v) State.Combat.Reach = v end)
-	Components.createSlider(combatC, "Reach Distance", 10, 30, 18, function(v) State.Combat.ReachDistance = v end)
-	Components.createToggle(combatC, "Reach Legit", function(v) State.Combat.ReachLegit = v end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Auto Features")
-	Components.createToggle(combatC, "Triggerbot", function(v) State.Combat.Triggerbot = v end)
-	Components.createSlider(combatC, "Trigger Delay", 1, 50, 10, function(v) State.Combat.TriggerbotDelay = v / 100 end)
-	Components.createToggle(combatC, "Auto Parry", function(v) State.Combat.AutoParry = v end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Exploits")
-	Components.createToggle(combatC, "Hitbox Expander", function(v) State.Combat.HitboxExpander = v end)
-	Components.createSlider(combatC, "Hitbox Size", 1, 20, 5, function(v) State.Combat.HitboxSize = v end)
-	Components.createToggle(combatC, "Backtrack", function(v) State.Combat.Backtrack = v end)
-	Components.createSlider(combatC, "Backtrack Time", 1, 50, 20, function(v) State.Combat.BacktrackTime = v / 100 end)
-	Components.createToggle(combatC, "Target Strafe", function(v) State.Combat.TargetStrafe = v end)
-	Components.createSlider(combatC, "Strafe Speed", 1, 20, 5, function(v) State.Combat.StrafeSpeed = v end)
-	Components.createSlider(combatC, "Strafe Radius", 5, 30, 10, function(v) State.Combat.StrafeRadius = v end)
+	do
+		local aimSection = Tabs.createExpandableSection(combatC, "Aim Assist", false)
+		Components.createToggle(aimSection, "Aim Assist" .. KeybindSystem:getDisplayText("AimAssist"), 
+			function(v) 
+				State.Combat.AimAssist = v 
+				KeybindSystem.binds["AimAssist"].active = v
+			end)
+		Components.createSlider(aimSection, "Smoothness", 1, 100, 15, function(v) State.Combat.AimSmoothness = v / 200 end)
+		Components.createSlider(aimSection, "FOV", 50, 600, 150, function(v) State.Combat.AimFOV = v end)
+		Components.createToggle(aimSection, "Show FOV Circle", function(v) State.Combat.ShowFOVCircle = v end)
+		Components.createToggle(aimSection, "Prediction", function(v) State.Combat.AimPrediction = v end)
+		Components.createSlider(aimSection, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
+		
+		local silentSection = Tabs.createExpandableSection(combatC, "Silent Aim", false)
+		Components.createToggle(silentSection, "Silent Aim" .. KeybindSystem:getDisplayText("SilentAim"), 
+			function(v) 
+				State.Combat.SilentAim = v 
+				KeybindSystem.binds["SilentAim"].active = v
+			end)
+		Components.createSlider(silentSection, "Hit Chance", 0, 100, 100, function(v) State.Combat.SilentAimHitChance = v end)
+		
+		local auraSection = Tabs.createExpandableSection(combatC, "Kill Aura", false)
+		Components.createToggle(auraSection, "Kill Aura" .. KeybindSystem:getDisplayText("KillAura"), 
+			function(v) 
+				State.Combat.KillAura = v 
+				KeybindSystem.binds["KillAura"].active = v
+			end)
+		Components.createSlider(auraSection, "Range", 5, 50, 15, function(v) State.Combat.KillAuraRange = v end)
+		Components.createSlider(auraSection, "CPS", 1, 20, 10, function(v) State.Combat.KillAuraCPS = v end)
+		Components.createToggle(auraSection, "Target Players", function(v) State.Combat.KillAuraPlayers = v end)
+		Components.createToggle(auraSection, "Target NPCs", function(v) State.Combat.KillAuraNPCs = v end)
+		Components.createToggle(auraSection, "Wall Check", function(v) State.Combat.KillAuraWallCheck = v end)
+		Components.createToggle(auraSection, "Legit Mode", function(v) State.Combat.KillAuraLegit = v end)
+		
+		local reachSection = Tabs.createExpandableSection(combatC, "Reach", false)
+		Components.createToggle(reachSection, "Reach", function(v) State.Combat.Reach = v end)
+		Components.createSlider(reachSection, "Reach Distance", 10, 30, 18, function(v) State.Combat.ReachDistance = v end)
+		Components.createToggle(reachSection, "Reach Legit", function(v) State.Combat.ReachLegit = v end)
+		
+		local autoSection = Tabs.createExpandableSection(combatC, "Auto Features", false)
+		Components.createToggle(autoSection, "Triggerbot" .. KeybindSystem:getDisplayText("Triggerbot"), 
+			function(v) 
+				State.Combat.Triggerbot = v 
+				KeybindSystem.binds["Triggerbot"].active = v
+			end)
+		Components.createSlider(autoSection, "Trigger Delay", 1, 50, 10, function(v) State.Combat.TriggerbotDelay = v / 100 end)
+		Components.createToggle(autoSection, "Auto Parry", function(v) State.Combat.AutoParry = v end)
+		
+		local exploitSection = Tabs.createExpandableSection(combatC, "Exploits", false)
+		Components.createToggle(exploitSection, "Hitbox Expander", function(v) State.Combat.HitboxExpander = v end)
+		Components.createSlider(exploitSection, "Hitbox Size", 1, 20, 5, function(v) State.Combat.HitboxSize = v end)
+		Components.createToggle(exploitSection, "Backtrack", function(v) State.Combat.Backtrack = v end)
+		Components.createSlider(exploitSection, "Backtrack Time", 1, 50, 20, function(v) State.Combat.BacktrackTime = v / 100 end)
+		Components.createToggle(exploitSection, "Target Strafe", function(v) State.Combat.TargetStrafe = v end)
+		Components.createSlider(exploitSection, "Strafe Speed", 1, 20, 5, function(v) State.Combat.StrafeSpeed = v end)
+		Components.createSlider(exploitSection, "Strafe Radius", 5, 30, 10, function(v) State.Combat.StrafeRadius = v end)
+	end
 	
 	-- ---------------------------------------------------------------------------
-	-- MOVEMENT TAB
+	-- MOVEMENT TAB WITH EXPANDABLE SECTIONS
 	-- ---------------------------------------------------------------------------
-	Components.createSection(moveC, "Flight")
-	Components.createToggle(moveC, "Fly", function(v) State.Movement.Fly = v end)
-	Components.createSlider(moveC, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
-	Components.createToggle(moveC, "Fly Legit", function(v) State.Movement.FlyLegit = v end)
-	Components.createToggle(moveC, "Noclip", function(v) State.Movement.Noclip = v end)
-	Components.createDivider(moveC)
-	Components.createSection(moveC, "Speed & Jump")
-	Components.createToggle(moveC, "Speed", function(v)
-		State.Movement.Speed = v
-		if not v then
-			local h = getHumanoid()
-			if h then
-				h.WalkSpeed = 16
-			end
-		end
-	end)
-	Components.createSlider(moveC, "Speed Value", 16, 500, 16, function(v) State.Movement.SpeedValue = v end)
-	Components.createToggle(moveC, "Speed Legit", function(v) State.Movement.SpeedLegit = v end)
-	Components.createToggle(moveC, "Jump Power", function(v)
-		State.Movement.JumpPower = v
-		if not v then
-			local h = getHumanoid()
-			if h then
-				h.JumpPower = 50
-			end
-		end
-	end)
-	Components.createSlider(moveC, "Jump Value", 50, 500, 50, function(v) State.Movement.JumpValue = v end)
-	Components.createToggle(moveC, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
-	Components.createDivider(moveC)
-	Components.createSection(moveC, "Special Movement")
-	Components.createToggle(moveC, "Bunny Hop", function(v) State.Movement.BunnyHop = v end)
-	Components.createToggle(moveC, "Long Jump (Space)", function(v) State.Movement.LongJump = v end)
-	Components.createSlider(moveC, "Long Jump Force", 50, 400, 100, function(v) State.Movement.LongJumpForce = v end)
-	Components.createToggle(moveC, "Speed Glide", function(v) State.Movement.SpeedGlide = v end)
-	Components.createSlider(moveC, "Glide Speed", 1, 50, 10, function(v) State.Movement.GlideSpeed = v end)
-	Components.createToggle(moveC, "Dash (Q)", function(v) State.Movement.Dash = v end)
-	Components.createSlider(moveC, "Dash Force", 50, 300, 100, function(v) State.Movement.DashForce = v end)
-	Components.createSlider(moveC, "Dash Cooldown", 1, 50, 10, function(v) State.Movement.DashCooldown = v / 10 end)
-	Components.createToggle(moveC, "Air Control", function(v) State.Movement.AirControl = v end)
-	Components.createDivider(moveC)
-	Components.createSection(moveC, "Teleport & Safety")
-	Components.createToggle(moveC, "Click TP", function(v) State.Movement.ClickTP = v end)
-	Components.createToggle(moveC, "Anti Void", function(v) State.Movement.AntiVoid = v end)
-	Components.createSlider(moveC, "Void Height", -500, 0, -100, function(v) State.Movement.VoidHeight = v end)
-	Components.createToggle(moveC, "Anchor", function(v) State.Movement.Anchor = v end)
-	Components.createDivider(moveC)
-	Components.createSection(moveC, "Exploits")
-	Components.createToggle(moveC, "Spin Bot", function(v) State.Movement.SpinBot = v end)
-	Components.createSlider(moveC, "Spin Speed", 1, 50, 20, function(v) State.Movement.SpinSpeed = v end)
-	Components.createToggle(moveC, "Fake Lag", function(v) State.Movement.FakeLag = v end)
-	Components.createSlider(moveC, "Lag Intensity", 1, 10, 5, function(v) State.Movement.LagIntensity = v end)
-	
-	-- ---------------------------------------------------------------------------
-	-- ESP TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(espC, "Player ESP")
-	Components.createToggle(espC, "Name ESP", function(v) State.ESP.NameESP = v end)
-	Components.createToggle(espC, "Box ESP", function(v) State.ESP.BoxESP = v end)
-	Components.createToggle(espC, "Health ESP", function(v) State.ESP.HealthESP = v end)
-	Components.createToggle(espC, "Distance ESP", function(v) State.ESP.DistanceESP = v end)
-	Components.createToggle(espC, "Tracers", function(v) State.ESP.Tracers = v end)
-	Components.createToggle(espC, "Skeleton ESP", function(v) State.ESP.SkeletonESP = v end)
-	Components.createToggle(espC, "Offscreen Arrows", function(v) State.ESP.OffscreenArrows = v end)
-	Components.createDivider(espC)
-	Components.createSection(espC, "World ESP")
-	Components.createToggle(espC, "NPC ESP", function(v) State.ESP.NPCESP = v end)
-	Components.createToggle(espC, "Item ESP", function(v) State.ESP.ItemESP = v end)
-	Components.createDivider(espC)
-	Components.createSection(espC, "Highlights")
-	Components.createToggle(espC, "Chams", function(v) State.ESP.Chams = v updateChams() end)
-	Components.createDivider(espC)
-	Components.createSection(espC, "Settings")
-	Components.createSlider(espC, "Max Distance", 100, 2000, 1000, function(v) State.ESP.MaxDistance = v end)
-	Components.createToggle(espC, "Team Check", function(v) State.ESP.TeamCheck = v end)
-	
-	-- ---------------------------------------------------------------------------
-	-- VISUALS TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(visC, "Lighting")
-	Components.createToggle(visC, "Fullbright", function(v)
-		State.Visuals.Fullbright = v
-		if v then
-			Lighting.Ambient = Color3.new(1, 1, 1)
-			Lighting.Brightness = 2
-			Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-		else
-			Lighting.Ambient = OriginalLighting.Ambient
-			Lighting.Brightness = OriginalLighting.Brightness
-			Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
-		end
-	end)
-	Components.createToggle(visC, "No Fog", function(v)
-		State.Visuals.NoFog = v
-		if v then
-			Lighting.FogEnd = 1e10
-			Lighting.FogStart = 1e10
-		else
-			Lighting.FogEnd = OriginalLighting.FogEnd
-			Lighting.FogStart = OriginalLighting.FogStart
-		end
-	end)
-	Components.createToggle(visC, "No Shadows", function(v) State.Visuals.NoShadows = v Lighting.GlobalShadows = not v end)
-	Components.createDivider(visC)
-	Components.createSection(visC, "Crosshair")
-	Components.createToggle(visC, "Custom Crosshair", function(v) State.Visuals.Crosshair = v end)
-	Components.createSlider(visC, "Crosshair Size", 5, 50, 10, function(v) State.Visuals.CrosshairSize = v end)
-	Components.createSlider(visC, "Crosshair Gap", 0, 20, 5, function(v) State.Visuals.CrosshairGap = v end)
-	Components.createDivider(visC)
-	Components.createSection(visC, "Camera")
-	Components.createSlider(visC, "Camera FOV", 30, 120, 70, function(v) State.Visuals.CameraFOV = v camera.FieldOfView = v end)
-	Components.createToggle(visC, "Third Person", function(v) State.Visuals.ThirdPerson = v player.CameraMaxZoomDistance = v and 100 or 128 player.CameraMinZoomDistance = v and 15 or 0.5 end)
-	Components.createToggle(visC, "Freecam", function(v) State.Visuals.Freecam = v if v then FreecamPos = camera.CFrame.Position UIS.MouseBehavior = Enum.MouseBehavior.LockCenter else camera.CameraType = Enum.CameraType.Custom UIS.MouseBehavior = Enum.MouseBehavior.Default end end)
-	Components.createSlider(visC, "Freecam Speed", 1, 20, 1, function(v) State.Visuals.FreecamSpeed = v end)
-	Components.createDivider(visC)
-	Components.createSection(visC, "World Visuals")
-	Components.createToggle(visC, "X-Ray", function(v) State.Visuals.XRay = v end)
-	Components.createSlider(visC, "X-Ray Transparency", 0, 100, 50, function(v) State.Visuals.XRayTransparency = v / 100 end)
-	
-	-- ---------------------------------------------------------------------------
-	-- WORLD TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(worldC, "Environment")
-	Components.createSlider(worldC, "Time of Day", 0, 24, 14, function(v) State.World.TimeOfDay = v Lighting.ClockTime = v end)
-	Components.createSlider(worldC, "Gravity", 0, 500, 196, function(v) State.World.Gravity = v workspace.Gravity = v end)
-	Components.createDivider(worldC)
-	Components.createSection(worldC, "Terrain")
-	Components.createToggle(worldC, "Remove Grass", function(v)
-		State.World.RemoveGrass = v
-		local t = workspace:FindFirstChildOfClass("Terrain")
-		if t then
-			t.Decoration = not v
-		end
-		for _, o in ipairs(workspace:GetDescendants()) do
-			if o:IsA("BasePart") and (o.Name:lower():find("grass") or o.Name:lower():find("foliage")) then
-				o.Transparency = v and 1 or 0
-			end
-		end
-	end)
-	Components.createDivider(worldC)
-	Components.createSection(worldC, "Tools")
-	Components.createToggle(worldC, "Delete Mode (Click)", function(v) State.World.DeleteMode = v end)
-	
-	-- ---------------------------------------------------------------------------
-	-- PLAYER TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(playerC, "Character")
-	Components.createToggle(playerC, "God Mode", function(v) State.Player.GodMode = v end)
-	Components.createToggle(playerC, "No Ragdoll", function(v) State.Player.NoRagdoll = v end)
-	Components.createToggle(playerC, "Auto Respawn", function(v) State.Player.AutoRespawn = v end)
-	Components.createSlider(playerC, "Character Scale", 50, 200, 100, function(v) State.Player.CharScale = v / 100 end)
-	Components.createDivider(playerC)
-	Components.createSection(playerC, "Invisibility (Hitbox-Only)")
-	Components.createLabel(playerC, "Model moves away, hitbox stays. NO transparency.")
-	Components.createToggle(playerC, "Invisibility", function(v)
-		State.Player.Invisibility = v
-		if v then
-			InvisSystem:Enable()
-		else
-			InvisSystem:Disable()
-		end
-	end)
-	Components.createSlider(playerC, "Invis Offset", 50, 500, 100, function(v) State.Player.InvisOffset = v end)
-	Components.createDivider(playerC)
-	Components.createSection(playerC, "Weapon")
-	Components.createToggle(playerC, "No Recoil", function(v) State.Player.NoRecoil = v end)
-	Components.createToggle(playerC, "No Spread", function(v) State.Player.NoSpread = v end)
-	Components.createToggle(playerC, "Infinite Stamina", function(v) State.Player.InfiniteStamina = v end)
-	
-	-- ---------------------------------------------------------------------------
-	-- TROLL TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(trollC, "Follow / Orbit")
-	Components.createToggle(trollC, "Annoy Player", function(v) State.Troll.AnnoyPlayer = v end)
-	Components.createToggle(trollC, "Orbit Player", function(v) State.Troll.OrbitPlayer = v end)
-	Components.createSlider(trollC, "Orbit Radius", 5, 30, 10, function(v) State.Troll.OrbitRadius = v end)
-	Components.createSlider(trollC, "Orbit Speed", 1, 10, 2, function(v) State.Troll.OrbitSpeed = v end)
-	Components.createDivider(trollC)
-	Components.createSection(trollC, "Character Troll")
-	Components.createToggle(trollC, "Fling", function(v) State.Troll.Fling = v end)
-	Components.createSlider(trollC, "Fling Power", 100, 1000, 500, function(v) State.Troll.FlingPower = v end)
-	Components.createToggle(trollC, "Headless", function(v) State.Troll.Headless = v end)
-	Components.createDivider(trollC)
-	Components.createSection(trollC, "Info")
-	Components.createLabel(trollC, "Type /target [name] in chat to set target")
-	
-	-- ---------------------------------------------------------------------------
-	-- MISC TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(miscC, "HUD Elements")
-	Components.createToggle(miscC, "Watermark", function(v) State.Misc.Watermark = v end)
-	Components.createToggle(miscC, "FPS Counter", function(v) State.Misc.FPSCounter = v end)
-	Components.createToggle(miscC, "Ping Display", function(v) State.Misc.PingDisplay = v end)
-	Components.createToggle(miscC, "Player Count", function(v) State.Misc.PlayerCount = v end)
-	Components.createToggle(miscC, "Velocity Display", function(v) State.Misc.VelocityDisplay = v end)
-	Components.createToggle(miscC, "Target Info", function(v) State.Misc.TargetInfo = v end)
-	Components.createToggle(miscC, "Keybinds Display", function(v) State.Misc.KeybindsDisplay = v end)
-	Components.createDivider(miscC)
-	Components.createSection(miscC, "Utility")
-	Components.createToggle(miscC, "Anti AFK", function(v) State.Misc.AntiAFK = v end)
-	Components.createToggle(miscC, "Chat Spam", function(v) State.Misc.ChatSpam = v end)
-	Components.createSlider(miscC, "Spam Delay", 1, 10, 2, function(v) State.Misc.SpamDelay = v end)
-	Components.createDivider(miscC)
-	Components.createSection(miscC, "Server")
-	Components.createToggle(miscC, "Server Hop", function(v)
-		if v then
-			pcall(function()
-				local s = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-				for _, srv in ipairs(s.data) do
-					if srv.id ~= game.JobId then
-						TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id)
-						break
-					end
+	do
+		local flySection = Tabs.createExpandableSection(moveC, "Flight", false)
+		Components.createToggle(flySection, "Fly" .. KeybindSystem:getDisplayText("Fly"), 
+			function(v) 
+				State.Movement.Fly = v 
+				KeybindSystem.binds["Fly"].active = v
+			end)
+		Components.createSlider(flySection, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
+		Components.createToggle(flySection, "Fly Legit", function(v) State.Movement.FlyLegit = v end)
+		Components.createToggle(flySection, "Noclip" .. KeybindSystem:getDisplayText("Noclip"), 
+			function(v) 
+				State.Movement.Noclip = v 
+				KeybindSystem.binds["Noclip"].active = v
+			end)
+		
+		local speedSection = Tabs.createExpandableSection(moveC, "Speed & Jump", false)
+		Components.createToggle(speedSection, "Speed" .. KeybindSystem:getDisplayText("Speed"), 
+			function(v) 
+				State.Movement.Speed = v 
+				KeybindSystem.binds["Speed"].active = v
+				if not v then
+					local h = getHumanoid()
+					if h then h.WalkSpeed = 16 end
 				end
 			end)
-		end
-	end)
-	Components.createToggle(miscC, "Rejoin", function(v)
-		if v then
-			TeleportService:Teleport(game.PlaceId)
-		end
-	end)
+		Components.createSlider(speedSection, "Speed Value", 16, 500, 16, function(v) State.Movement.SpeedValue = v end)
+		Components.createToggle(speedSection, "Speed Legit", function(v) State.Movement.SpeedLegit = v end)
+		Components.createToggle(speedSection, "Jump Power", function(v)
+			State.Movement.JumpPower = v
+			if not v then
+				local h = getHumanoid()
+				if h then h.JumpPower = 50 end
+			end
+		end)
+		Components.createSlider(speedSection, "Jump Value", 50, 500, 50, function(v) State.Movement.JumpValue = v end)
+		Components.createToggle(speedSection, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
+		
+		local specialSection = Tabs.createExpandableSection(moveC, "Special Movement", false)
+		Components.createToggle(specialSection, "Bunny Hop", function(v) State.Movement.BunnyHop = v end)
+		Components.createToggle(specialSection, "Long Jump (Space)", function(v) State.Movement.LongJump = v end)
+		Components.createSlider(specialSection, "Long Jump Force", 50, 400, 100, function(v) State.Movement.LongJumpForce = v end)
+		Components.createToggle(specialSection, "Speed Glide", function(v) State.Movement.SpeedGlide = v end)
+		Components.createSlider(specialSection, "Glide Speed", 1, 50, 10, function(v) State.Movement.GlideSpeed = v end)
+		Components.createToggle(specialSection, "Dash (Q)", function(v) State.Movement.Dash = v end)
+		Components.createSlider(specialSection, "Dash Force", 50, 300, 100, function(v) State.Movement.DashForce = v end)
+		Components.createSlider(specialSection, "Dash Cooldown", 1, 50, 10, function(v) State.Movement.DashCooldown = v / 10 end)
+		Components.createToggle(specialSection, "Air Control", function(v) State.Movement.AirControl = v end)
+		
+		local tpSection = Tabs.createExpandableSection(moveC, "Teleport & Safety", false)
+		Components.createToggle(tpSection, "Click TP", function(v) State.Movement.ClickTP = v end)
+		Components.createToggle(tpSection, "Anti Void", function(v) State.Movement.AntiVoid = v end)
+		Components.createSlider(tpSection, "Void Height", -500, 0, -100, function(v) State.Movement.VoidHeight = v end)
+		Components.createToggle(tpSection, "Anchor", function(v) State.Movement.Anchor = v end)
+		
+		local exploitSection = Tabs.createExpandableSection(moveC, "Movement Exploits", false)
+		Components.createToggle(exploitSection, "Spin Bot", function(v) State.Movement.SpinBot = v end)
+		Components.createSlider(exploitSection, "Spin Speed", 1, 50, 20, function(v) State.Movement.SpinSpeed = v end)
+		Components.createToggle(exploitSection, "Fake Lag", function(v) State.Movement.FakeLag = v end)
+		Components.createSlider(exploitSection, "Lag Intensity", 1, 10, 5, function(v) State.Movement.LagIntensity = v end)
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- ESP TAB WITH EXPANDABLE SECTIONS
+	-- ---------------------------------------------------------------------------
+	do
+		local playerSection = Tabs.createExpandableSection(espC, "Player ESP", true)
+		Components.createToggle(playerSection, "Name ESP", function(v) State.ESP.NameESP = v end)
+		Components.createToggle(playerSection, "Box ESP", function(v) State.ESP.BoxESP = v end)
+		Components.createToggle(playerSection, "Health ESP", function(v) State.ESP.HealthESP = v end)
+		Components.createToggle(playerSection, "Distance ESP", function(v) State.ESP.DistanceESP = v end)
+		Components.createToggle(playerSection, "Tracers", function(v) State.ESP.Tracers = v end)
+		Components.createToggle(playerSection, "Skeleton ESP", function(v) State.ESP.SkeletonESP = v end)
+		Components.createToggle(playerSection, "Offscreen Arrows", function(v) State.ESP.OffscreenArrows = v end)
+		
+		local worldSection = Tabs.createExpandableSection(espC, "World ESP", false)
+		Components.createToggle(worldSection, "NPC ESP", function(v) State.ESP.NPCESP = v end)
+		Components.createToggle(worldSection, "Item ESP", function(v) State.ESP.ItemESP = v end)
+		
+		local highlightSection = Tabs.createExpandableSection(espC, "Highlights", false)
+		Components.createToggle(highlightSection, "Chams", function(v) State.ESP.Chams = v updateChams() end)
+		
+		local settingsSection = Tabs.createExpandableSection(espC, "ESP Settings", false)
+		Components.createSlider(settingsSection, "Max Distance", 100, 2000, 1000, function(v) State.ESP.MaxDistance = v end)
+		Components.createToggle(settingsSection, "Team Check", function(v) State.ESP.TeamCheck = v end)
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- VISUALS TAB WITH EXPANDABLE SECTIONS
+	-- ---------------------------------------------------------------------------
+	do
+		local lightingSection = Tabs.createExpandableSection(visC, "Lighting", false)
+		Components.createToggle(lightingSection, "Fullbright", function(v)
+			State.Visuals.Fullbright = v
+			if v then
+				Lighting.Ambient = Color3.new(1, 1, 1)
+				Lighting.Brightness = 2
+				Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+			else
+				Lighting.Ambient = OriginalLighting.Ambient
+				Lighting.Brightness = OriginalLighting.Brightness
+				Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
+			end
+		end)
+		Components.createToggle(lightingSection, "No Fog", function(v)
+			State.Visuals.NoFog = v
+			if v then
+				Lighting.FogEnd = 1e10
+				Lighting.FogStart = 1e10
+			else
+				Lighting.FogEnd = OriginalLighting.FogEnd
+				Lighting.FogStart = OriginalLighting.FogStart
+			end
+		end)
+		Components.createToggle(lightingSection, "No Shadows", function(v) State.Visuals.NoShadows = v Lighting.GlobalShadows = not v end)
+		
+		local crosshairSection = Tabs.createExpandableSection(visC, "Crosshair", false)
+		Components.createToggle(crosshairSection, "Custom Crosshair", function(v) State.Visuals.Crosshair = v end)
+		Components.createSlider(crosshairSection, "Crosshair Size", 5, 50, 10, function(v) State.Visuals.CrosshairSize = v end)
+		Components.createSlider(crosshairSection, "Crosshair Gap", 0, 20, 5, function(v) State.Visuals.CrosshairGap = v end)
+		
+		local cameraSection = Tabs.createExpandableSection(visC, "Camera", false)
+		Components.createSlider(cameraSection, "Camera FOV", 30, 120, 70, function(v) State.Visuals.CameraFOV = v camera.FieldOfView = v end)
+		Components.createToggle(cameraSection, "Third Person", function(v) State.Visuals.ThirdPerson = v player.CameraMaxZoomDistance = v and 100 or 128 player.CameraMinZoomDistance = v and 15 or 0.5 end)
+		Components.createToggle(cameraSection, "Freecam", function(v) 
+			State.Visuals.Freecam = v 
+			if v then 
+				FreecamPos = camera.CFrame.Position 
+				UIS.MouseBehavior = Enum.MouseBehavior.LockCenter 
+			else 
+				camera.CameraType = Enum.CameraType.Custom 
+				UIS.MouseBehavior = Enum.MouseBehavior.Default 
+			end 
+		end)
+		Components.createSlider(cameraSection, "Freecam Speed", 1, 20, 1, function(v) State.Visuals.FreecamSpeed = v end)
+		
+		local worldSection = Tabs.createExpandableSection(visC, "World Visuals", false)
+		Components.createToggle(worldSection, "X-Ray", function(v) State.Visuals.XRay = v end)
+		Components.createSlider(worldSection, "X-Ray Transparency", 0, 100, 50, function(v) State.Visuals.XRayTransparency = v / 100 end)
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- WORLD TAB WITH EXPANDABLE SECTIONS
+	-- ---------------------------------------------------------------------------
+	do
+		local envSection = Tabs.createExpandableSection(worldC, "Environment", false)
+		Components.createSlider(envSection, "Time of Day", 0, 24, 14, function(v) State.World.TimeOfDay = v Lighting.ClockTime = v end)
+		Components.createSlider(envSection, "Gravity", 0, 500, 196, function(v) State.World.Gravity = v workspace.Gravity = v end)
+		
+		local terrainSection = Tabs.createExpandableSection(worldC, "Terrain", false)
+		Components.createToggle(terrainSection, "Remove Grass", function(v)
+			State.World.RemoveGrass = v
+			local t = workspace:FindFirstChildOfClass("Terrain")
+			if t then t.Decoration = not v end
+			for _, o in ipairs(workspace:GetDescendants()) do
+				if o:IsA("BasePart") and (o.Name:lower():find("grass") or o.Name:lower():find("foliage")) then
+					o.Transparency = v and 1 or 0
+				end
+			end
+		end)
+		
+		local toolsSection = Tabs.createExpandableSection(worldC, "Tools", false)
+		Components.createToggle(toolsSection, "Delete Mode (Click)", function(v) State.World.DeleteMode = v end)
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- PLAYER TAB WITH EXPANDABLE SECTIONS
+	-- ---------------------------------------------------------------------------
+	do
+		local charSection = Tabs.createExpandableSection(playerC, "Character", false)
+		Components.createToggle(charSection, "God Mode", function(v) State.Player.GodMode = v end)
+		Components.createToggle(charSection, "No Ragdoll", function(v) State.Player.NoRagdoll = v end)
+		Components.createToggle(charSection, "Auto Respawn", function(v) State.Player.AutoRespawn = v end)
+		Components.createSlider(charSection, "Character Scale", 50, 200, 100, function(v) State.Player.CharScale = v / 100 end)
+		
+		local invisSection = Tabs.createExpandableSection(playerC, "Invisibility", false)
+		Components.createLabel(invisSection, "Transparency-based invisibility")
+		Components.createToggle(invisSection, "Invisibility", function(v)
+			State.Player.Invisibility = v
+			if v then
+				InvisSystem:Enable()
+			else
+				InvisSystem:Disable()
+			end
+		end)
+		Components.createSlider(invisSection, "Invis Offset", 50, 500, 100, function(v) State.Player.InvisOffset = v end)
+		
+		local weaponSection = Tabs.createExpandableSection(playerC, "Weapon", false)
+		Components.createToggle(weaponSection, "No Recoil", function(v) State.Player.NoRecoil = v end)
+		Components.createToggle(weaponSection, "No Spread", function(v) State.Player.NoSpread = v end)
+		Components.createToggle(weaponSection, "Infinite Stamina", function(v) State.Player.InfiniteStamina = v end)
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- TROLL TAB WITH EXPANDABLE SECTIONS
+	-- ---------------------------------------------------------------------------
+	do
+		local followSection = Tabs.createExpandableSection(trollC, "Follow / Orbit", false)
+		Components.createToggle(followSection, "Annoy Player", function(v) State.Troll.AnnoyPlayer = v end)
+		Components.createToggle(followSection, "Orbit Player", function(v) State.Troll.OrbitPlayer = v end)
+		Components.createSlider(followSection, "Orbit Radius", 5, 30, 10, function(v) State.Troll.OrbitRadius = v end)
+		Components.createSlider(followSection, "Orbit Speed", 1, 10, 2, function(v) State.Troll.OrbitSpeed = v end)
+		
+		local charSection = Tabs.createExpandableSection(trollC, "Character Troll", false)
+		Components.createToggle(charSection, "Fling", function(v) State.Troll.Fling = v end)
+		Components.createSlider(charSection, "Fling Power", 100, 1000, 500, function(v) State.Troll.FlingPower = v end)
+		Components.createToggle(charSection, "Headless", function(v) State.Troll.Headless = v end)
+		
+		local infoSection = Tabs.createExpandableSection(trollC, "Info", true)
+		Components.createLabel(infoSection, "Type /target [name] in chat to set target")
+		Components.createLabel(infoSection, "Example: /target Player1")
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- MISC TAB WITH EXPANDABLE SECTIONS
+	-- ---------------------------------------------------------------------------
+	do
+		local hudSection = Tabs.createExpandableSection(miscC, "HUD Elements", true)
+		Components.createToggle(hudSection, "Watermark", function(v) State.Misc.Watermark = v end)
+		Components.createToggle(hudSection, "FPS Counter", function(v) State.Misc.FPSCounter = v end)
+		Components.createToggle(hudSection, "Ping Display", function(v) State.Misc.PingDisplay = v end)
+		Components.createToggle(hudSection, "Player Count", function(v) State.Misc.PlayerCount = v end)
+		Components.createToggle(hudSection, "Velocity Display", function(v) State.Misc.VelocityDisplay = v end)
+		Components.createToggle(hudSection, "Target Info", function(v) State.Misc.TargetInfo = v end)
+		Components.createToggle(hudSection, "Keybinds Display", function(v) State.Misc.KeybindsDisplay = v end)
+		
+		local utilitySection = Tabs.createExpandableSection(miscC, "Utility", false)
+		Components.createToggle(utilitySection, "Anti AFK", function(v) State.Misc.AntiAFK = v end)
+		Components.createToggle(utilitySection, "Chat Spam", function(v) State.Misc.ChatSpam = v end)
+		Components.createSlider(utilitySection, "Spam Delay", 1, 10, 2, function(v) State.Misc.SpamDelay = v end)
+		
+		local serverSection = Tabs.createExpandableSection(miscC, "Server", false)
+		Components.createToggle(serverSection, "Server Hop", function(v)
+			if v then
+				pcall(function()
+					local s = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+					for _, srv in ipairs(s.data) do
+						if srv.id ~= game.JobId then
+							TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id)
+							break
+						end
+					end
+				end)
+			end
+		end)
+		Components.createToggle(serverSection, "Rejoin", function(v)
+			if v then
+				TeleportService:Teleport(game.PlaceId)
+			end
+		end)
+		
+		local keybindSection = Tabs.createExpandableSection(miscC, "Keybind Settings", true)
+		Components.createLabel(keybindSection, "Current Keybinds:")
+		Components.createLabel(keybindSection, "C - Aim Assist")
+		Components.createLabel(keybindSection, "V - Kill Aura")
+		Components.createLabel(keybindSection, "F - Fly")
+		Components.createLabel(keybindSection, "N - Noclip")
+		Components.createLabel(keybindSection, "Z - Speed")
+		Components.createLabel(keybindSection, "X - ESP")
+		Components.createLabel(keybindSection, "B - Silent Aim")
+		Components.createLabel(keybindSection, "T - Triggerbot")
+		Components.createLabel(keybindSection, "Press M to toggle menu")
+	end
 	
 	-- Activate first tab
 	Tabs.activate(combatT, combatC)
@@ -2139,7 +2438,7 @@ return function(arg1, arg2, arg3)
 				
 				-- Animate open
 				main.Size = UDim2.new(0, 0, 0, 0)
-				tween(main, {Size = UDim2.new(0, 950, 0, 650)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+				tween(main, {Size = UDim2.new(0, 1000, 0, 700)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
 			else
 				-- Restore previous mouse state
 				UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
@@ -2200,8 +2499,9 @@ return function(arg1, arg2, arg3)
 	-- INITIALIZATION COMPLETE
 	-- ---------------------------------------------------------------------------
 	if DrawingEnabled then
-		print("[Vertex Hub] Loaded successfully! Drawing API available. Press M to toggle menu.")
+		print("[Vertex Hub v2.0] Loaded successfully! Drawing API available. Press M to toggle menu.")
+		print("[Keybinds] C=AimAssist V=KillAura F=Fly N=Noclip Z=Speed X=ESP B=SilentAim T=Triggerbot")
 	else
-		print("[Vertex Hub] Loaded successfully! WARNING: Drawing API not available - ESP features disabled. Press M to toggle menu.")
+		print("[Vertex Hub v2.0] Loaded successfully! WARNING: Drawing API not available - ESP features disabled. Press M to toggle menu.")
 	end
 end
