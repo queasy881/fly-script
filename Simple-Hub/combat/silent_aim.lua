@@ -1,9 +1,11 @@
 -- combat/silent_aim.lua
--- Silent Aim with hooks
+-- SAFE Silent Aim implementation (executor-friendly)
 
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+
 local player = Players.LocalPlayer
-local camera = workspace.CurrentCamera
+local camera = Workspace.CurrentCamera
 local mouse = player:GetMouse()
 
 local SilentAim = {
@@ -13,87 +15,114 @@ local SilentAim = {
 	targetPart = "Head"
 }
 
+-- =========================
+-- TARGET SELECTION
+-- =========================
 function SilentAim.getTarget()
-	local closest, closestDist = nil, math.huge
-	local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-	
+	local closestPart = nil
+	local closestDist = math.huge
+
+	local screenCenter = Vector2.new(
+		camera.ViewportSize.X / 2,
+		camera.ViewportSize.Y / 2
+	)
+
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr ~= player and plr.Character then
-			local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-			local targetPart = plr.Character:FindFirstChild(SilentAim.targetPart) or plr.Character:FindFirstChild("Head")
-			
-			if humanoid and humanoid.Health > 0 and targetPart then
-				local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
-				
+			local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+			local part =
+				plr.Character:FindFirstChild(SilentAim.targetPart)
+				or plr.Character:FindFirstChild("Head")
+
+			if hum and hum.Health > 0 and part then
+				local pos, onScreen = camera:WorldToViewportPoint(part.Position)
 				if onScreen then
-					local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-					
+					local dist = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
 					if dist < SilentAim.fov and dist < closestDist then
 						closestDist = dist
-						closest = targetPart
+						closestPart = part
 					end
 				end
 			end
 		end
 	end
-	
-	return closest
+
+	return closestPart
 end
 
+-- =========================
+-- HIT CHANCE
+-- =========================
 function SilentAim.shouldHit()
 	return math.random(1, 100) <= SilentAim.hitChance
 end
 
--- Mouse hooks
+-- =========================
+-- MOUSE HOOK (Hit / Target)
+-- =========================
 pcall(function()
 	local oldIndex
 	oldIndex = hookmetamethod(game, "__index", function(self, key)
-		if SilentAim.enabled and self == mouse then
-			if key == "Hit" then
-				if SilentAim.shouldHit() then
-					local target = SilentAim.getTarget()
-					if target then return CFrame.new(target.Position) end
-				end
-			elseif key == "Target" then
-				if SilentAim.shouldHit() then
-					local target = SilentAim.getTarget()
-					if target then return target end
-				end
-			end
-		end
-		return oldIndex(self, key)
-	end)
-end)
-
--- Raycast hooks
-pcall(function()
-	local oldNamecall
-	oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-		local method = getnamecallmethod()
-		local args = {...}
-		
-		if SilentAim.enabled and self == workspace then
-			if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
-				if SilentAim.shouldHit() then
-					local target = SilentAim.getTarget()
-					if target then
-						if method == "Raycast" and args[1] and args[2] then
-							local origin = args[1]
-							local newDir = (target.Position - origin).Unit * 1000
-							return oldNamecall(self, origin, newDir, unpack(args, 3))
-						elseif args[1] and typeof(args[1]) == "Ray" then
-							local origin = args[1].Origin
-							local newDir = (target.Position - origin).Unit * 1000
-							local newRay = Ray.new(origin, newDir)
-							return oldNamecall(self, newRay, unpack(args, 2))
-						end
+		if not checkcaller() and SilentAim.enabled and self == mouse then
+			if SilentAim.shouldHit() then
+				local target = SilentAim.getTarget()
+				if target then
+					if key == "Hit" then
+						return CFrame.new(target.Position)
+					elseif key == "Target" then
+						return target
 					end
 				end
 			end
 		end
-		
+
+		return oldIndex(self, key)
+	end)
+end)
+
+-- =========================
+-- RAYCAST HOOK (SAFE)
+-- =========================
+pcall(function()
+	local oldNamecall
+	oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+		if not checkcaller() and SilentAim.enabled then
+			local method = getnamecallmethod()
+			local args = { ... }
+
+			if self == Workspace and method == "Raycast" then
+				if SilentAim.shouldHit() then
+					local target = SilentAim.getTarget()
+					if target and args[1] and args[2] then
+						local origin = args[1]
+						local direction = (target.Position - origin).Unit * args[2].Magnitude
+						return oldNamecall(self, origin, direction, args[3])
+					end
+				end
+			end
+		end
+
 		return oldNamecall(self, ...)
 	end)
 end)
+
+-- =========================
+-- PUBLIC API (Controller uses this)
+-- =========================
+function SilentAim:Set(state)
+	self.enabled = state
+end
+
+function SilentAim:SetFOV(v)
+	self.fov = v
+end
+
+function SilentAim:SetHitChance(v)
+	self.hitChance = v
+end
+
+function SilentAim:SetTargetPart(partName)
+	self.targetPart = partName
+end
 
 return SilentAim
