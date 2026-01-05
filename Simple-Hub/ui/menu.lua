@@ -1700,60 +1700,49 @@ return function(arg1, arg2, arg3)
 		
 		-- FIXED TOGGLE COMPONENT - Now returns a table with UpdateState method
 		function Components.createToggle(parent, text, callback)
-	local state = false
+    local state = false
 
-	local btn = Instance.new("TextButton")
-	btn.Name = "Toggle_" .. text:gsub("%s+", "_")
-	btn.Size = UDim2.new(0, 160, 0, 28)
-	btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-	btn.Text = text .. " : OFF"
-	btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 14
-	btn.Parent = parent
+    local btn = Instance.new("TextButton")
+    btn.Name = "Toggle_" .. text:gsub("%s+", "_")
+    btn.Size = UDim2.new(0, 160, 0, 28)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.Parent = parent
 
-	local function applyVisual()
-		if state then
-			btn.Text = text .. " : ON"
-			btn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
-		else
-			btn.Text = text .. " : OFF"
-			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-		end
-	end
+    local function apply()
+        btn.Text = text .. (state and " : ON" or " : OFF")
+        btn.BackgroundColor3 = state
+            and Color3.fromRGB(60,120,255)
+            or Color3.fromRGB(40,40,50)
+    end
 
-	-- ✅ CLICK
-	btn.MouseButton1Click:Connect(function()
-		state = not state
-		applyVisual()
-		if callback then callback(state) end
-	end)
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        apply()
+        if callback then callback(state) end
+    end)
 
-	-- ✅ CRITICAL: PATCH THE BUTTON ITSELF
-	function btn:SetState(value)
-		if typeof(value) ~= "boolean" then return end
-		state = value
-		applyVisual()
-		if callback then callback(state) end
-	end
+    apply()
 
-	function btn:GetState()
-		return state
-	end
+    -- 🚨 RETURN OBJECT — NOT THE BUTTON
+    return {
+        Button = btn,
 
-	applyVisual()
+        UpdateState = function(_, v)
+            if typeof(v) ~= "boolean" then return end
+            state = v
+            apply()
+            if callback then callback(state) end
+        end,
 
-	-- ✅ ALSO RETURN A WRAPPER (for new code)
-	return {
-		Button = btn,
-		UpdateState = function(_, v)
-			btn:SetState(v)
-		end,
-		GetState = function()
-			return state
-		end
-	}
+        GetState = function()
+            return state
+        end
+    }
 end
+
 
 		
 		function Components.createSlider(parent, text, min, max, default, callback)
