@@ -1,399 +1,314 @@
--- components_redesigned.lua - CYBERPUNK HEXAGONAL THEME
--- Modern card-based UI with neon accents and futuristic design
+-- components_redesigned.lua - GLASSMORPHISM MODERN DESIGN
+-- Floating cards, blur effects, minimal aesthetic
 
 local Components = {}
 
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 
--- Cyberpunk Color Palette
+-- Modern Minimal Color Palette
 local Colors = {
-    Background = Color3.fromRGB(10, 12, 18),
-    Card = Color3.fromRGB(18, 22, 32),
-    CardHover = Color3.fromRGB(22, 28, 40),
-    Surface = Color3.fromRGB(25, 30, 42),
-    Elevated = Color3.fromRGB(30, 36, 50),
-    Border = Color3.fromRGB(50, 60, 80),
-    BorderGlow = Color3.fromRGB(80, 100, 140),
-    Text = Color3.fromRGB(230, 235, 245),
-    TextDim = Color3.fromRGB(150, 160, 180),
-    TextMuted = Color3.fromRGB(100, 110, 130),
-    Primary = Color3.fromRGB(0, 200, 255),      -- Cyan neon
-    Secondary = Color3.fromRGB(200, 50, 255),   -- Purple neon
-    Accent = Color3.fromRGB(255, 0, 200),       -- Pink neon
-    Success = Color3.fromRGB(0, 255, 150),
-    Warning = Color3.fromRGB(255, 200, 0),
-    Error = Color3.fromRGB(255, 50, 100),
-    Glow = Color3.fromRGB(0, 150, 255)
+    Background = Color3.fromRGB(15, 15, 20),
+    Glass = Color3.fromRGB(25, 25, 35),
+    GlassLight = Color3.fromRGB(35, 35, 50),
+    Blur = Color3.fromRGB(20, 20, 30),
+    Text = Color3.fromRGB(255, 255, 255),
+    TextSoft = Color3.fromRGB(180, 180, 200),
+    TextMuted = Color3.fromRGB(120, 120, 140),
+    Accent = Color3.fromRGB(120, 100, 255),
+    AccentSoft = Color3.fromRGB(150, 130, 255),
+    Success = Color3.fromRGB(100, 220, 150),
+    Border = Color3.fromRGB(60, 60, 80),
+    Shadow = Color3.fromRGB(0, 0, 0)
 }
 
--- Helper: Create hexagonal corner approximation
-local function createHexCorner(parent, radius)
+-- Smooth corners
+local function corner(parent, radius)
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 8)
+    c.CornerRadius = UDim.new(0, radius or 12)
     c.Parent = parent
     return c
 end
 
--- Helper: Create glowing border
-local function createGlowBorder(parent, color)
+-- Glass effect border
+local function glassBorder(parent)
     local s = Instance.new("UIStroke")
-    s.Color = color or Colors.BorderGlow
+    s.Color = Colors.Border
     s.Thickness = 1
     s.Transparency = 0.3
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     s.Parent = parent
-    
-    -- Add glow effect
-    local glow = Instance.new("UIStroke")
-    glow.Color = color or Colors.Glow
-    glow.Thickness = 2
-    glow.Transparency = 0.8
-    glow.Parent = parent
-    
     return s
-end
-
--- Helper: Create gradient overlay
-local function createGradient(parent, colors, rotation)
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = colors or ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Colors.Primary),
-        ColorSequenceKeypoint.new(1, Colors.Secondary)
-    }
-    gradient.Rotation = rotation or 45
-    gradient.Parent = parent
-    return gradient
 end
 
 -- Smooth tween
 local function tween(obj, props, duration)
     if not obj then return end
-    local info = TweenInfo.new(duration or 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local info = TweenInfo.new(duration or 0.3, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
     local t = TweenService:Create(obj, info, props)
     t:Play()
     return t
 end
 
 -- ============================================
--- TOGGLE COMPONENT - Cyberpunk Card Style
+-- TOGGLE - Minimal Floating Card
 -- ============================================
 function Components.createToggle(parent, text, callback, initialState)
     local container = Instance.new("TextButton")
-    container.Name = "Toggle_" .. (text or "Unknown")
-    container.Size = UDim2.new(1, -12, 0, 50)
-    container.BackgroundColor3 = Colors.Card
+    container.Name = "Toggle"
+    container.Size = UDim2.new(1, 0, 0, 60)
+    container.BackgroundColor3 = Colors.Glass
+    container.BackgroundTransparency = 0.3
     container.BorderSizePixel = 0
     container.AutoButtonColor = false
     container.Text = ""
     container.Parent = parent
     
-    createHexCorner(container, 10)
-    createGlowBorder(container, Colors.BorderGlow)
+    corner(container, 16)
+    glassBorder(container)
     
-    -- Hover glow effect
-    local hoverGlow = Instance.new("Frame")
-    hoverGlow.Name = "HoverGlow"
-    hoverGlow.Size = UDim2.new(1, 0, 1, 0)
-    hoverGlow.BackgroundColor3 = Colors.Primary
-    hoverGlow.BackgroundTransparency = 1
-    hoverGlow.BorderSizePixel = 0
-    hoverGlow.ZIndex = 0
-    hoverGlow.Parent = container
-    createHexCorner(hoverGlow, 10)
+    -- Gradient overlay
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 220))
+    }
+    gradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0.95),
+        NumberSequenceKeypoint.new(1, 0.98)
+    }
+    gradient.Rotation = 135
+    gradient.Parent = container
     
-    -- Left accent bar
-    local accentBar = Instance.new("Frame")
-    accentBar.Name = "AccentBar"
-    accentBar.Size = UDim2.new(0, 4, 0, 0)
-    accentBar.Position = UDim2.new(0, 0, 0.5, 0)
-    accentBar.AnchorPoint = Vector2.new(0, 0.5)
-    accentBar.BackgroundColor3 = Colors.Primary
-    accentBar.BorderSizePixel = 0
-    accentBar.Parent = container
-    createHexCorner(accentBar, 2)
-    
-    -- Icon background (hexagonal feel)
-    local iconBg = Instance.new("Frame")
-    iconBg.Size = UDim2.new(0, 32, 0, 32)
-    iconBg.Position = UDim2.new(0, 15, 0.5, 0)
-    iconBg.AnchorPoint = Vector2.new(0, 0.5)
-    iconBg.BackgroundColor3 = Colors.Surface
-    iconBg.BorderSizePixel = 0
-    iconBg.Parent = container
-    createHexCorner(iconBg, 6)
-    
-    local iconText = Instance.new("TextLabel")
-    iconText.Size = UDim2.new(1, 0, 1, 0)
-    iconText.BackgroundTransparency = 1
-    iconText.Text = "●"
-    iconText.TextColor3 = Colors.TextMuted
-    iconText.Font = Enum.Font.GothamBold
-    iconText.TextSize = 16
-    iconText.Parent = iconBg
+    -- Left color indicator
+    local indicator = Instance.new("Frame")
+    indicator.Size = UDim2.new(0, 0, 1, 0)
+    indicator.BackgroundColor3 = Colors.Accent
+    indicator.BorderSizePixel = 0
+    indicator.Parent = container
+    local indCorner = Instance.new("UICorner")
+    indCorner.CornerRadius = UDim.new(0, 16)
+    indCorner.Parent = indicator
     
     -- Label
     local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(1, -130, 1, 0)
-    label.Position = UDim2.new(0, 55, 0, 0)
+    label.Size = UDim2.new(1, -120, 1, 0)
+    label.Position = UDim2.new(0, 24, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text or "Toggle"
-    label.TextColor3 = Colors.TextDim
+    label.TextColor3 = Colors.TextSoft
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Font = Enum.Font.GothamMedium
-    label.TextSize = 13
+    label.TextSize = 14
     label.Parent = container
     
-    -- Modern switch
+    -- Modern pill switch
     local switchBg = Instance.new("Frame")
-    switchBg.Name = "Switch"
-    switchBg.Size = UDim2.new(0, 48, 0, 24)
-    switchBg.Position = UDim2.new(1, -60, 0.5, 0)
+    switchBg.Size = UDim2.new(0, 52, 0, 28)
+    switchBg.Position = UDim2.new(1, -70, 0.5, 0)
     switchBg.AnchorPoint = Vector2.new(0, 0.5)
-    switchBg.BackgroundColor3 = Colors.Surface
+    switchBg.BackgroundColor3 = Colors.Glass
     switchBg.BorderSizePixel = 0
     switchBg.Parent = container
-    createHexCorner(switchBg, 12)
+    corner(switchBg, 14)
     
-    local switchHandle = Instance.new("Frame")
-    switchHandle.Name = "Handle"
-    switchHandle.Size = UDim2.new(0, 18, 0, 18)
-    switchHandle.Position = UDim2.new(0, 3, 0.5, 0)
-    switchHandle.AnchorPoint = Vector2.new(0, 0.5)
-    switchHandle.BackgroundColor3 = Colors.TextMuted
-    switchHandle.BorderSizePixel = 0
-    switchHandle.Parent = switchBg
-    createHexCorner(switchHandle, 9)
+    local switchStroke = Instance.new("UIStroke")
+    switchStroke.Color = Colors.Border
+    switchStroke.Thickness = 2
+    switchStroke.Transparency = 0.5
+    switchStroke.Parent = switchBg
     
-    -- Add glow to handle
-    local handleGlow = Instance.new("UIStroke")
-    handleGlow.Color = Colors.Primary
-    handleGlow.Thickness = 2
-    handleGlow.Transparency = 1
-    handleGlow.Parent = switchHandle
+    local switchCircle = Instance.new("Frame")
+    switchCircle.Size = UDim2.new(0, 22, 0, 22)
+    switchCircle.Position = UDim2.new(0, 3, 0.5, 0)
+    switchCircle.AnchorPoint = Vector2.new(0, 0.5)
+    switchCircle.BackgroundColor3 = Colors.TextMuted
+    switchCircle.BorderSizePixel = 0
+    switchCircle.Parent = switchBg
+    corner(switchCircle, 11)
     
-    -- State
     local state = initialState or false
     
-    -- Update visual state
     local function updateVisual()
         if state then
-            tween(container, {BackgroundColor3 = Colors.CardHover})
+            tween(indicator, {Size = UDim2.new(0, 4, 1, 0)})
             tween(label, {TextColor3 = Colors.Text})
-            tween(accentBar, {Size = UDim2.new(0, 4, 1, -10)})
-            tween(switchBg, {BackgroundColor3 = Colors.Primary})
-            tween(switchHandle, {
-                Position = UDim2.new(1, -21, 0.5, 0),
-                BackgroundColor3 = Color3.new(1, 1, 1)
+            tween(switchBg, {BackgroundColor3 = Colors.Accent})
+            tween(switchCircle, {
+                Position = UDim2.new(1, -25, 0.5, 0),
+                BackgroundColor3 = Colors.Text
             })
-            tween(handleGlow, {Transparency = 0.5})
-            tween(iconText, {TextColor3 = Colors.Primary})
-            tween(iconBg, {BackgroundColor3 = Colors.Elevated})
+            tween(switchStroke, {Transparency = 1})
         else
-            tween(container, {BackgroundColor3 = Colors.Card})
-            tween(label, {TextColor3 = Colors.TextDim})
-            tween(accentBar, {Size = UDim2.new(0, 4, 0, 0)})
-            tween(switchBg, {BackgroundColor3 = Colors.Surface})
-            tween(switchHandle, {
+            tween(indicator, {Size = UDim2.new(0, 0, 1, 0)})
+            tween(label, {TextColor3 = Colors.TextSoft})
+            tween(switchBg, {BackgroundColor3 = Colors.Glass})
+            tween(switchCircle, {
                 Position = UDim2.new(0, 3, 0.5, 0),
                 BackgroundColor3 = Colors.TextMuted
             })
-            tween(handleGlow, {Transparency = 1})
-            tween(iconText, {TextColor3 = Colors.TextMuted})
-            tween(iconBg, {BackgroundColor3 = Colors.Surface})
+            tween(switchStroke, {Transparency = 0.5})
         end
     end
     
-    -- Initialize
     updateVisual()
     
-    -- Events
     container.MouseEnter:Connect(function()
-        tween(hoverGlow, {BackgroundTransparency = 0.95})
+        tween(container, {BackgroundTransparency = 0.2})
     end)
     
     container.MouseLeave:Connect(function()
-        tween(hoverGlow, {BackgroundTransparency = 1})
+        tween(container, {BackgroundTransparency = 0.3})
     end)
     
     container.MouseButton1Click:Connect(function()
         state = not state
         updateVisual()
-        if callback then
-            task.spawn(callback, state)
-        end
+        if callback then task.spawn(callback, state) end
     end)
     
-    local toggleObject = {
+    return {
         Button = container,
-        Label = label,
         SetState = function(self, newState)
-            if typeof(newState) ~= "boolean" then return end
-            if state ~= newState then
+            if typeof(newState) == "boolean" and state ~= newState then
                 state = newState
                 updateVisual()
             end
         end,
         UpdateState = function(self, newState)
-            if typeof(newState) ~= "boolean" then return end
-            state = newState
-            updateVisual()
-            if callback then
-                task.spawn(callback, state)
+            if typeof(newState) == "boolean" then
+                state = newState
+                updateVisual()
+                if callback then task.spawn(callback, state) end
             end
         end,
-        GetState = function(self)
-            return state
-        end
+        GetState = function(self) return state end
     }
-    
-    return toggleObject
 end
 
 -- ============================================
--- SLIDER COMPONENT - Cyberpunk Style
+-- SLIDER - Floating Card
 -- ============================================
 function Components.createSlider(parent, text, min, max, defaultValue, callback)
     local container = Instance.new("Frame")
-    container.Name = "Slider_" .. (text or "Unknown")
-    container.Size = UDim2.new(1, -12, 0, 70)
-    container.BackgroundColor3 = Colors.Card
+    container.Size = UDim2.new(1, 0, 0, 80)
+    container.BackgroundColor3 = Colors.Glass
+    container.BackgroundTransparency = 0.3
     container.BorderSizePixel = 0
     container.Parent = parent
     
-    createHexCorner(container, 10)
-    createGlowBorder(container, Colors.BorderGlow)
+    corner(container, 16)
+    glassBorder(container)
     
-    -- Header area
-    local headerBg = Instance.new("Frame")
-    headerBg.Size = UDim2.new(1, 0, 0, 30)
-    headerBg.BackgroundColor3 = Colors.Surface
-    headerBg.BackgroundTransparency = 0.5
-    headerBg.BorderSizePixel = 0
-    headerBg.Parent = container
-    createHexCorner(headerBg, 10)
+    -- Gradient
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 220))
+    }
+    gradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0.95),
+        NumberSequenceKeypoint.new(1, 0.98)
+    }
+    gradient.Rotation = 135
+    gradient.Parent = container
     
     -- Label
     local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(1, -100, 0, 30)
-    label.Position = UDim2.new(0, 15, 0, 0)
+    label.Size = UDim2.new(1, -100, 0, 24)
+    label.Position = UDim2.new(0, 24, 0, 16)
     label.BackgroundTransparency = 1
     label.Text = text or "Slider"
-    label.TextColor3 = Colors.TextDim
+    label.TextColor3 = Colors.TextSoft
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Font = Enum.Font.GothamMedium
-    label.TextSize = 12
+    label.TextSize = 14
     label.Parent = container
     
-    -- Value display with background
-    local valueBg = Instance.new("Frame")
-    valueBg.Size = UDim2.new(0, 70, 0, 22)
-    valueBg.Position = UDim2.new(1, -80, 0, 4)
-    valueBg.BackgroundColor3 = Colors.Elevated
-    valueBg.BorderSizePixel = 0
-    valueBg.Parent = container
-    createHexCorner(valueBg, 6)
+    -- Value bubble
+    local valueBubble = Instance.new("Frame")
+    valueBubble.Size = UDim2.new(0, 60, 0, 28)
+    valueBubble.Position = UDim2.new(1, -84, 0, 14)
+    valueBubble.BackgroundColor3 = Colors.Accent
+    valueBubble.BorderSizePixel = 0
+    valueBubble.Parent = container
+    corner(valueBubble, 14)
     
     local valueLabel = Instance.new("TextLabel")
-    valueLabel.Name = "Value"
     valueLabel.Size = UDim2.new(1, 0, 1, 0)
     valueLabel.BackgroundTransparency = 1
     valueLabel.Text = tostring(defaultValue or min)
-    valueLabel.TextColor3 = Colors.Primary
+    valueLabel.TextColor3 = Colors.Text
     valueLabel.Font = Enum.Font.GothamBold
-    valueLabel.TextSize = 13
-    valueLabel.Parent = valueBg
+    valueLabel.TextSize = 14
+    valueLabel.Parent = valueBubble
     
-    -- Slider track
+    -- Track
     local track = Instance.new("Frame")
-    track.Name = "Track"
-    track.Size = UDim2.new(1, -30, 0, 8)
-    track.Position = UDim2.new(0, 15, 1, -20)
-    track.BackgroundColor3 = Colors.Surface
+    track.Size = UDim2.new(1, -48, 0, 4)
+    track.Position = UDim2.new(0, 24, 1, -24)
+    track.BackgroundColor3 = Colors.Glass
     track.BorderSizePixel = 0
     track.Parent = container
-    createHexCorner(track, 4)
+    corner(track, 2)
     
-    -- Add inner shadow effect
-    local trackStroke = Instance.new("UIStroke")
-    trackStroke.Color = Colors.Background
-    trackStroke.Thickness = 1
-    trackStroke.Transparency = 0.5
-    trackStroke.Parent = track
-    
-    -- Fill with gradient
+    -- Fill
     local fill = Instance.new("Frame")
-    fill.Name = "Fill"
     local initialPercent = ((defaultValue or min) - min) / (max - min)
     fill.Size = UDim2.new(initialPercent, 0, 1, 0)
-    fill.BackgroundColor3 = Colors.Primary
+    fill.BackgroundColor3 = Colors.Accent
     fill.BorderSizePixel = 0
     fill.Parent = track
-    createHexCorner(fill, 4)
-    createGradient(fill, ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Colors.Primary),
-        ColorSequenceKeypoint.new(1, Colors.Secondary)
-    }, 90)
+    corner(fill, 2)
     
     -- Handle
     local handle = Instance.new("Frame")
-    handle.Name = "Handle"
-    handle.Size = UDim2.new(0, 20, 0, 20)
+    handle.Size = UDim2.new(0, 18, 0, 18)
     handle.Position = UDim2.new(initialPercent, 0, 0.5, 0)
     handle.AnchorPoint = Vector2.new(0.5, 0.5)
-    handle.BackgroundColor3 = Color3.new(1, 1, 1)
+    handle.BackgroundColor3 = Colors.Text
     handle.BorderSizePixel = 0
     handle.ZIndex = 2
     handle.Parent = track
-    createHexCorner(handle, 10)
+    corner(handle, 9)
     
-    -- Handle glow
-    local handleGlow = Instance.new("UIStroke")
-    handleGlow.Color = Colors.Primary
-    handleGlow.Thickness = 3
-    handleGlow.Transparency = 0.4
-    handleGlow.Parent = handle
+    local handleShadow = Instance.new("UIStroke")
+    handleShadow.Color = Colors.Accent
+    handleShadow.Thickness = 3
+    handleShadow.Transparency = 0.5
+    handleShadow.Parent = handle
     
-    -- State
     local value = defaultValue or min
     local dragging = false
     
-    -- Update visual
     local function updateVisual(percent)
         percent = math.clamp(percent, 0, 1)
         value = math.floor(min + (max - min) * percent)
         valueLabel.Text = tostring(value)
         
-        tween(fill, {Size = UDim2.new(percent, 0, 1, 0)}, 0.1)
-        tween(handle, {Position = UDim2.new(percent, 0, 0.5, 0)}, 0.1)
+        tween(fill, {Size = UDim2.new(percent, 0, 1, 0)}, 0.15)
+        tween(handle, {Position = UDim2.new(percent, 0, 0.5, 0)}, 0.15)
         
-        if callback then
-            task.spawn(callback, value)
-        end
+        if callback then task.spawn(callback, value) end
     end
     
-    -- Handle input
     track.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             local relativeX = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
             updateVisual(relativeX)
-            tween(handleGlow, {Transparency = 0.2})
         end
     end)
     
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
-            tween(handleGlow, {Transparency = 0.2})
         end
     end)
     
     UIS.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
-            tween(handleGlow, {Transparency = 0.4})
         end
     end)
     
@@ -408,91 +323,54 @@ function Components.createSlider(parent, text, min, max, defaultValue, callback)
 end
 
 -- ============================================
--- SECTION HEADER - Cyberpunk Style
+-- SECTION
 -- ============================================
 function Components.createSection(parent, text)
     local section = Instance.new("Frame")
-    section.Name = "Section_" .. (text or "Unknown")
-    section.Size = UDim2.new(1, -12, 0, 40)
+    section.Size = UDim2.new(1, 0, 0, 36)
     section.BackgroundTransparency = 1
     section.Parent = parent
     
-    -- Decorative line
-    local line = Instance.new("Frame")
-    line.Size = UDim2.new(1, 0, 0, 1)
-    line.Position = UDim2.new(0, 0, 1, -1)
-    line.BackgroundColor3 = Colors.BorderGlow
-    line.BackgroundTransparency = 0.5
-    line.BorderSizePixel = 0
-    line.Parent = section
-    createGradient(line, ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Colors.Primary),
-        ColorSequenceKeypoint.new(0.5, Colors.Secondary),
-        ColorSequenceKeypoint.new(1, Colors.Primary)
-    }, 0)
-    
-    -- Hex accent
-    local hexAccent = Instance.new("Frame")
-    hexAccent.Size = UDim2.new(0, 6, 0, 24)
-    hexAccent.Position = UDim2.new(0, 0, 0.5, 0)
-    hexAccent.AnchorPoint = Vector2.new(0, 0.5)
-    hexAccent.BackgroundColor3 = Colors.Primary
-    hexAccent.BorderSizePixel = 0
-    hexAccent.Parent = section
-    createHexCorner(hexAccent, 3)
-    
-    -- Label
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -15, 1, 0)
-    label.Position = UDim2.new(0, 15, 0, 0)
+    label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Text = (text or "SECTION"):upper()
-    label.TextColor3 = Colors.Text
+    label.TextColor3 = Colors.Accent
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Font = Enum.Font.GothamBold
-    label.TextSize = 11
+    label.TextSize = 12
     label.Parent = section
     
     return section
 end
 
 -- ============================================
--- DIVIDER - Minimal
+-- DIVIDER
 -- ============================================
 function Components.createDivider(parent)
     local divider = Instance.new("Frame")
-    divider.Size = UDim2.new(1, -24, 0, 12)
+    divider.Size = UDim2.new(1, 0, 0, 16)
     divider.BackgroundTransparency = 1
     divider.Parent = parent
-    
-    local line = Instance.new("Frame")
-    line.Size = UDim2.new(1, 0, 0, 1)
-    line.Position = UDim2.new(0, 0, 0.5, 0)
-    line.BackgroundColor3 = Colors.Border
-    line.BackgroundTransparency = 0.7
-    line.BorderSizePixel = 0
-    line.Parent = divider
-    
     return divider
 end
 
 -- ============================================
--- LABEL - Info Text
+-- LABEL
 -- ============================================
 function Components.createLabel(parent, text)
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -12, 0, 30)
+    lbl.Size = UDim2.new(1, 0, 0, 28)
     lbl.BackgroundTransparency = 1
     lbl.Text = text or ""
     lbl.TextColor3 = Colors.TextMuted
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 11
+    lbl.TextSize = 12
     lbl.TextWrapped = true
     lbl.Parent = parent
     return lbl
 end
 
--- Export
 _G.VertexComponents = Components
 return Components
