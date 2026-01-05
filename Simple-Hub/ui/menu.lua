@@ -340,79 +340,57 @@ return function(arg1, arg2, arg3)
 	
 	local function applyStateToUI()
 		-- Apply all toggle states to UI
-		if ToggleRefs.AimAssist then ToggleRefs.AimAssist:SetState(State.Combat.AimAssist) end
-		if ToggleRefs.ShowFOVCircle then ToggleRefs.ShowFOVCircle:SetState(State.Combat.ShowFOVCircle) end
-		if ToggleRefs.Prediction then ToggleRefs.Prediction:SetState(State.Combat.AimPrediction) end
-		if ToggleRefs.SilentAim then ToggleRefs.SilentAim:SetState(State.Combat.SilentAim) end
-		if ToggleRefs.KillAura then ToggleRefs.KillAura:SetState(State.Combat.KillAura) end
-		if ToggleRefs.KillAuraPlayers then ToggleRefs.KillAuraPlayers:SetState(State.Combat.KillAuraPlayers) end
-		if ToggleRefs.KillAuraNPCs then ToggleRefs.KillAuraNPCs:SetState(State.Combat.KillAuraNPCs) end
-		if ToggleRefs.KillAuraWallCheck then ToggleRefs.KillAuraWallCheck:SetState(State.Combat.KillAuraWallCheck) end
-		if ToggleRefs.KillAuraLegit then ToggleRefs.KillAuraLegit:SetState(State.Combat.KillAuraLegit) end
-		if ToggleRefs.Reach then ToggleRefs.Reach:SetState(State.Combat.Reach) end
-		if ToggleRefs.ReachLegit then ToggleRefs.ReachLegit:SetState(State.Combat.ReachLegit) end
-		if ToggleRefs.Triggerbot then ToggleRefs.Triggerbot:SetState(State.Combat.Triggerbot) end
-		if ToggleRefs.AutoParry then ToggleRefs.AutoParry:SetState(State.Combat.AutoParry) end
-		if ToggleRefs.HitboxExpander then ToggleRefs.HitboxExpander:SetState(State.Combat.HitboxExpander) end
-		if ToggleRefs.Backtrack then ToggleRefs.Backtrack:SetState(State.Combat.Backtrack) end
-		if ToggleRefs.TargetStrafe then ToggleRefs.TargetStrafe:SetState(State.Combat.TargetStrafe) end
-		if ToggleRefs.Fly then ToggleRefs.Fly:SetState(State.Movement.Fly) end
-		if ToggleRefs.FlyLegit then ToggleRefs.FlyLegit:SetState(State.Movement.FlyLegit) end
-		if ToggleRefs.Noclip then ToggleRefs.Noclip:SetState(State.Movement.Noclip) end
-		if ToggleRefs.Speed then ToggleRefs.Speed:SetState(State.Movement.Speed) end
-		if ToggleRefs.SpeedLegit then ToggleRefs.SpeedLegit:SetState(State.Movement.SpeedLegit) end
-		if ToggleRefs.JumpPower then ToggleRefs.JumpPower:SetState(State.Movement.JumpPower) end
-		if ToggleRefs.InfiniteJump then ToggleRefs.InfiniteJump:SetState(State.Movement.InfiniteJump) end
-		if ToggleRefs.BunnyHop then ToggleRefs.BunnyHop:SetState(State.Movement.BunnyHop) end
-		if ToggleRefs.LongJump then ToggleRefs.LongJump:SetState(State.Movement.LongJump) end
-		if ToggleRefs.SpeedGlide then ToggleRefs.SpeedGlide:SetState(State.Movement.SpeedGlide) end
-		if ToggleRefs.Dash then ToggleRefs.Dash:SetState(State.Movement.Dash) end
-		if ToggleRefs.AirControl then ToggleRefs.AirControl:SetState(State.Movement.AirControl) end
-		if ToggleRefs.ClickTP then ToggleRefs.ClickTP:SetState(State.Movement.ClickTP) end
-		if ToggleRefs.AntiVoid then ToggleRefs.AntiVoid:SetState(State.Movement.AntiVoid) end
-		if ToggleRefs.Anchor then ToggleRefs.Anchor:SetState(State.Movement.Anchor) end
-		if ToggleRefs.SpinBot then ToggleRefs.SpinBot:SetState(State.Movement.SpinBot) end
-		if ToggleRefs.FakeLag then ToggleRefs.FakeLag:SetState(State.Movement.FakeLag) end
-		if ToggleRefs.NameESP then ToggleRefs.NameESP:SetState(State.ESP.NameESP) end
-		if ToggleRefs.BoxESP then ToggleRefs.BoxESP:SetState(State.ESP.BoxESP) end
-		if ToggleRefs.HealthESP then ToggleRefs.HealthESP:SetState(State.ESP.HealthESP) end
-		if ToggleRefs.DistanceESP then ToggleRefs.DistanceESP:SetState(State.ESP.DistanceESP) end
-		if ToggleRefs.Tracers then ToggleRefs.Tracers:SetState(State.ESP.Tracers) end
-		if ToggleRefs.SkeletonESP then ToggleRefs.SkeletonESP:SetState(State.ESP.SkeletonESP) end
-		if ToggleRefs.OffscreenArrows then ToggleRefs.OffscreenArrows:SetState(State.ESP.OffscreenArrows) end
-		if ToggleRefs.NPCESP then ToggleRefs.NPCESP:SetState(State.ESP.NPCESP) end
-		if ToggleRefs.ItemESP then ToggleRefs.ItemESP:SetState(State.ESP.ItemESP) end
-		if ToggleRefs.Chams then ToggleRefs.Chams:SetState(State.ESP.Chams) end
-		if ToggleRefs.TeamCheck then ToggleRefs.TeamCheck:SetState(State.ESP.TeamCheck) end
-		if ToggleRefs.Fullbright then ToggleRefs.Fullbright:SetState(State.Visuals.Fullbright) end
-		if ToggleRefs.NoFog then ToggleRefs.NoFog:SetState(State.Visuals.NoFog) end
-		if ToggleRefs.NoShadows then ToggleRefs.NoShadows:SetState(State.Visuals.NoShadows) end
-		if ToggleRefs.Crosshair then ToggleRefs.Crosshair:SetState(State.Visuals.Crosshair) end
-		if ToggleRefs.ThirdPerson then ToggleRefs.ThirdPerson:SetState(State.Visuals.ThirdPerson) end
-		if ToggleRefs.Freecam then ToggleRefs.Freecam:SetState(State.Visuals.Freecam) end
-		if ToggleRefs.XRay then ToggleRefs.XRay:SetState(State.Visuals.XRay) end
-		if ToggleRefs.RemoveGrass then ToggleRefs.RemoveGrass:SetState(State.World.RemoveGrass) end
-		if ToggleRefs.DeleteMode then ToggleRefs.DeleteMode:SetState(State.World.DeleteMode) end
-		if ToggleRefs.GodMode then ToggleRefs.GodMode:SetState(State.Player.GodMode) end
-		if ToggleRefs.NoRagdoll then ToggleRefs.NoRagdoll:SetState(State.Player.NoRagdoll) end
-		if ToggleRefs.AutoRespawn then ToggleRefs.AutoRespawn:SetState(State.Player.AutoRespawn) end
-		if ToggleRefs.Invisibility then ToggleRefs.Invisibility:SetState(State.Player.Invisibility) end
-		if ToggleRefs.NoRecoil then ToggleRefs.NoRecoil:SetState(State.Player.NoRecoil) end
-		if ToggleRefs.NoSpread then ToggleRefs.NoSpread:SetState(State.Player.NoSpread) end
-		if ToggleRefs.InfiniteStamina then ToggleRefs.InfiniteStamina:SetState(State.Player.InfiniteStamina) end
-		if ToggleRefs.AnnoyPlayer then ToggleRefs.AnnoyPlayer:SetState(State.Troll.AnnoyPlayer) end
-		if ToggleRefs.OrbitPlayer then ToggleRefs.OrbitPlayer:SetState(State.Troll.OrbitPlayer) end
-		if ToggleRefs.Fling then ToggleRefs.Fling:SetState(State.Troll.Fling) end
-		if ToggleRefs.Headless then ToggleRefs.Headless:SetState(State.Troll.Headless) end
-		if ToggleRefs.Watermark then ToggleRefs.Watermark:SetState(State.Misc.Watermark) end
-		if ToggleRefs.FPSCounter then ToggleRefs.FPSCounter:SetState(State.Misc.FPSCounter) end
-		if ToggleRefs.PingDisplay then ToggleRefs.PingDisplay:SetState(State.Misc.PingDisplay) end
-		if ToggleRefs.PlayerCount then ToggleRefs.PlayerCount:SetState(State.Misc.PlayerCount) end
-		if ToggleRefs.VelocityDisplay then ToggleRefs.VelocityDisplay:SetState(State.Misc.VelocityDisplay) end
-		if ToggleRefs.TargetInfo then ToggleRefs.TargetInfo:SetState(State.Misc.TargetInfo) end
-		if ToggleRefs.KeybindsDisplay then ToggleRefs.KeybindsDisplay:SetState(State.Misc.KeybindsDisplay) end
-		if ToggleRefs.AntiAFK then ToggleRefs.AntiAFK:SetState(State.Misc.AntiAFK) end
-		if ToggleRefs.ChatSpam then ToggleRefs.ChatSpam:SetState(State.Misc.ChatSpam) end
+		for refName, toggleObj in pairs(ToggleRefs) do
+			if toggleObj and toggleObj.UpdateState then
+				-- Map ref name to state category
+				local category, settingName
+				if refName:find("Aim") or refName:find("Silent") or refName:find("Kill") or refName:find("Reach") or refName:find("Trigger") or refName:find("AutoParry") or refName:find("Hitbox") or refName:find("Backtrack") or refName:find("TargetStrafe") then
+					category = "Combat"
+				elseif refName:find("Fly") or refName:find("Noclip") or refName:find("Speed") or refName:find("Jump") or refName:find("Bunny") or refName:find("Long") or refName:find("Glide") or refName:find("Dash") or refName:find("Click") or refName:find("Anti") or refName:find("Anchor") or refName:find("Spin") or refName:find("Fake") or refName:find("Air") then
+					category = "Movement"
+				elseif refName:find("ESP") or refName:find("Tracers") or refName:find("Skeleton") or refName:find("Arrow") or refName:find("Chams") or refName:find("TeamCheck") then
+					category = "ESP"
+				elseif refName:find("Fullbright") or refName:find("Fog") or refName:find("Shadow") or refName:find("Crosshair") or refName:find("Third") or refName:find("Freecam") or refName:find("XRay") then
+					category = "Visuals"
+				elseif refName:find("Remove") or refName:find("Delete") then
+					category = "World"
+				elseif refName:find("God") or refName:find("Ragdoll") or refName:find("Respawn") or refName:find("Invis") or refName:find("Recoil") or refName:find("Spread") or refName:find("Stamina") then
+					category = "Player"
+				elseif refName:find("Annoy") or refName:find("Orbit") or refName:find("Fling") or refName:find("Headless") then
+					category = "Troll"
+				elseif refName:find("Watermark") or refName:find("FPS") or refName:find("Ping") or refName:find("PlayerCount") or refName:find("Velocity") or refName:find("TargetInfo") or refName:find("Keybinds") or refName:find("AntiAFK") or refName:find("Chat") then
+					category = "Misc"
+				end
+				
+				if category and State[category] then
+					-- Convert ref name to setting name
+					settingName = refName
+					if settingName == "ShowFOVCircle" then
+						settingName = "ShowFOVCircle"
+					elseif settingName == "KillAuraPlayers" then
+						settingName = "KillAuraPlayers"
+					elseif settingName == "KillAuraNPCs" then
+						settingName = "KillAuraNPCs"
+					elseif settingName == "KillAuraWallCheck" then
+						settingName = "KillAuraWallCheck"
+					elseif settingName == "KillAuraLegit" then
+						settingName = "KillAuraLegit"
+					elseif settingName == "ReachLegit" then
+						settingName = "ReachLegit"
+					elseif settingName == "SpeedLegit" then
+						settingName = "SpeedLegit"
+					elseif settingName == "FlyLegit" then
+						settingName = "FlyLegit"
+					elseif settingName == "TeamCheck" then
+						settingName = "TeamCheck"
+					end
+					
+					if State[category][settingName] ~= nil then
+						toggleObj.UpdateState(State[category][settingName])
+					end
+				end
+			end
+		end
 	end
 	
 	local function saveConfig(name)
@@ -1720,50 +1698,54 @@ return function(arg1, arg2, arg3)
 			lbl.Parent = parent
 		end
 		
-function Components.createToggle(parent, text, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 160, 0, 28)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    btn.Text = text .. " : OFF"
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    btn.Parent = parent
-
-    local state = false
-
-    local function applyVisual()
-        if state then
-            btn.Text = text .. " : ON"
-            btn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
-        else
-            btn.Text = text .. " : OFF"
-            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        end
-    end
-
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        applyVisual()
-        if callback then callback(state) end
-    end)
-
-    function btn:SetState(value)
-        if typeof(value) ~= "boolean" then return end
-        state = value
-        applyVisual()
-        if callback then callback(state) end
-    end
-
-    function btn:GetState()
-        return state
-    end
-
-    applyVisual()
-    return btn
-end
-
-
+		-- FIXED TOGGLE COMPONENT - Now returns a table with UpdateState method
+		function Components.createToggle(parent, text, callback)
+			local toggleObj = {}
+			local state = false
+			
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(0, 160, 0, 28)
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+			btn.Text = text .. " : OFF"
+			btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+			btn.Font = Enum.Font.Gotham
+			btn.TextSize = 14
+			btn.Parent = parent
+			
+			local function applyVisual()
+				if state then
+					btn.Text = text .. " : ON"
+					btn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
+				else
+					btn.Text = text .. " : OFF"
+					btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+				end
+			end
+			
+			btn.MouseButton1Click:Connect(function()
+				state = not state
+				applyVisual()
+				if callback then callback(state) end
+			end)
+			
+			-- Add methods to toggleObj
+			function toggleObj.UpdateState(value)
+				if typeof(value) ~= "boolean" then return end
+				state = value
+				applyVisual()
+				if callback then callback(state) end
+			end
+			
+			function toggleObj.GetState()
+				return state
+			end
+			
+			-- Store the button reference
+			toggleObj.Button = btn
+			
+			applyVisual()
+			return toggleObj
+		end
 		
 		function Components.createSlider(parent, text, min, max, default, callback)
 			local cont = Instance.new("Frame")
@@ -2679,7 +2661,7 @@ end
 	
 	Components.createDivider(miscC)
 	Components.createSection(miscC, "Server")
-	Components.createToggle(miscC, "Server Hop", function(v)
+	local serverToggle = Components.createToggle(miscC, "Server Hop", function(v)
 		if v then
 			pcall(function()
 				local success, s = pcall(function()
@@ -2694,11 +2676,19 @@ end
 					end
 				end
 			end)
+			-- Reset toggle state immediately since teleporting will disconnect
+			if serverToggle and serverToggle.UpdateState then
+				serverToggle.UpdateState(false)
+			end
 		end
 	end)
-	Components.createToggle(miscC, "Rejoin", function(v)
+	local rejoinToggle = Components.createToggle(miscC, "Rejoin", function(v)
 		if v then
 			TeleportService:Teleport(game.PlaceId)
+			-- Reset toggle state
+			if rejoinToggle and rejoinToggle.UpdateState then
+				rejoinToggle.UpdateState(false)
+			end
 		end
 	end)
 	
