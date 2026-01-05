@@ -36,6 +36,7 @@ return function(arg1, arg2, arg3)
 	local Stats = game:GetService("Stats")
 	local HttpService = game:GetService("HttpService")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local DataStoreService = game:GetService("DataStoreService")
 	
 	local player = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
@@ -318,6 +319,146 @@ return function(arg1, arg2, arg3)
 		},
 		Settings = { MenuKey = Enum.KeyCode.M, AccentColor = Color3.fromRGB(60, 120, 255) }
 	}
+	
+	-- ---------------------------------------------------------------------------
+	-- CONFIG SYSTEM
+	-- ---------------------------------------------------------------------------
+	local Configs = {
+		store = DataStoreService:GetDataStore("VertexHub_Configs_" .. player.UserId),
+		list = {},
+		current = nil
+	}
+	
+	local function saveConfig(name)
+		if not name or name == "" then name = "Config_" .. os.date("%Y-%m-%d_%H-%M") end
+		
+		local configData = {
+			ESP = State.ESP,
+			Combat = State.Combat,
+			Movement = State.Movement,
+			Visuals = State.Visuals,
+			World = State.World,
+			Player = State.Player,
+			Troll = State.Troll,
+			Misc = State.Misc,
+			Settings = State.Settings,
+			Timestamp = os.time(),
+			Game = game.PlaceId,
+			GameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name or "Unknown"
+		}
+		
+		local success, err = pcall(function()
+			Configs.store:SetAsync(name, configData)
+		end)
+		
+		if success then
+			print("[Vertex] Config saved: " .. name)
+			-- Refresh list
+			local success2, data = pcall(function()
+				return Configs.store:GetAsync("_config_list") or {}
+			end)
+			if success2 then
+				data[name] = true
+				pcall(function()
+					Configs.store:SetAsync("_config_list", data)
+				end)
+			end
+			return true
+		else
+			print("[Vertex] Failed to save config: " .. err)
+			return false
+		end
+	end
+	
+	local function loadConfig(name)
+		local success, data = pcall(function()
+			return Configs.store:GetAsync(name)
+		end)
+		
+		if success and data then
+			-- Load each category
+			for category, values in pairs(data) do
+				if State[category] then
+					for key, val in pairs(values) do
+						if State[category][key] ~= nil then
+							State[category][key] = val
+						end
+					end
+				end
+			end
+			
+			-- Apply visual changes
+			if State.Visuals.Fullbright then
+				Lighting.Ambient = Color3.new(1, 1, 1)
+				Lighting.Brightness = 2
+				Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+			end
+			
+			if State.Visuals.NoFog then
+				Lighting.FogEnd = 1e10
+				Lighting.FogStart = 1e10
+			end
+			
+			if State.Visuals.NoShadows then
+				Lighting.GlobalShadows = false
+			end
+			
+			camera.FieldOfView = State.Visuals.CameraFOV
+			workspace.Gravity = State.World.Gravity
+			Lighting.ClockTime = State.World.TimeOfDay
+			
+			print("[Vertex] Config loaded: " .. name)
+			return true
+		else
+			print("[Vertex] Failed to load config")
+			return false
+		end
+	end
+	
+	local function deleteConfig(name)
+		local success = pcall(function()
+			Configs.store:RemoveAsync(name)
+		end)
+		
+		if success then
+			-- Update list
+			local success2, data = pcall(function()
+				return Configs.store:GetAsync("_config_list") or {}
+			end)
+			if success2 then
+				data[name] = nil
+				pcall(function()
+					Configs.store:SetAsync("_config_list", data)
+				end)
+			end
+			print("[Vertex] Config deleted: " .. name)
+			return true
+		else
+			print("[Vertex] Failed to delete config")
+			return false
+		end
+	end
+	
+	local function getConfigList()
+		local success, data = pcall(function()
+			return Configs.store:GetAsync("_config_list") or {}
+		end)
+		
+		if success then
+			local list = {}
+			for name, _ in pairs(data) do
+				table.insert(list, name)
+			end
+			table.sort(list)
+			return list
+		end
+		return {}
+	end
+	
+	-- Load config list on start
+	task.spawn(function()
+		Configs.list = getConfigList()
+	end)
 	
 	-- ---------------------------------------------------------------------------
 	-- STORAGE
@@ -1592,6 +1733,176 @@ return function(arg1, arg2, arg3)
 			end)
 			return cont
 		end
+		
+		-- New component: Text input
+		function Components.createInput(parent, text, placeholder, callback)
+			local cont = Instance.new("Frame")
+			cont.Size = UDim2.new(1, -16, 0, 40)
+			cont.BackgroundColor3 = Colors.Btn
+			cont.BorderSizePixel = 0
+			cont.Parent = parent
+			corner(cont)
+			stroke(cont)
+			
+			local lbl = Instance.new("TextLabel")
+			lbl.Size = UDim2.new(0, 80, 1, 0)
+			lbl.Position = UDim2.new(0, 8, 0, 0)
+			lbl.BackgroundTransparency = 1
+			lbl.Text = text
+			lbl.TextColor3 = Colors.Dim
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+			lbl.Font = Enum.Font.GothamMedium
+			lbl.TextSize = 12
+			lbl.Parent = cont
+			
+			local input = Instance.new("TextBox")
+			input.Size = UDim2.new(1, -100, 1, -12)
+			input.Position = UDim2.new(0, 88, 0, 6)
+			input.BackgroundColor3 = Colors.SliderBg
+			input.BorderSizePixel = 0
+			input.Text = ""
+			input.PlaceholderText = placeholder or ""
+			input.TextColor3 = Colors.Text
+			input.PlaceholderColor3 = Colors.Dim
+			input.Font = Enum.Font.Gotham
+			input.TextSize = 12
+			input.ClearTextOnFocus = false
+			input.Parent = cont
+			corner(input, 4)
+			
+			input.FocusLost:Connect(function(enter)
+				if enter and callback then
+					callback(input.Text)
+				end
+			end)
+			
+			return cont
+		end
+		
+		-- New component: Dropdown
+		function Components.createDropdown(parent, text, options, callback)
+			local cont = Instance.new("Frame")
+			cont.Size = UDim2.new(1, -16, 0, 40)
+			cont.BackgroundColor3 = Colors.Btn
+			cont.BorderSizePixel = 0
+			cont.Parent = parent
+			corner(cont)
+			stroke(cont)
+			
+			local lbl = Instance.new("TextLabel")
+			lbl.Size = UDim2.new(0, 80, 1, 0)
+			lbl.Position = UDim2.new(0, 8, 0, 0)
+			lbl.BackgroundTransparency = 1
+			lbl.Text = text
+			lbl.TextColor3 = Colors.Dim
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+			lbl.Font = Enum.Font.GothamMedium
+			lbl.TextSize = 12
+			lbl.Parent = cont
+			
+			local dropdown = Instance.new("TextButton")
+			dropdown.Size = UDim2.new(1, -100, 1, -12)
+			dropdown.Position = UDim2.new(0, 88, 0, 6)
+			dropdown.BackgroundColor3 = Colors.SliderBg
+			dropdown.BorderSizePixel = 0
+			dropdown.Text = options[1] or "Select..."
+			dropdown.TextColor3 = Colors.Text
+			dropdown.Font = Enum.Font.Gotham
+			dropdown.TextSize = 12
+			dropdown.AutoButtonColor = false
+			dropdown.Parent = cont
+			corner(dropdown, 4)
+			
+			local arrow = Instance.new("TextLabel")
+			arrow.Size = UDim2.new(0, 20, 1, 0)
+			arrow.Position = UDim2.new(1, -20, 0, 0)
+			arrow.BackgroundTransparency = 1
+			arrow.Text = "▼"
+			arrow.TextColor3 = Colors.Dim
+			arrow.Font = Enum.Font.GothamBold
+			arrow.TextSize = 10
+			arrow.Parent = dropdown
+			
+			local list = Instance.new("Frame")
+			list.Size = UDim2.new(1, 0, 0, 0)
+			list.Position = UDim2.new(0, 0, 1, 2)
+			list.BackgroundColor3 = Colors.SliderBg
+			list.BorderSizePixel = 0
+			list.Visible = false
+			list.ZIndex = 10
+			list.Parent = dropdown
+			corner(list, 4)
+			
+			local layout = Instance.new("UIListLayout")
+			layout.Parent = list
+			
+			local open = false
+			
+			local function toggle()
+				open = not open
+				if open then
+					list.Visible = true
+					list.Size = UDim2.new(1, 0, 0, math.min(#options * 30, 150))
+					arrow.Text = "▲"
+				else
+					list.Visible = false
+					list.Size = UDim2.new(1, 0, 0, 0)
+					arrow.Text = "▼"
+				end
+			end
+			
+			dropdown.MouseButton1Click:Connect(toggle)
+			
+			-- Populate options
+			for i, option in ipairs(options) do
+				local optionBtn = Instance.new("TextButton")
+				optionBtn.Size = UDim2.new(1, -8, 0, 28)
+				optionBtn.Position = UDim2.new(0, 4, 0, (i-1)*30)
+				optionBtn.BackgroundColor3 = Colors.Btn
+				optionBtn.BorderSizePixel = 0
+				optionBtn.Text = option
+				optionBtn.TextColor3 = Colors.Dim
+				optionBtn.Font = Enum.Font.Gotham
+				optionBtn.TextSize = 11
+				optionBtn.AutoButtonColor = false
+				optionBtn.ZIndex = 11
+				optionBtn.Parent = list
+				corner(optionBtn, 3)
+				
+				optionBtn.MouseEnter:Connect(function()
+					optionBtn.BackgroundColor3 = Colors.BtnHover
+					optionBtn.TextColor3 = Colors.Text
+				end)
+				
+				optionBtn.MouseLeave:Connect(function()
+					optionBtn.BackgroundColor3 = Colors.Btn
+					optionBtn.TextColor3 = Colors.Dim
+				end)
+				
+				optionBtn.MouseButton1Click:Connect(function()
+					dropdown.Text = option
+					if callback then callback(option) end
+					toggle()
+				end)
+			end
+			
+			-- Close dropdown when clicking outside
+			UIS.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 and open then
+					if not dropdown:IsDescendantOf(parent) then return end
+					local mousePos = UIS:GetMouseLocation()
+					local absPos = dropdown.AbsolutePosition
+					local absSize = dropdown.AbsoluteSize
+					
+					if not (mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X and
+						mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y + list.AbsoluteSize.Y) then
+						toggle()
+					end
+				end
+			end)
+			
+			return cont
+		end
 	end
 	_G.VertexComponents = Components
 	
@@ -2059,7 +2370,7 @@ return function(arg1, arg2, arg3)
 	Components.createLabel(trollC, "Type /target [name] in chat to set target")
 	
 	-- ---------------------------------------------------------------------------
-	-- MISC TAB
+	-- MISC TAB (WITH CONFIG SYSTEM)
 	-- ---------------------------------------------------------------------------
 	Components.createSection(miscC, "HUD Elements")
 	Components.createToggle(miscC, "Watermark", function(v) State.Misc.Watermark = v end)
@@ -2074,6 +2385,176 @@ return function(arg1, arg2, arg3)
 	Components.createToggle(miscC, "Anti AFK", function(v) State.Misc.AntiAFK = v end)
 	Components.createToggle(miscC, "Chat Spam", function(v) State.Misc.ChatSpam = v end)
 	Components.createSlider(miscC, "Spam Delay", 1, 10, 2, function(v) State.Misc.SpamDelay = v end)
+	Components.createDivider(miscC)
+	
+	-- CONFIG SYSTEM
+	Components.createSection(miscC, "Config System")
+	Components.createLabel(miscC, "Save/Load your settings")
+	
+	-- Config name input
+	local configNameInput = Components.createInput(miscC, "Config Name", "Enter config name...", function(text)
+		-- This is just for display, actual save happens in buttons
+	end)
+	
+	-- Buttons container
+	local configButtons = Instance.new("Frame")
+	configButtons.Size = UDim2.new(1, -16, 0, 30)
+	configButtons.BackgroundTransparency = 1
+	configButtons.Parent = miscC
+	
+	local saveBtn = Instance.new("TextButton")
+	saveBtn.Size = UDim2.new(0.3, -4, 1, 0)
+	saveBtn.Position = UDim2.new(0, 0, 0, 0)
+	saveBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+	saveBtn.Text = "Save"
+	saveBtn.TextColor3 = Color3.new(1, 1, 1)
+	saveBtn.Font = Enum.Font.GothamBold
+	saveBtn.TextSize = 12
+	saveBtn.AutoButtonColor = false
+	saveBtn.Parent = configButtons
+	local saveCorner = Instance.new("UICorner")
+	saveCorner.CornerRadius = UDim.new(0, 4)
+	saveCorner.Parent = saveBtn
+	
+	local loadBtn = Instance.new("TextButton")
+	loadBtn.Size = UDim2.new(0.3, -4, 1, 0)
+	loadBtn.Position = UDim2.new(0.35, 0, 0, 0)
+	loadBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
+	loadBtn.Text = "Load"
+	loadBtn.TextColor3 = Color3.new(1, 1, 1)
+	loadBtn.Font = Enum.Font.GothamBold
+	loadBtn.TextSize = 12
+	loadBtn.AutoButtonColor = false
+	loadBtn.Parent = configButtons
+	local loadCorner = Instance.new("UICorner")
+	loadCorner.CornerRadius = UDim.new(0, 4)
+	loadCorner.Parent = loadBtn
+	
+	local deleteBtn = Instance.new("TextButton")
+	deleteBtn.Size = UDim2.new(0.3, -4, 1, 0)
+	deleteBtn.Position = UDim2.new(0.7, 0, 0, 0)
+	deleteBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+	deleteBtn.Text = "Delete"
+	deleteBtn.TextColor3 = Color3.new(1, 1, 1)
+	deleteBtn.Font = Enum.Font.GothamBold
+	deleteBtn.TextSize = 12
+	deleteBtn.AutoButtonColor = false
+	deleteBtn.Parent = configButtons
+	local deleteCorner = Instance.new("UICorner")
+	deleteCorner.CornerRadius = UDim.new(0, 4)
+	deleteCorner.Parent = deleteBtn
+	
+	-- Config list dropdown
+	local configListLabel = Components.createLabel(miscC, "Saved Configs:")
+	
+	-- Create dropdown for configs
+	local configDropdown
+	local function refreshConfigDropdown()
+		if configDropdown then configDropdown:Destroy() end
+		
+		Configs.list = getConfigList()
+		if #Configs.list == 0 then
+			table.insert(Configs.list, "No configs saved")
+		end
+		
+		configDropdown = Components.createDropdown(miscC, "Select Config", Configs.list, function(selected)
+			if selected ~= "No configs saved" then
+				-- Update input field with selected config
+				local inputField = configNameInput:FindFirstChildOfClass("TextBox")
+				if inputField then
+					inputField.Text = selected
+				end
+			end
+		end)
+	end
+	
+	-- Initial refresh
+	task.spawn(refreshConfigDropdown)
+	
+	-- Button hover effects
+	saveBtn.MouseEnter:Connect(function() saveBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 100) end)
+	saveBtn.MouseLeave:Connect(function() saveBtn.BackgroundColor3 = Color3.fromRGB(60, 180, 80) end)
+	
+	loadBtn.MouseEnter:Connect(function() loadBtn.BackgroundColor3 = Color3.fromRGB(80, 140, 255) end)
+	loadBtn.MouseLeave:Connect(function() loadBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 255) end)
+	
+	deleteBtn.MouseEnter:Connect(function() deleteBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 80) end)
+	deleteBtn.MouseLeave:Connect(function() deleteBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60) end)
+	
+	-- Button actions
+	saveBtn.MouseButton1Click:Connect(function()
+		local inputField = configNameInput:FindFirstChildOfClass("TextBox")
+		local name = inputField and inputField.Text or ""
+		if name == "" then name = "Config_" .. os.date("%Y-%m-%d_%H-%M") end
+		
+		if saveConfig(name) then
+			refreshConfigDropdown()
+			-- Show success message
+			local notif = Instance.new("TextLabel")
+			notif.Size = UDim2.new(0, 200, 0, 40)
+			notif.Position = UDim2.new(0.5, -100, 0.5, -20)
+			notif.BackgroundColor3 = Color3.fromRGB(60, 180, 80)
+			notif.Text = "Config saved: " .. name
+			notif.TextColor3 = Color3.new(1, 1, 1)
+			notif.Font = Enum.Font.GothamBold
+			notif.TextSize = 14
+			notif.Parent = miscC
+			corner(notif, 6)
+			
+			task.wait(2)
+			notif:Destroy()
+		end
+	end)
+	
+	loadBtn.MouseButton1Click:Connect(function()
+		local inputField = configNameInput:FindFirstChildOfClass("TextBox")
+		local name = inputField and inputField.Text or ""
+		
+		if name ~= "" then
+			if loadConfig(name) then
+				-- Show success message
+				local notif = Instance.new("TextLabel")
+				notif.Size = UDim2.new(0, 200, 0, 40)
+				notif.Position = UDim2.new(0.5, -100, 0.5, -20)
+				notif.BackgroundColor3 = Color3.fromRGB(60, 120, 255)
+				notif.Text = "Config loaded: " .. name
+				notif.TextColor3 = Color3.new(1, 1, 1)
+				notif.Font = Enum.Font.GothamBold
+				notif.TextSize = 14
+				notif.Parent = miscC
+				corner(notif, 6)
+				
+				task.wait(2)
+				notif:Destroy()
+			end
+		end
+	end)
+	
+	deleteBtn.MouseButton1Click:Connect(function()
+		local inputField = configNameInput:FindFirstChildOfClass("TextBox")
+		local name = inputField and inputField.Text or ""
+		
+		if name ~= "" then
+			if deleteConfig(name) then
+				refreshConfigDropdown()
+				-- Show success message
+				local notif = Instance.new("TextLabel")
+				notif.Size = UDim2.new(0, 200, 0, 40)
+				notif.Position = UDim2.new(0.5, -100, 0.5, -20)
+				notif.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+				notif.Text = "Config deleted: " .. name
+				notif.TextColor3 = Color3.new(1, 1, 1)
+				notif.Font = Enum.Font.GothamBold
+				notif.TextSize = 14
+				notif.Parent = miscC
+				corner(notif, 6)
+				
+				task.wait(2)
+				notif:Destroy()
+			end
+		end
+	end)
+	
 	Components.createDivider(miscC)
 	Components.createSection(miscC, "Server")
 	Components.createToggle(miscC, "Server Hop", function(v)
@@ -2119,6 +2600,9 @@ return function(arg1, arg2, arg3)
 				-- Animate open
 				main.Size = UDim2.new(0, 0, 0, 0)
 				tween(main, {Size = UDim2.new(0, 950, 0, 650)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
+				
+				-- Refresh config list when opening menu
+				refreshConfigDropdown()
 			else
 				-- Restore previous mouse state
 				UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
@@ -2179,4 +2663,9 @@ return function(arg1, arg2, arg3)
 	-- INITIALIZATION COMPLETE
 	-- ---------------------------------------------------------------------------
 	print("[Vertex Hub] Loaded successfully! Press M to toggle menu.")
+	print("[Vertex Hub] Features: All combat, movement, ESP, visuals, world, player, troll, and config system.")
+	print("[Vertex Hub] Config System: Save/Load/Delete settings with DataStore persistence.")
+	
+	-- Return the State table for external access if needed
+	return State
 end
