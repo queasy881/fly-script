@@ -71,9 +71,40 @@ _G.VertexState = State
 
 -- ============================================================
 -- TOGGLE REGISTRY (IMPORTANT)
+-- Store ONLY toggle objects (tables with UpdateState), NEVER TextButtons
 -- ============================================================
 local ToggleRefs = {}
 _G.VertexToggleRefs = ToggleRefs
+
+-- ============================================================
+-- SAFE TOGGLE UPDATE FUNCTION
+-- Use this instead of direct calls to prevent errors
+-- ============================================================
+local function safeUpdateToggle(refName, value)
+	local toggleObj = ToggleRefs[refName]
+	if not toggleObj then
+		return false
+	end
+	
+	-- Safety check: must be a table with UpdateState function
+	if type(toggleObj) ~= "table" then
+		warn("[ToggleRefs] ERROR: " .. refName .. " is not a table, it's a " .. type(toggleObj))
+		ToggleRefs[refName] = nil
+		return false
+	end
+	
+	if type(toggleObj.UpdateState) ~= "function" then
+		warn("[ToggleRefs] ERROR: " .. refName .. " has no UpdateState function")
+		ToggleRefs[refName] = nil
+		return false
+	end
+	
+	-- Call UpdateState correctly (function call, not method call)
+	toggleObj.UpdateState(toggleObj, value)
+	return true
+end
+
+_G.VertexSafeUpdateToggle = safeUpdateToggle
 
 -- ============================================================
 -- START MENU
@@ -86,7 +117,8 @@ if startMenu then
 		Components = Components,
 		Animations = Animations,
 		State = State,
-		ToggleRefs = ToggleRefs
+		ToggleRefs = ToggleRefs,
+		safeUpdateToggle = safeUpdateToggle
 	})
 end
 
