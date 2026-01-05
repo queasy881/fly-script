@@ -1573,6 +1573,8 @@ return function(arg1, arg2, arg3)
 				if callback then task.spawn(callback, state) end
 			end)
 			-- FIXED: Return a TABLE with methods, not the TextButton
+						-- FIXED: Return a TABLE with methods, not the TextButton
+						-- FIXED: Return a TABLE with methods, not the TextButton
 			local toggleObject = {
 				Button = btn,
 				SetState = function(self, newState)
