@@ -36,7 +36,6 @@ return function(arg1, arg2, arg3)
 	local Stats = game:GetService("Stats")
 	local HttpService = game:GetService("HttpService")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
-	local DataStoreService = game:GetService("DataStoreService")
 	
 	local player = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
@@ -321,13 +320,18 @@ return function(arg1, arg2, arg3)
 	}
 	
 	-- ---------------------------------------------------------------------------
-	-- CONFIG SYSTEM
+	-- FIXED CONFIG SYSTEM (No DataStoreService - uses file saving or memory)
 	-- ---------------------------------------------------------------------------
 	local Configs = {
-		store = DataStoreService:GetDataStore("VertexHub_Configs_" .. player.UserId),
 		list = {},
-		current = nil
+		current = nil,
+		storageKey = "VertexHub_Configs_" .. player.UserId
 	}
+	
+	-- Try to use SaveManager if available, otherwise use simple memory storage
+	local hasSaveManager = pcall(function()
+		return (getsynasset or getcustomasset) and true or false
+	end)
 	
 	local function saveConfig(name)
 		if not name or name == "" then name = "Config_" .. os.date("%Y-%m-%d_%H-%M") end
@@ -344,40 +348,70 @@ return function(arg1, arg2, arg3)
 			Settings = State.Settings,
 			Timestamp = os.time(),
 			Game = game.PlaceId,
-			GameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name or "Unknown"
+			GameName = game.Name
 		}
 		
-		local success, err = pcall(function()
-			Configs.store:SetAsync(name, configData)
+		-- Convert to JSON
+		local jsonData
+		pcall(function()
+			jsonData = HttpService:JSONEncode(configData)
 		end)
 		
-		if success then
-			print("[Vertex] Config saved: " .. name)
-			-- Refresh list
-			local success2, data = pcall(function()
-				return Configs.store:GetAsync("_config_list") or {}
-			end)
-			if success2 then
-				data[name] = true
-				pcall(function()
-					Configs.store:SetAsync("_config_list", data)
-				end)
-			end
-			return true
-		else
-			print("[Vertex] Failed to save config: " .. err)
+		if not jsonData then
+			print("[Vertex] Failed to encode config data")
 			return false
 		end
+		
+		-- Method 1: Try to save to file (if supported by executor)
+		if writefile then
+			local success, err = pcall(function()
+				writefile("vertex_config_" .. name .. ".json", jsonData)
+			end)
+			if success then
+				print("[Vertex] Config saved to file: vertex_config_" .. name .. ".json")
+				-- Update list
+				Configs.list[name] = true
+				return true
+			end
+		end
+		
+		-- Method 2: Save to global table (temporary, session-only)
+		_G.VertexConfigs = _G.VertexConfigs or {}
+		_G.VertexConfigs[name] = configData
+		
+		-- Update list
+		Configs.list[name] = true
+		
+		print("[Vertex] Config saved to memory: " .. name)
+		return true
 	end
 	
 	local function loadConfig(name)
-		local success, data = pcall(function()
-			return Configs.store:GetAsync(name)
-		end)
+		local configData = nil
 		
-		if success and data then
+		-- Method 1: Try to load from file
+		if readfile then
+			local success, data = pcall(function()
+				return readfile("vertex_config_" .. name .. ".json")
+			end)
+			if success and data then
+				local success2, decoded = pcall(function()
+					return HttpService:JSONDecode(data)
+				end)
+				if success2 then
+					configData = decoded
+				end
+			end
+		end
+		
+		-- Method 2: Load from global table
+		if not configData and _G.VertexConfigs and _G.VertexConfigs[name] then
+			configData = _G.VertexConfigs[name]
+		end
+		
+		if configData then
 			-- Load each category
-			for category, values in pairs(data) do
+			for category, values in pairs(configData) do
 				if State[category] then
 					for key, val in pairs(values) do
 						if State[category][key] ~= nil then
@@ -410,49 +444,63 @@ return function(arg1, arg2, arg3)
 			print("[Vertex] Config loaded: " .. name)
 			return true
 		else
-			print("[Vertex] Failed to load config")
+			print("[Vertex] Failed to load config: " .. name)
 			return false
 		end
 	end
 	
 	local function deleteConfig(name)
-		local success = pcall(function()
-			Configs.store:RemoveAsync(name)
-		end)
-		
-		if success then
-			-- Update list
-			local success2, data = pcall(function()
-				return Configs.store:GetAsync("_config_list") or {}
+		-- Method 1: Try to delete file
+		if delfile then
+			local success = pcall(function()
+				delfile("vertex_config_" .. name .. ".json")
 			end)
-			if success2 then
-				data[name] = nil
-				pcall(function()
-					Configs.store:SetAsync("_config_list", data)
-				end)
+			if success then
+				print("[Vertex] Config file deleted: " .. name)
 			end
-			print("[Vertex] Config deleted: " .. name)
-			return true
-		else
-			print("[Vertex] Failed to delete config")
-			return false
 		end
+		
+		-- Method 2: Delete from global table
+		if _G.VertexConfigs then
+			_G.VertexConfigs[name] = nil
+		end
+		
+		-- Update list
+		Configs.list[name] = nil
+		
+		print("[Vertex] Config deleted: " .. name)
+		return true
 	end
 	
 	local function getConfigList()
-		local success, data = pcall(function()
-			return Configs.store:GetAsync("_config_list") or {}
-		end)
+		local list = {}
 		
-		if success then
-			local list = {}
-			for name, _ in pairs(data) do
-				table.insert(list, name)
+		-- Method 1: Check files
+		if listfiles then
+			local success, files = pcall(function()
+				return listfiles("")
+			end)
+			if success then
+				for _, file in ipairs(files) do
+					if file:find("vertex_config_") and file:find(".json") then
+						local name = file:gsub("vertex_config_", ""):gsub(".json", "")
+						table.insert(list, name)
+					end
+				end
 			end
-			table.sort(list)
-			return list
 		end
-		return {}
+		
+		-- Method 2: Check global table
+		if _G.VertexConfigs then
+			for name, _ in pairs(_G.VertexConfigs) do
+				if not table.find(list, name) then
+					table.insert(list, name)
+				end
+			end
+		end
+		
+		table.sort(list)
+		return list
 	end
 	
 	-- Load config list on start
@@ -2370,7 +2418,7 @@ return function(arg1, arg2, arg3)
 	Components.createLabel(trollC, "Type /target [name] in chat to set target")
 	
 	-- ---------------------------------------------------------------------------
-	-- MISC TAB (WITH CONFIG SYSTEM)
+	-- MISC TAB (WITH FIXED CONFIG SYSTEM)
 	-- ---------------------------------------------------------------------------
 	Components.createSection(miscC, "HUD Elements")
 	Components.createToggle(miscC, "Watermark", function(v) State.Misc.Watermark = v end)
@@ -2387,9 +2435,9 @@ return function(arg1, arg2, arg3)
 	Components.createSlider(miscC, "Spam Delay", 1, 10, 2, function(v) State.Misc.SpamDelay = v end)
 	Components.createDivider(miscC)
 	
-	-- CONFIG SYSTEM
+	-- FIXED CONFIG SYSTEM (No DataStoreService)
 	Components.createSection(miscC, "Config System")
-	Components.createLabel(miscC, "Save/Load your settings")
+	Components.createLabel(miscC, "Save/Load your settings (Session only)")
 	
 	-- Config name input
 	local configNameInput = Components.createInput(miscC, "Config Name", "Enter config name...", function(text)
@@ -2499,7 +2547,9 @@ return function(arg1, arg2, arg3)
 			notif.Font = Enum.Font.GothamBold
 			notif.TextSize = 14
 			notif.Parent = miscC
-			corner(notif, 6)
+			local nc = Instance.new("UICorner")
+			nc.CornerRadius = UDim.new(0, 6)
+			nc.Parent = notif
 			
 			task.wait(2)
 			notif:Destroy()
@@ -2510,7 +2560,7 @@ return function(arg1, arg2, arg3)
 		local inputField = configNameInput:FindFirstChildOfClass("TextBox")
 		local name = inputField and inputField.Text or ""
 		
-		if name ~= "" then
+		if name ~= "" and name ~= "No configs saved" then
 			if loadConfig(name) then
 				-- Show success message
 				local notif = Instance.new("TextLabel")
@@ -2522,7 +2572,9 @@ return function(arg1, arg2, arg3)
 				notif.Font = Enum.Font.GothamBold
 				notif.TextSize = 14
 				notif.Parent = miscC
-				corner(notif, 6)
+				local nc = Instance.new("UICorner")
+				nc.CornerRadius = UDim.new(0, 6)
+				nc.Parent = notif
 				
 				task.wait(2)
 				notif:Destroy()
@@ -2534,7 +2586,7 @@ return function(arg1, arg2, arg3)
 		local inputField = configNameInput:FindFirstChildOfClass("TextBox")
 		local name = inputField and inputField.Text or ""
 		
-		if name ~= "" then
+		if name ~= "" and name ~= "No configs saved" then
 			if deleteConfig(name) then
 				refreshConfigDropdown()
 				-- Show success message
@@ -2547,7 +2599,9 @@ return function(arg1, arg2, arg3)
 				notif.Font = Enum.Font.GothamBold
 				notif.TextSize = 14
 				notif.Parent = miscC
-				corner(notif, 6)
+				local nc = Instance.new("UICorner")
+				nc.CornerRadius = UDim.new(0, 6)
+				nc.Parent = notif
 				
 				task.wait(2)
 				notif:Destroy()
@@ -2560,11 +2614,15 @@ return function(arg1, arg2, arg3)
 	Components.createToggle(miscC, "Server Hop", function(v)
 		if v then
 			pcall(function()
-				local s = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-				for _, srv in ipairs(s.data) do
-					if srv.id ~= game.JobId then
-						TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id)
-						break
+				local success, s = pcall(function()
+					return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+				end)
+				if success and s and s.data then
+					for _, srv in ipairs(s.data) do
+						if srv.id ~= game.JobId then
+							TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id)
+							break
+						end
 					end
 				end
 			end)
@@ -2664,7 +2722,7 @@ return function(arg1, arg2, arg3)
 	-- ---------------------------------------------------------------------------
 	print("[Vertex Hub] Loaded successfully! Press M to toggle menu.")
 	print("[Vertex Hub] Features: All combat, movement, ESP, visuals, world, player, troll, and config system.")
-	print("[Vertex Hub] Config System: Save/Load/Delete settings with DataStore persistence.")
+	print("[Vertex Hub] Config System: Save/Load/Delete settings (uses file system if available)")
 	
 	-- Return the State table for external access if needed
 	return State
