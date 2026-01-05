@@ -2170,7 +2170,9 @@ end
 	-- COMBAT TAB
 	-- ---------------------------------------------------------------------------
 	Components.createSection(combatC, "Aim Assist")
-	Components.createToggle(combatC, "Aim Assist", function(v) State.Combat.AimAssist = v end)
+	local aimAssistToggle = Components.createToggle(combatC, "Aim Assist", function(v)
+    State.Combat.AimAssist = v
+end)
 	Components.createSlider(combatC, "Smoothness", 1, 100, 15, function(v) State.Combat.AimSmoothness = v / 200 end)
 	Components.createSlider(combatC, "FOV", 50, 600, 150, function(v) State.Combat.AimFOV = v end)
 	Components.createToggle(combatC, "Show FOV Circle", function(v) State.Combat.ShowFOVCircle = v end)
