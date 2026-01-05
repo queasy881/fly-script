@@ -71,6 +71,11 @@ return function(arg1, arg2, arg3)
 	_G.VertexAnimations = Animations
 	
 	-- ---------------------------------------------------------------------------
+	-- TOGGLE REGISTRY - Store all toggle objects for SetState access
+	-- ---------------------------------------------------------------------------
+	local ToggleRefs = {}
+	
+	-- ---------------------------------------------------------------------------
 	-- ENTITY CACHE (Updated every 0.5s, not every frame)
 	-- ---------------------------------------------------------------------------
 	local EntityCache = { players = {}, npcs = {}, items = {} }
@@ -333,6 +338,83 @@ return function(arg1, arg2, arg3)
 		return (getsynasset or getcustomasset) and true or false
 	end)
 	
+	local function applyStateToUI()
+		-- Apply all toggle states to UI
+		if ToggleRefs.AimAssist then ToggleRefs.AimAssist:SetState(State.Combat.AimAssist) end
+		if ToggleRefs.ShowFOVCircle then ToggleRefs.ShowFOVCircle:SetState(State.Combat.ShowFOVCircle) end
+		if ToggleRefs.Prediction then ToggleRefs.Prediction:SetState(State.Combat.AimPrediction) end
+		if ToggleRefs.SilentAim then ToggleRefs.SilentAim:SetState(State.Combat.SilentAim) end
+		if ToggleRefs.KillAura then ToggleRefs.KillAura:SetState(State.Combat.KillAura) end
+		if ToggleRefs.KillAuraPlayers then ToggleRefs.KillAuraPlayers:SetState(State.Combat.KillAuraPlayers) end
+		if ToggleRefs.KillAuraNPCs then ToggleRefs.KillAuraNPCs:SetState(State.Combat.KillAuraNPCs) end
+		if ToggleRefs.KillAuraWallCheck then ToggleRefs.KillAuraWallCheck:SetState(State.Combat.KillAuraWallCheck) end
+		if ToggleRefs.KillAuraLegit then ToggleRefs.KillAuraLegit:SetState(State.Combat.KillAuraLegit) end
+		if ToggleRefs.Reach then ToggleRefs.Reach:SetState(State.Combat.Reach) end
+		if ToggleRefs.ReachLegit then ToggleRefs.ReachLegit:SetState(State.Combat.ReachLegit) end
+		if ToggleRefs.Triggerbot then ToggleRefs.Triggerbot:SetState(State.Combat.Triggerbot) end
+		if ToggleRefs.AutoParry then ToggleRefs.AutoParry:SetState(State.Combat.AutoParry) end
+		if ToggleRefs.HitboxExpander then ToggleRefs.HitboxExpander:SetState(State.Combat.HitboxExpander) end
+		if ToggleRefs.Backtrack then ToggleRefs.Backtrack:SetState(State.Combat.Backtrack) end
+		if ToggleRefs.TargetStrafe then ToggleRefs.TargetStrafe:SetState(State.Combat.TargetStrafe) end
+		if ToggleRefs.Fly then ToggleRefs.Fly:SetState(State.Movement.Fly) end
+		if ToggleRefs.FlyLegit then ToggleRefs.FlyLegit:SetState(State.Movement.FlyLegit) end
+		if ToggleRefs.Noclip then ToggleRefs.Noclip:SetState(State.Movement.Noclip) end
+		if ToggleRefs.Speed then ToggleRefs.Speed:SetState(State.Movement.Speed) end
+		if ToggleRefs.SpeedLegit then ToggleRefs.SpeedLegit:SetState(State.Movement.SpeedLegit) end
+		if ToggleRefs.JumpPower then ToggleRefs.JumpPower:SetState(State.Movement.JumpPower) end
+		if ToggleRefs.InfiniteJump then ToggleRefs.InfiniteJump:SetState(State.Movement.InfiniteJump) end
+		if ToggleRefs.BunnyHop then ToggleRefs.BunnyHop:SetState(State.Movement.BunnyHop) end
+		if ToggleRefs.LongJump then ToggleRefs.LongJump:SetState(State.Movement.LongJump) end
+		if ToggleRefs.SpeedGlide then ToggleRefs.SpeedGlide:SetState(State.Movement.SpeedGlide) end
+		if ToggleRefs.Dash then ToggleRefs.Dash:SetState(State.Movement.Dash) end
+		if ToggleRefs.AirControl then ToggleRefs.AirControl:SetState(State.Movement.AirControl) end
+		if ToggleRefs.ClickTP then ToggleRefs.ClickTP:SetState(State.Movement.ClickTP) end
+		if ToggleRefs.AntiVoid then ToggleRefs.AntiVoid:SetState(State.Movement.AntiVoid) end
+		if ToggleRefs.Anchor then ToggleRefs.Anchor:SetState(State.Movement.Anchor) end
+		if ToggleRefs.SpinBot then ToggleRefs.SpinBot:SetState(State.Movement.SpinBot) end
+		if ToggleRefs.FakeLag then ToggleRefs.FakeLag:SetState(State.Movement.FakeLag) end
+		if ToggleRefs.NameESP then ToggleRefs.NameESP:SetState(State.ESP.NameESP) end
+		if ToggleRefs.BoxESP then ToggleRefs.BoxESP:SetState(State.ESP.BoxESP) end
+		if ToggleRefs.HealthESP then ToggleRefs.HealthESP:SetState(State.ESP.HealthESP) end
+		if ToggleRefs.DistanceESP then ToggleRefs.DistanceESP:SetState(State.ESP.DistanceESP) end
+		if ToggleRefs.Tracers then ToggleRefs.Tracers:SetState(State.ESP.Tracers) end
+		if ToggleRefs.SkeletonESP then ToggleRefs.SkeletonESP:SetState(State.ESP.SkeletonESP) end
+		if ToggleRefs.OffscreenArrows then ToggleRefs.OffscreenArrows:SetState(State.ESP.OffscreenArrows) end
+		if ToggleRefs.NPCESP then ToggleRefs.NPCESP:SetState(State.ESP.NPCESP) end
+		if ToggleRefs.ItemESP then ToggleRefs.ItemESP:SetState(State.ESP.ItemESP) end
+		if ToggleRefs.Chams then ToggleRefs.Chams:SetState(State.ESP.Chams) end
+		if ToggleRefs.TeamCheck then ToggleRefs.TeamCheck:SetState(State.ESP.TeamCheck) end
+		if ToggleRefs.Fullbright then ToggleRefs.Fullbright:SetState(State.Visuals.Fullbright) end
+		if ToggleRefs.NoFog then ToggleRefs.NoFog:SetState(State.Visuals.NoFog) end
+		if ToggleRefs.NoShadows then ToggleRefs.NoShadows:SetState(State.Visuals.NoShadows) end
+		if ToggleRefs.Crosshair then ToggleRefs.Crosshair:SetState(State.Visuals.Crosshair) end
+		if ToggleRefs.ThirdPerson then ToggleRefs.ThirdPerson:SetState(State.Visuals.ThirdPerson) end
+		if ToggleRefs.Freecam then ToggleRefs.Freecam:SetState(State.Visuals.Freecam) end
+		if ToggleRefs.XRay then ToggleRefs.XRay:SetState(State.Visuals.XRay) end
+		if ToggleRefs.RemoveGrass then ToggleRefs.RemoveGrass:SetState(State.World.RemoveGrass) end
+		if ToggleRefs.DeleteMode then ToggleRefs.DeleteMode:SetState(State.World.DeleteMode) end
+		if ToggleRefs.GodMode then ToggleRefs.GodMode:SetState(State.Player.GodMode) end
+		if ToggleRefs.NoRagdoll then ToggleRefs.NoRagdoll:SetState(State.Player.NoRagdoll) end
+		if ToggleRefs.AutoRespawn then ToggleRefs.AutoRespawn:SetState(State.Player.AutoRespawn) end
+		if ToggleRefs.Invisibility then ToggleRefs.Invisibility:SetState(State.Player.Invisibility) end
+		if ToggleRefs.NoRecoil then ToggleRefs.NoRecoil:SetState(State.Player.NoRecoil) end
+		if ToggleRefs.NoSpread then ToggleRefs.NoSpread:SetState(State.Player.NoSpread) end
+		if ToggleRefs.InfiniteStamina then ToggleRefs.InfiniteStamina:SetState(State.Player.InfiniteStamina) end
+		if ToggleRefs.AnnoyPlayer then ToggleRefs.AnnoyPlayer:SetState(State.Troll.AnnoyPlayer) end
+		if ToggleRefs.OrbitPlayer then ToggleRefs.OrbitPlayer:SetState(State.Troll.OrbitPlayer) end
+		if ToggleRefs.Fling then ToggleRefs.Fling:SetState(State.Troll.Fling) end
+		if ToggleRefs.Headless then ToggleRefs.Headless:SetState(State.Troll.Headless) end
+		if ToggleRefs.Watermark then ToggleRefs.Watermark:SetState(State.Misc.Watermark) end
+		if ToggleRefs.FPSCounter then ToggleRefs.FPSCounter:SetState(State.Misc.FPSCounter) end
+		if ToggleRefs.PingDisplay then ToggleRefs.PingDisplay:SetState(State.Misc.PingDisplay) end
+		if ToggleRefs.PlayerCount then ToggleRefs.PlayerCount:SetState(State.Misc.PlayerCount) end
+		if ToggleRefs.VelocityDisplay then ToggleRefs.VelocityDisplay:SetState(State.Misc.VelocityDisplay) end
+		if ToggleRefs.TargetInfo then ToggleRefs.TargetInfo:SetState(State.Misc.TargetInfo) end
+		if ToggleRefs.KeybindsDisplay then ToggleRefs.KeybindsDisplay:SetState(State.Misc.KeybindsDisplay) end
+		if ToggleRefs.AntiAFK then ToggleRefs.AntiAFK:SetState(State.Misc.AntiAFK) end
+		if ToggleRefs.ChatSpam then ToggleRefs.ChatSpam:SetState(State.Misc.ChatSpam) end
+	end
+	
 	local function saveConfig(name)
 		if not name or name == "" then name = "Config_" .. os.date("%Y-%m-%d_%H-%M") end
 		
@@ -440,6 +522,9 @@ return function(arg1, arg2, arg3)
 			camera.FieldOfView = State.Visuals.CameraFOV
 			workspace.Gravity = State.World.Gravity
 			Lighting.ClockTime = State.World.TimeOfDay
+			
+			-- Apply state to UI toggles
+			applyStateToUI()
 			
 			print("[Vertex] Config loaded: " .. name)
 			return true
@@ -2170,44 +2255,44 @@ end
 	-- COMBAT TAB
 	-- ---------------------------------------------------------------------------
 	Components.createSection(combatC, "Aim Assist")
-	local aimAssistToggle = Components.createToggle(combatC, "Aim Assist", function(v)
-    State.Combat.AimAssist = v
-end)
+	ToggleRefs.AimAssist = Components.createToggle(combatC, "Aim Assist", function(v)
+		State.Combat.AimAssist = v
+	end)
 	Components.createSlider(combatC, "Smoothness", 1, 100, 15, function(v) State.Combat.AimSmoothness = v / 200 end)
 	Components.createSlider(combatC, "FOV", 50, 600, 150, function(v) State.Combat.AimFOV = v end)
-	Components.createToggle(combatC, "Show FOV Circle", function(v) State.Combat.ShowFOVCircle = v end)
-	Components.createToggle(combatC, "Prediction", function(v) State.Combat.AimPrediction = v end)
+	ToggleRefs.ShowFOVCircle = Components.createToggle(combatC, "Show FOV Circle", function(v) State.Combat.ShowFOVCircle = v end)
+	ToggleRefs.Prediction = Components.createToggle(combatC, "Prediction", function(v) State.Combat.AimPrediction = v end)
 	Components.createSlider(combatC, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
 	Components.createDivider(combatC)
 	Components.createSection(combatC, "Silent Aim")
-	Components.createToggle(combatC, "Silent Aim", function(v) State.Combat.SilentAim = v end)
+	ToggleRefs.SilentAim = Components.createToggle(combatC, "Silent Aim", function(v) State.Combat.SilentAim = v end)
 	Components.createSlider(combatC, "Hit Chance", 0, 100, 100, function(v) State.Combat.SilentAimHitChance = v end)
 	Components.createDivider(combatC)
 	Components.createSection(combatC, "Kill Aura")
-	Components.createToggle(combatC, "Kill Aura", function(v) State.Combat.KillAura = v end)
+	ToggleRefs.KillAura = Components.createToggle(combatC, "Kill Aura", function(v) State.Combat.KillAura = v end)
 	Components.createSlider(combatC, "Range", 5, 50, 15, function(v) State.Combat.KillAuraRange = v end)
 	Components.createSlider(combatC, "CPS", 1, 20, 10, function(v) State.Combat.KillAuraCPS = v end)
-	Components.createToggle(combatC, "Target Players", function(v) State.Combat.KillAuraPlayers = v end)
-	Components.createToggle(combatC, "Target NPCs", function(v) State.Combat.KillAuraNPCs = v end)
-	Components.createToggle(combatC, "Wall Check", function(v) State.Combat.KillAuraWallCheck = v end)
-	Components.createToggle(combatC, "Legit Mode", function(v) State.Combat.KillAuraLegit = v end)
+	ToggleRefs.KillAuraPlayers = Components.createToggle(combatC, "Target Players", function(v) State.Combat.KillAuraPlayers = v end)
+	ToggleRefs.KillAuraNPCs = Components.createToggle(combatC, "Target NPCs", function(v) State.Combat.KillAuraNPCs = v end)
+	ToggleRefs.KillAuraWallCheck = Components.createToggle(combatC, "Wall Check", function(v) State.Combat.KillAuraWallCheck = v end)
+	ToggleRefs.KillAuraLegit = Components.createToggle(combatC, "Legit Mode", function(v) State.Combat.KillAuraLegit = v end)
 	Components.createDivider(combatC)
 	Components.createSection(combatC, "Reach")
-	Components.createToggle(combatC, "Reach", function(v) State.Combat.Reach = v end)
+	ToggleRefs.Reach = Components.createToggle(combatC, "Reach", function(v) State.Combat.Reach = v end)
 	Components.createSlider(combatC, "Reach Distance", 10, 30, 18, function(v) State.Combat.ReachDistance = v end)
-	Components.createToggle(combatC, "Reach Legit", function(v) State.Combat.ReachLegit = v end)
+	ToggleRefs.ReachLegit = Components.createToggle(combatC, "Reach Legit", function(v) State.Combat.ReachLegit = v end)
 	Components.createDivider(combatC)
 	Components.createSection(combatC, "Auto Features")
-	Components.createToggle(combatC, "Triggerbot", function(v) State.Combat.Triggerbot = v end)
+	ToggleRefs.Triggerbot = Components.createToggle(combatC, "Triggerbot", function(v) State.Combat.Triggerbot = v end)
 	Components.createSlider(combatC, "Trigger Delay", 1, 50, 10, function(v) State.Combat.TriggerbotDelay = v / 100 end)
-	Components.createToggle(combatC, "Auto Parry", function(v) State.Combat.AutoParry = v end)
+	ToggleRefs.AutoParry = Components.createToggle(combatC, "Auto Parry", function(v) State.Combat.AutoParry = v end)
 	Components.createDivider(combatC)
 	Components.createSection(combatC, "Exploits")
-	Components.createToggle(combatC, "Hitbox Expander", function(v) State.Combat.HitboxExpander = v end)
+	ToggleRefs.HitboxExpander = Components.createToggle(combatC, "Hitbox Expander", function(v) State.Combat.HitboxExpander = v end)
 	Components.createSlider(combatC, "Hitbox Size", 1, 20, 5, function(v) State.Combat.HitboxSize = v end)
-	Components.createToggle(combatC, "Backtrack", function(v) State.Combat.Backtrack = v end)
+	ToggleRefs.Backtrack = Components.createToggle(combatC, "Backtrack", function(v) State.Combat.Backtrack = v end)
 	Components.createSlider(combatC, "Backtrack Time", 1, 50, 20, function(v) State.Combat.BacktrackTime = v / 100 end)
-	Components.createToggle(combatC, "Target Strafe", function(v) State.Combat.TargetStrafe = v end)
+	ToggleRefs.TargetStrafe = Components.createToggle(combatC, "Target Strafe", function(v) State.Combat.TargetStrafe = v end)
 	Components.createSlider(combatC, "Strafe Speed", 1, 20, 5, function(v) State.Combat.StrafeSpeed = v end)
 	Components.createSlider(combatC, "Strafe Radius", 5, 30, 10, function(v) State.Combat.StrafeRadius = v end)
 	
@@ -2215,13 +2300,13 @@ end)
 	-- MOVEMENT TAB
 	-- ---------------------------------------------------------------------------
 	Components.createSection(moveC, "Flight")
-	Components.createToggle(moveC, "Fly", function(v) State.Movement.Fly = v end)
+	ToggleRefs.Fly = Components.createToggle(moveC, "Fly", function(v) State.Movement.Fly = v end)
 	Components.createSlider(moveC, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
-	Components.createToggle(moveC, "Fly Legit", function(v) State.Movement.FlyLegit = v end)
-	Components.createToggle(moveC, "Noclip", function(v) State.Movement.Noclip = v end)
+	ToggleRefs.FlyLegit = Components.createToggle(moveC, "Fly Legit", function(v) State.Movement.FlyLegit = v end)
+	ToggleRefs.Noclip = Components.createToggle(moveC, "Noclip", function(v) State.Movement.Noclip = v end)
 	Components.createDivider(moveC)
 	Components.createSection(moveC, "Speed & Jump")
-	Components.createToggle(moveC, "Speed", function(v)
+	ToggleRefs.Speed = Components.createToggle(moveC, "Speed", function(v)
 		State.Movement.Speed = v
 		if not v then
 			local h = getHumanoid()
@@ -2231,8 +2316,8 @@ end)
 		end
 	end)
 	Components.createSlider(moveC, "Speed Value", 16, 500, 16, function(v) State.Movement.SpeedValue = v end)
-	Components.createToggle(moveC, "Speed Legit", function(v) State.Movement.SpeedLegit = v end)
-	Components.createToggle(moveC, "Jump Power", function(v)
+	ToggleRefs.SpeedLegit = Components.createToggle(moveC, "Speed Legit", function(v) State.Movement.SpeedLegit = v end)
+	ToggleRefs.JumpPower = Components.createToggle(moveC, "Jump Power", function(v)
 		State.Movement.JumpPower = v
 		if not v then
 			local h = getHumanoid()
@@ -2242,59 +2327,59 @@ end)
 		end
 	end)
 	Components.createSlider(moveC, "Jump Value", 50, 500, 50, function(v) State.Movement.JumpValue = v end)
-	Components.createToggle(moveC, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
+	ToggleRefs.InfiniteJump = Components.createToggle(moveC, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
 	Components.createDivider(moveC)
 	Components.createSection(moveC, "Special Movement")
-	Components.createToggle(moveC, "Bunny Hop", function(v) State.Movement.BunnyHop = v end)
-	Components.createToggle(moveC, "Long Jump (Space)", function(v) State.Movement.LongJump = v end)
+	ToggleRefs.BunnyHop = Components.createToggle(moveC, "Bunny Hop", function(v) State.Movement.BunnyHop = v end)
+	ToggleRefs.LongJump = Components.createToggle(moveC, "Long Jump (Space)", function(v) State.Movement.LongJump = v end)
 	Components.createSlider(moveC, "Long Jump Force", 50, 400, 100, function(v) State.Movement.LongJumpForce = v end)
-	Components.createToggle(moveC, "Speed Glide", function(v) State.Movement.SpeedGlide = v end)
+	ToggleRefs.SpeedGlide = Components.createToggle(moveC, "Speed Glide", function(v) State.Movement.SpeedGlide = v end)
 	Components.createSlider(moveC, "Glide Speed", 1, 50, 10, function(v) State.Movement.GlideSpeed = v end)
-	Components.createToggle(moveC, "Dash (Q)", function(v) State.Movement.Dash = v end)
+	ToggleRefs.Dash = Components.createToggle(moveC, "Dash (Q)", function(v) State.Movement.Dash = v end)
 	Components.createSlider(moveC, "Dash Force", 50, 300, 100, function(v) State.Movement.DashForce = v end)
 	Components.createSlider(moveC, "Dash Cooldown", 1, 50, 10, function(v) State.Movement.DashCooldown = v / 10 end)
-	Components.createToggle(moveC, "Air Control", function(v) State.Movement.AirControl = v end)
+	ToggleRefs.AirControl = Components.createToggle(moveC, "Air Control", function(v) State.Movement.AirControl = v end)
 	Components.createDivider(moveC)
 	Components.createSection(moveC, "Teleport & Safety")
-	Components.createToggle(moveC, "Click TP", function(v) State.Movement.ClickTP = v end)
-	Components.createToggle(moveC, "Anti Void", function(v) State.Movement.AntiVoid = v end)
+	ToggleRefs.ClickTP = Components.createToggle(moveC, "Click TP", function(v) State.Movement.ClickTP = v end)
+	ToggleRefs.AntiVoid = Components.createToggle(moveC, "Anti Void", function(v) State.Movement.AntiVoid = v end)
 	Components.createSlider(moveC, "Void Height", -500, 0, -100, function(v) State.Movement.VoidHeight = v end)
-	Components.createToggle(moveC, "Anchor", function(v) State.Movement.Anchor = v end)
+	ToggleRefs.Anchor = Components.createToggle(moveC, "Anchor", function(v) State.Movement.Anchor = v end)
 	Components.createDivider(moveC)
 	Components.createSection(moveC, "Exploits")
-	Components.createToggle(moveC, "Spin Bot", function(v) State.Movement.SpinBot = v end)
+	ToggleRefs.SpinBot = Components.createToggle(moveC, "Spin Bot", function(v) State.Movement.SpinBot = v end)
 	Components.createSlider(moveC, "Spin Speed", 1, 50, 20, function(v) State.Movement.SpinSpeed = v end)
-	Components.createToggle(moveC, "Fake Lag", function(v) State.Movement.FakeLag = v end)
+	ToggleRefs.FakeLag = Components.createToggle(moveC, "Fake Lag", function(v) State.Movement.FakeLag = v end)
 	Components.createSlider(moveC, "Lag Intensity", 1, 10, 5, function(v) State.Movement.LagIntensity = v end)
 	
 	-- ---------------------------------------------------------------------------
 	-- ESP TAB
 	-- ---------------------------------------------------------------------------
 	Components.createSection(espC, "Player ESP")
-	Components.createToggle(espC, "Name ESP", function(v) State.ESP.NameESP = v end)
-	Components.createToggle(espC, "Box ESP", function(v) State.ESP.BoxESP = v end)
-	Components.createToggle(espC, "Health ESP", function(v) State.ESP.HealthESP = v end)
-	Components.createToggle(espC, "Distance ESP", function(v) State.ESP.DistanceESP = v end)
-	Components.createToggle(espC, "Tracers", function(v) State.ESP.Tracers = v end)
-	Components.createToggle(espC, "Skeleton ESP", function(v) State.ESP.SkeletonESP = v end)
-	Components.createToggle(espC, "Offscreen Arrows", function(v) State.ESP.OffscreenArrows = v end)
+	ToggleRefs.NameESP = Components.createToggle(espC, "Name ESP", function(v) State.ESP.NameESP = v end)
+	ToggleRefs.BoxESP = Components.createToggle(espC, "Box ESP", function(v) State.ESP.BoxESP = v end)
+	ToggleRefs.HealthESP = Components.createToggle(espC, "Health ESP", function(v) State.ESP.HealthESP = v end)
+	ToggleRefs.DistanceESP = Components.createToggle(espC, "Distance ESP", function(v) State.ESP.DistanceESP = v end)
+	ToggleRefs.Tracers = Components.createToggle(espC, "Tracers", function(v) State.ESP.Tracers = v end)
+	ToggleRefs.SkeletonESP = Components.createToggle(espC, "Skeleton ESP", function(v) State.ESP.SkeletonESP = v end)
+	ToggleRefs.OffscreenArrows = Components.createToggle(espC, "Offscreen Arrows", function(v) State.ESP.OffscreenArrows = v end)
 	Components.createDivider(espC)
 	Components.createSection(espC, "World ESP")
-	Components.createToggle(espC, "NPC ESP", function(v) State.ESP.NPCESP = v end)
-	Components.createToggle(espC, "Item ESP", function(v) State.ESP.ItemESP = v end)
+	ToggleRefs.NPCESP = Components.createToggle(espC, "NPC ESP", function(v) State.ESP.NPCESP = v end)
+	ToggleRefs.ItemESP = Components.createToggle(espC, "Item ESP", function(v) State.ESP.ItemESP = v end)
 	Components.createDivider(espC)
 	Components.createSection(espC, "Highlights")
-	Components.createToggle(espC, "Chams", function(v) State.ESP.Chams = v updateChams() end)
+	ToggleRefs.Chams = Components.createToggle(espC, "Chams", function(v) State.ESP.Chams = v updateChams() end)
 	Components.createDivider(espC)
 	Components.createSection(espC, "Settings")
 	Components.createSlider(espC, "Max Distance", 100, 2000, 1000, function(v) State.ESP.MaxDistance = v end)
-	Components.createToggle(espC, "Team Check", function(v) State.ESP.TeamCheck = v end)
+	ToggleRefs.TeamCheck = Components.createToggle(espC, "Team Check", function(v) State.ESP.TeamCheck = v end)
 	
 	-- ---------------------------------------------------------------------------
 	-- VISUALS TAB
 	-- ---------------------------------------------------------------------------
 	Components.createSection(visC, "Lighting")
-	Components.createToggle(visC, "Fullbright", function(v)
+	ToggleRefs.Fullbright = Components.createToggle(visC, "Fullbright", function(v)
 		State.Visuals.Fullbright = v
 		if v then
 			Lighting.Ambient = Color3.new(1, 1, 1)
@@ -2306,7 +2391,7 @@ end)
 			Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
 		end
 	end)
-	Components.createToggle(visC, "No Fog", function(v)
+	ToggleRefs.NoFog = Components.createToggle(visC, "No Fog", function(v)
 		State.Visuals.NoFog = v
 		if v then
 			Lighting.FogEnd = 1e10
@@ -2316,21 +2401,21 @@ end)
 			Lighting.FogStart = OriginalLighting.FogStart
 		end
 	end)
-	Components.createToggle(visC, "No Shadows", function(v) State.Visuals.NoShadows = v Lighting.GlobalShadows = not v end)
+	ToggleRefs.NoShadows = Components.createToggle(visC, "No Shadows", function(v) State.Visuals.NoShadows = v Lighting.GlobalShadows = not v end)
 	Components.createDivider(visC)
 	Components.createSection(visC, "Crosshair")
-	Components.createToggle(visC, "Custom Crosshair", function(v) State.Visuals.Crosshair = v end)
+	ToggleRefs.Crosshair = Components.createToggle(visC, "Custom Crosshair", function(v) State.Visuals.Crosshair = v end)
 	Components.createSlider(visC, "Crosshair Size", 5, 50, 10, function(v) State.Visuals.CrosshairSize = v end)
 	Components.createSlider(visC, "Crosshair Gap", 0, 20, 5, function(v) State.Visuals.CrosshairGap = v end)
 	Components.createDivider(visC)
 	Components.createSection(visC, "Camera")
 	Components.createSlider(visC, "Camera FOV", 30, 120, 70, function(v) State.Visuals.CameraFOV = v camera.FieldOfView = v end)
-	Components.createToggle(visC, "Third Person", function(v) State.Visuals.ThirdPerson = v player.CameraMaxZoomDistance = v and 100 or 128 player.CameraMinZoomDistance = v and 15 or 0.5 end)
-	Components.createToggle(visC, "Freecam", function(v) State.Visuals.Freecam = v if v then FreecamPos = camera.CFrame.Position UIS.MouseBehavior = Enum.MouseBehavior.LockCenter else camera.CameraType = Enum.CameraType.Custom UIS.MouseBehavior = Enum.MouseBehavior.Default end end)
+	ToggleRefs.ThirdPerson = Components.createToggle(visC, "Third Person", function(v) State.Visuals.ThirdPerson = v player.CameraMaxZoomDistance = v and 100 or 128 player.CameraMinZoomDistance = v and 15 or 0.5 end)
+	ToggleRefs.Freecam = Components.createToggle(visC, "Freecam", function(v) State.Visuals.Freecam = v if v then FreecamPos = camera.CFrame.Position UIS.MouseBehavior = Enum.MouseBehavior.LockCenter else camera.CameraType = Enum.CameraType.Custom UIS.MouseBehavior = Enum.MouseBehavior.Default end end)
 	Components.createSlider(visC, "Freecam Speed", 1, 20, 1, function(v) State.Visuals.FreecamSpeed = v end)
 	Components.createDivider(visC)
 	Components.createSection(visC, "World Visuals")
-	Components.createToggle(visC, "X-Ray", function(v) State.Visuals.XRay = v end)
+	ToggleRefs.XRay = Components.createToggle(visC, "X-Ray", function(v) State.Visuals.XRay = v end)
 	Components.createSlider(visC, "X-Ray Transparency", 0, 100, 50, function(v) State.Visuals.XRayTransparency = v / 100 end)
 	
 	-- ---------------------------------------------------------------------------
@@ -2341,7 +2426,7 @@ end)
 	Components.createSlider(worldC, "Gravity", 0, 500, 196, function(v) State.World.Gravity = v workspace.Gravity = v end)
 	Components.createDivider(worldC)
 	Components.createSection(worldC, "Terrain")
-	Components.createToggle(worldC, "Remove Grass", function(v)
+	ToggleRefs.RemoveGrass = Components.createToggle(worldC, "Remove Grass", function(v)
 		State.World.RemoveGrass = v
 		local t = workspace:FindFirstChildOfClass("Terrain")
 		if t then
@@ -2355,20 +2440,20 @@ end)
 	end)
 	Components.createDivider(worldC)
 	Components.createSection(worldC, "Tools")
-	Components.createToggle(worldC, "Delete Mode (Click)", function(v) State.World.DeleteMode = v end)
+	ToggleRefs.DeleteMode = Components.createToggle(worldC, "Delete Mode (Click)", function(v) State.World.DeleteMode = v end)
 	
 	-- ---------------------------------------------------------------------------
 	-- PLAYER TAB
 	-- ---------------------------------------------------------------------------
 	Components.createSection(playerC, "Character")
-	Components.createToggle(playerC, "God Mode", function(v) State.Player.GodMode = v end)
-	Components.createToggle(playerC, "No Ragdoll", function(v) State.Player.NoRagdoll = v end)
-	Components.createToggle(playerC, "Auto Respawn", function(v) State.Player.AutoRespawn = v end)
+	ToggleRefs.GodMode = Components.createToggle(playerC, "God Mode", function(v) State.Player.GodMode = v end)
+	ToggleRefs.NoRagdoll = Components.createToggle(playerC, "No Ragdoll", function(v) State.Player.NoRagdoll = v end)
+	ToggleRefs.AutoRespawn = Components.createToggle(playerC, "Auto Respawn", function(v) State.Player.AutoRespawn = v end)
 	Components.createSlider(playerC, "Character Scale", 50, 200, 100, function(v) State.Player.CharScale = v / 100 end)
 	Components.createDivider(playerC)
 	Components.createSection(playerC, "Invisibility (Hitbox-Only)")
 	Components.createLabel(playerC, "Model moves away, hitbox stays. NO transparency.")
-	Components.createToggle(playerC, "Invisibility", function(v)
+	ToggleRefs.Invisibility = Components.createToggle(playerC, "Invisibility", function(v)
 		State.Player.Invisibility = v
 		if v then
 			InvisSystem:Enable()
@@ -2379,23 +2464,23 @@ end)
 	Components.createSlider(playerC, "Invis Offset", 50, 500, 100, function(v) State.Player.InvisOffset = v end)
 	Components.createDivider(playerC)
 	Components.createSection(playerC, "Weapon")
-	Components.createToggle(playerC, "No Recoil", function(v) State.Player.NoRecoil = v end)
-	Components.createToggle(playerC, "No Spread", function(v) State.Player.NoSpread = v end)
-	Components.createToggle(playerC, "Infinite Stamina", function(v) State.Player.InfiniteStamina = v end)
+	ToggleRefs.NoRecoil = Components.createToggle(playerC, "No Recoil", function(v) State.Player.NoRecoil = v end)
+	ToggleRefs.NoSpread = Components.createToggle(playerC, "No Spread", function(v) State.Player.NoSpread = v end)
+	ToggleRefs.InfiniteStamina = Components.createToggle(playerC, "Infinite Stamina", function(v) State.Player.InfiniteStamina = v end)
 	
 	-- ---------------------------------------------------------------------------
 	-- TROLL TAB
 	-- ---------------------------------------------------------------------------
 	Components.createSection(trollC, "Follow / Orbit")
-	Components.createToggle(trollC, "Annoy Player", function(v) State.Troll.AnnoyPlayer = v end)
-	Components.createToggle(trollC, "Orbit Player", function(v) State.Troll.OrbitPlayer = v end)
+	ToggleRefs.AnnoyPlayer = Components.createToggle(trollC, "Annoy Player", function(v) State.Troll.AnnoyPlayer = v end)
+	ToggleRefs.OrbitPlayer = Components.createToggle(trollC, "Orbit Player", function(v) State.Troll.OrbitPlayer = v end)
 	Components.createSlider(trollC, "Orbit Radius", 5, 30, 10, function(v) State.Troll.OrbitRadius = v end)
 	Components.createSlider(trollC, "Orbit Speed", 1, 10, 2, function(v) State.Troll.OrbitSpeed = v end)
 	Components.createDivider(trollC)
 	Components.createSection(trollC, "Character Troll")
-	Components.createToggle(trollC, "Fling", function(v) State.Troll.Fling = v end)
+	ToggleRefs.Fling = Components.createToggle(trollC, "Fling", function(v) State.Troll.Fling = v end)
 	Components.createSlider(trollC, "Fling Power", 100, 1000, 500, function(v) State.Troll.FlingPower = v end)
-	Components.createToggle(trollC, "Headless", function(v) State.Troll.Headless = v end)
+	ToggleRefs.Headless = Components.createToggle(trollC, "Headless", function(v) State.Troll.Headless = v end)
 	Components.createDivider(trollC)
 	Components.createSection(trollC, "Info")
 	Components.createLabel(trollC, "Type /target [name] in chat to set target")
@@ -2404,17 +2489,17 @@ end)
 	-- MISC TAB (WITH FIXED CONFIG SYSTEM)
 	-- ---------------------------------------------------------------------------
 	Components.createSection(miscC, "HUD Elements")
-	Components.createToggle(miscC, "Watermark", function(v) State.Misc.Watermark = v end)
-	Components.createToggle(miscC, "FPS Counter", function(v) State.Misc.FPSCounter = v end)
-	Components.createToggle(miscC, "Ping Display", function(v) State.Misc.PingDisplay = v end)
-	Components.createToggle(miscC, "Player Count", function(v) State.Misc.PlayerCount = v end)
-	Components.createToggle(miscC, "Velocity Display", function(v) State.Misc.VelocityDisplay = v end)
-	Components.createToggle(miscC, "Target Info", function(v) State.Misc.TargetInfo = v end)
-	Components.createToggle(miscC, "Keybinds Display", function(v) State.Misc.KeybindsDisplay = v end)
+	ToggleRefs.Watermark = Components.createToggle(miscC, "Watermark", function(v) State.Misc.Watermark = v end)
+	ToggleRefs.FPSCounter = Components.createToggle(miscC, "FPS Counter", function(v) State.Misc.FPSCounter = v end)
+	ToggleRefs.PingDisplay = Components.createToggle(miscC, "Ping Display", function(v) State.Misc.PingDisplay = v end)
+	ToggleRefs.PlayerCount = Components.createToggle(miscC, "Player Count", function(v) State.Misc.PlayerCount = v end)
+	ToggleRefs.VelocityDisplay = Components.createToggle(miscC, "Velocity Display", function(v) State.Misc.VelocityDisplay = v end)
+	ToggleRefs.TargetInfo = Components.createToggle(miscC, "Target Info", function(v) State.Misc.TargetInfo = v end)
+	ToggleRefs.KeybindsDisplay = Components.createToggle(miscC, "Keybinds Display", function(v) State.Misc.KeybindsDisplay = v end)
 	Components.createDivider(miscC)
 	Components.createSection(miscC, "Utility")
-	Components.createToggle(miscC, "Anti AFK", function(v) State.Misc.AntiAFK = v end)
-	Components.createToggle(miscC, "Chat Spam", function(v) State.Misc.ChatSpam = v end)
+	ToggleRefs.AntiAFK = Components.createToggle(miscC, "Anti AFK", function(v) State.Misc.AntiAFK = v end)
+	ToggleRefs.ChatSpam = Components.createToggle(miscC, "Chat Spam", function(v) State.Misc.ChatSpam = v end)
 	Components.createSlider(miscC, "Spam Delay", 1, 10, 2, function(v) State.Misc.SpamDelay = v end)
 	Components.createDivider(miscC)
 	
