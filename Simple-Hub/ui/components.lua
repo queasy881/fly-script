@@ -8,31 +8,8 @@ local TextService = game:GetService("TextService")
 -- GLOBAL SAFETY PATCH FOR CONFIG SYSTEM
 -- Makes SetState safe on ANY button-like object
 
-local function patchSetState(obj)
-    if typeof(obj) == "Instance" and not obj.SetState then
-        obj.SetState = function(_, value)
-            if typeof(value) ~= "boolean" then return end
 
-            -- Try common patterns safely
-            if obj:IsA("TextButton") then
-                -- Visual fallback only
-                obj.Text = obj.Text:gsub(": ON", ""):gsub(": OFF", "")
-                obj.Text = obj.Text .. (value and " : ON" or " : OFF")
-            end
 
-            -- Store state if possible
-            obj._state = value
-        end
-    end
-end
-
--- Patch ALL future UI instances automatically
-local oldInstanceNew = Instance.new
-Instance.new = function(className)
-    local obj = oldInstanceNew(className)
-    task.defer(patchSetState, obj)
-    return obj
-end
 
 
 -- Colors (executor safe)
