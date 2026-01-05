@@ -419,6 +419,27 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
+	-- REACH OFFSET FUNCTION
+	-- ---------------------------------------------------------------------------
+	local function applyReachOffset(myRoot, targetRoot)
+		local distance = (myRoot.Position - targetRoot.Position).Magnitude
+		local LEGIT_RANGE = 14.4
+		
+		if distance <= State.Combat.ReachDistance and distance > LEGIT_RANGE then
+			local lookVector = (targetRoot.Position - myRoot.Position).Unit
+			local offsetDistance = math.max(distance - LEGIT_RANGE, 0)
+			
+			if State.Combat.ReachLegit then
+				offsetDistance = math.clamp(offsetDistance, 0, State.Combat.ReachDistance - LEGIT_RANGE) * (0.8 + math.random() * 0.4)
+			end
+			
+			local reportedPosition = myRoot.Position + lookVector * offsetDistance
+			return reportedPosition
+		end
+		return nil
+	end
+	
+	-- ---------------------------------------------------------------------------
 	-- FLY SYSTEM
 	-- ---------------------------------------------------------------------------
 	local FlySystem = { enabled = false, bodyGyro = nil, bodyVelocity = nil, currentVel = Vector3.new() }
@@ -563,53 +584,44 @@ return function(arg1, arg2, arg3)
 	local mouse2click = safeGetGlobal("mouse2click")
 	
 	-- ---------------------------------------------------------------------------
-	-- KILLAURA - SERVER VALIDATED (Per spec: modify reported position only)
-	-- NO teleporting, NO spamming remotes, NO fake damage
-	-- Hook the legitimate attack, modify reported self position
+	-- REMOTE/RAYCAST HOOK (KILLAURA + REACH)
 	-- ---------------------------------------------------------------------------
-	local LEGIT_RANGE = 14.4 -- Default sword range
-	local OriginalRemotes = {}
-	local KillAuraHooked = false
-	
-	local function hookKillAura()
-		if KillAuraHooked then return end
+	local function initCombatHooks()
 		if not hookmetamethod or not getnamecallmethod then return end
-		KillAuraHooked = true
 		
-		-- Hook remote events that handle combat
 		pcall(function()
 			local oldNamecall
 			oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
 				local method = getnamecallmethod()
 				local args = {...}
 				
-				-- Hook FireServer for combat remotes
-				if method == "FireServer" and State.Combat.KillAura then
+				-- Combat remotes
+				if method == "FireServer" and (State.Combat.KillAura or State.Combat.Reach) then
 					local remoteName = self.Name:lower()
 					
-					-- Common combat remote patterns
 					if remoteName:find("attack") or remoteName:find("hit") or remoteName:find("damage") or remoteName:find("swing") then
 						local myRoot = getRoot()
 						local target = CurrentTarget
 						
 						if myRoot and target and target.RootPart then
 							local distance = (myRoot.Position - target.RootPart.Position).Magnitude
+							local LEGIT_RANGE = 14.4
 							
-							-- Only modify if target is within our extended range but outside legit range
-							if distance <= State.Combat.KillAuraRange and distance > LEGIT_RANGE then
-								-- Calculate the offset needed to make the attack valid
+							-- KillAura range check
+							if State.Combat.KillAura and distance <= State.Combat.KillAuraRange and distance > LEGIT_RANGE then
 								local lookVector = (target.RootPart.Position - myRoot.Position).Unit
 								local offsetDistance = math.max(distance - LEGIT_RANGE, 0)
+								if State.Combat.KillAuraLegit then
+									offsetDistance = offsetDistance * (0.9 + math.random() * 0.2)
+								end
 								local reportedPosition = myRoot.Position + lookVector * offsetDistance
 								
-								-- Modify args if they contain position data
 								for i, arg in ipairs(args) do
 									if typeof(arg) == "Vector3" then
 										args[i] = reportedPosition
 									elseif typeof(arg) == "CFrame" then
 										args[i] = CFrame.new(reportedPosition) * (arg - arg.Position)
 									elseif typeof(arg) == "table" then
-										-- Check for position in table
 										if arg.Position then
 											arg.Position = reportedPosition
 										end
@@ -617,6 +629,52 @@ return function(arg1, arg2, arg3)
 											arg.Origin = reportedPosition
 										end
 									end
+								end
+							end
+							
+							-- Reach range check
+							if State.Combat.Reach and distance <= State.Combat.ReachDistance and distance > LEGIT_RANGE then
+								local reportedPosition = applyReachOffset(myRoot, target.RootPart)
+								if reportedPosition then
+									for i, arg in ipairs(args) do
+										if typeof(arg) == "Vector3" then
+											args[i] = reportedPosition
+										elseif typeof(arg) == "CFrame" then
+											args[i] = CFrame.new(reportedPosition) * (arg - arg.Position)
+										elseif typeof(arg) == "table" then
+											if arg.Position then
+												arg.Position = reportedPosition
+											end
+											if arg.Origin then
+												arg.Origin = reportedPosition
+											end
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+				
+				-- Raycast hooks
+				if (State.Combat.KillAura or State.Combat.Reach) and self == workspace then
+					if method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" then
+						local myRoot = getRoot()
+						local target = CurrentTarget
+						
+						if myRoot and target and target.RootPart then
+							local distance = (myRoot.Position - target.RootPart.Position).Magnitude
+							local LEGIT_RANGE = 14.4
+							
+							if (State.Combat.KillAura and distance <= State.Combat.KillAuraRange and distance > LEGIT_RANGE) or
+							   (State.Combat.Reach and distance <= State.Combat.ReachDistance and distance > LEGIT_RANGE) then
+								
+								local reportedPosition = applyReachOffset(myRoot, target.RootPart) or myRoot.Position
+								
+								if method == "Raycast" and args[1] then
+									return oldNamecall(self, args[1], (target.RootPart.Position - reportedPosition).Unit * 1000, unpack(args, 3))
+								elseif args[1] and typeof(args[1]) == "Ray" then
+									return oldNamecall(self, Ray.new(reportedPosition, (target.RootPart.Position - reportedPosition).Unit * 1000), unpack(args, 2))
 								end
 							end
 						end
@@ -628,9 +686,8 @@ return function(arg1, arg2, arg3)
 		end)
 	end
 	
-	-- Initialize hook
-	-- DEFERRED: Hook after script fully loads
-	task.defer(hookKillAura)
+	-- DEFERRED: Initialize hooks after script fully loads
+	task.defer(initCombatHooks)
 	
 	-- ---------------------------------------------------------------------------
 	-- SILENT AIM HOOKS
@@ -888,12 +945,14 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- KillAura - respects CPS, uses validated position offset
+		-- KillAura Attack Loop
 		if State.Combat.KillAura and root then
 			local now = tick()
 			local cooldown = 1 / State.Combat.KillAuraCPS
-			if State.Combat.KillAuraLegit then cooldown = cooldown * (1 + math.random() * 0.3) end
-			
+			if State.Combat.KillAuraLegit then
+				cooldown = cooldown * (1 + math.random() * 0.25)
+			end
+
 			if now - LastAttackTime >= cooldown then
 				local target = getBestTarget({
 					Range = State.Combat.KillAuraRange,
@@ -901,13 +960,16 @@ return function(arg1, arg2, arg3)
 					NPCs = State.Combat.KillAuraNPCs,
 					WallCheck = State.Combat.KillAuraWallCheck
 				})
-				
+
 				if target and target.RootPart then
 					LastAttackTime = now
 					CurrentTarget = target
+
 					local tool = getTool()
 					if tool then
 						pcall(function() tool:Activate() end)
+						
+						-- Optional touch interest
 						pcall(function()
 							local handle = tool:FindFirstChild("Handle")
 							if handle and firetouchinterest then
@@ -960,7 +1022,7 @@ return function(arg1, arg2, arg3)
 		if State.Combat.Backtrack then
 			for name, data in pairs(EntityCache.players) do
 				if data.RootPart then
-					if not BacktrackPositions[name] then BacktrackPositions[name] = {} end
+					if not BacktrackPositions[name] then BacktrackPositions[name] = {}
 					table.insert(BacktrackPositions[name], { Pos = data.RootPart.Position, Time = tick() })
 					for i = #BacktrackPositions[name], 1, -1 do
 						if tick() - BacktrackPositions[name][i].Time > State.Combat.BacktrackTime then
