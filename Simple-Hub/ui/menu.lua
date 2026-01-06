@@ -28,68 +28,80 @@ return function(Components)
 	-- CONFIGURATION SYSTEM INTEGRATION
 	-- ---------------------------------------------------------------------------
 	local Config = {}
-	local ConfigLoaded = false
-	
-	-- Try to load the config module
-	local function loadConfig()
-		local success, configModule = pcall(function()
-			if _G.VertexConfig then
-				return _G.VertexConfig
-			end
-			for _, obj in pairs(game:GetDescendants()) do
-				if obj.Name == "config" and obj:IsA("ModuleScript") then
-					return require(obj)
-				end
-			end
-			return nil
-		end)
-		
-		if success and configModule then
-			Config = configModule
-			ConfigLoaded = true
-			print("[CONFIG] Configuration loaded successfully")
-			return true
-		else
-			print("[CONFIG] Using default configuration")
-			Config = {
-				get = function(key, default)
-					return Config[key] or default
-				end,
-				set = function(key, value)
-					Config[key] = value
-					return true
-				end,
-				setMultiple = function(values)
-					for k, v in pairs(values) do
-						Config[k] = v
-					end
-					return true
-				end,
-				reset = function()
-					return true
-				end,
-				getAll = function()
-					return Config
-				end,
-			save = function() return true end
+local ConfigLoaded = false
 
-
-				toMenuFormat = function()
-					return {
-						MenuKey = Enum.KeyCode.M,
-						AccentColor = Color3.fromRGB(60, 120, 255),
-						DefaultTab = "Combat",
-						Settings = {}
-					}
-				end,
-				DEFAULTS = {},
-				VERSION = "1.0.0"
-			}
-			return false
+local function loadConfig()
+	local success, configModule = pcall(function()
+		if _G.VertexConfig then
+			return _G.VertexConfig
 		end
+
+		for _, obj in pairs(game:GetDescendants()) do
+			if obj.Name == "config" and obj:IsA("ModuleScript") then
+				return require(obj)
+			end
+		end
+
+		return nil
+	end)
+
+	if success and configModule then
+		Config = configModule
+		ConfigLoaded = true
+		print("[CONFIG] Configuration loaded successfully")
+		return true
+	else
+		print("[CONFIG] Using default configuration")
+
+		Config = {
+			get = function(key, default)
+				return Config[key] or default
+			end,
+
+			set = function(key, value)
+				Config[key] = value
+				return true
+			end,
+
+			setMultiple = function(values)
+				for k, v in pairs(values) do
+					Config[k] = v
+				end
+				return true
+			end,
+
+			reset = function()
+				return true
+			end,
+
+			getAll = function()
+				return {}
+			end,
+
+			save = function()
+				return true
+			end,
+
+			toMenuFormat = function()
+				return {
+					MenuKey = Enum.KeyCode.M,
+					AccentColor = Color3.fromRGB(60, 120, 255),
+					DefaultTab = "Combat",
+					Settings = {}
+				}
+			end,
+
+			DEFAULTS = {},
+			VERSION = "1.0.0"
+		}
+
+		ConfigLoaded = false
+		return false
 	end
-	
-	loadConfig()
+end
+
+loadConfig()
+
 	
 	-- ---------------------------------------------------------------------------
 	-- VIBRANT NEON COLOR PALETTE
