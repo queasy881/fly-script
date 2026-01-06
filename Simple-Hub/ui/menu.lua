@@ -2151,10 +2151,15 @@ if not selectedData then return end
 			if selectedData then
 				local btn = selectedData.Button
 				tween(btn, {BackgroundTransparency = 0.1}, 0.2)
-				tween(btn:FindFirstChildOfClass("TextLabel"), {TextColor3 = selectedData.Color}, 0.2)
-				if data.Indicator then
-	data.Indicator.Visible = true
+				local textLabel = btn:FindFirstChildOfClass("TextLabel")
+if textLabel then
+    tween(textLabel, {TextColor3 = selectedData.Color}, 0.2)
 end
+
+				if selectedData.Indicator then
+    selectedData.Indicator.Visible = true
+end
+
 
 			end
 			
