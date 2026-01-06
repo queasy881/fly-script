@@ -574,38 +574,41 @@ function Components.createKeybind(parent, text, currentKey, callback, saveCallba
         end)
     end
     
-    keyBtn.MouseButton1Click:Connect(startListening)
-    
-    keyBtn.MouseEnter:Connect(function()
-        if not waitingForInput then
-            tween(keyBtn, {BackgroundTransparency = 0.1}, 0.15)
-        end
-    end)
-    
-    keyBtn.MouseLeave:Connect(function()
-        if not waitingForInput then
-            tween(keyBtn, {BackgroundTransparency = 0.2}, 0.15)
-        end
-    end)
-    
-    container.MouseEnter:Connect(function()
-        tween(container, {BackgroundTransparency = 0.2}, 0.15)
-    end)
-    
-    container.MouseLeave:Connect(function()
-        tween(container, {BackgroundTransparency = 0.3}, 0.15)
-    end)
-    
-    return {
-        Container = container,
-        UpdateKey = function(self, newKey)
-            keyBtn.Text = newKey and tostring(newKey):gsub("Enum.KeyCode.", "") or "None"
-        end,
-        GetKey = function(self)
-            return keyBtn.Text
-        end
-    }
+   keyBtn.MouseButton1Click:Connect(startListening)
+
+keyBtn.MouseEnter:Connect(function()
+    if not waitingForInput then
+        tween(keyBtn, {BackgroundTransparency = 0.1}, 0.15)
+    end
+end)
+
+keyBtn.MouseLeave:Connect(function()
+    if not waitingForInput then
+        tween(keyBtn, {BackgroundTransparency = 0.2}, 0.15)
+    end
+end)
+
+container.MouseEnter:Connect(function()
+    tween(container, {BackgroundTransparency = 0.2}, 0.15)
+end)
+
+container.MouseLeave:Connect(function()
+    tween(container, {BackgroundTransparency = 0.3}, 0.15)
+end)
+
+return {
+    Container = container,
+
+    UpdateKey = function(self, newKey)
+        keyBtn.Text = newKey and tostring(newKey):gsub("Enum.KeyCode.", "") or "None"
+    end,
+
+    GetKey = function(self)
+        return keyBtn.Text
+    end
+}
 end
+
 
 function Components.createColorPicker(parent, text, defaultColor, callback, saveCallback)
     local container = Instance.new("Frame")
