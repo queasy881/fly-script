@@ -1531,40 +1531,7 @@ local categoryButtons = {}
 local categoryContents = {}
 local currentCategory = nil
 
--- Forward declaration
-local function switchCategory(categoryName) end
 
--- REAL IMPLEMENTATION (replace the empty one)
-function switchCategory(categoryName)
-	if currentCategory == categoryName then return end
-
-	-- Hide all contents
-	for name, content in pairs(categoryContents) do
-		if content then
-			content.Visible = false
-		end
-	end
-
-	-- Reset all buttons
-	for name, data in pairs(categoryButtons) do
-		if data and data.Button then
-			tween(data.Button, {BackgroundTransparency = 0.4}, 0.2)
-			if data.Label then
-				tween(data.Label, {TextColor3 = NeonColors.TextSoft}, 0.2)
-			end
-			if data.Indicator then
-				data.Indicator.Visible = false
-			end
-		end
-	end
-
-	-- Show selected category
-	if categoryContents[categoryName] then
-		categoryContents[categoryName].Visible = true
-		contentTitle.Text = categoryName
-		currentCategory = categoryName
-	end
-end
 
 	
 	
@@ -1712,6 +1679,38 @@ end
 	contentTitle.Font = Enum.Font.GothamBlack
 	contentTitle.TextSize = 22
 	contentTitle.Parent = contentHeader
+
+
+
+	-- CATEGORY SWITCH FUNCTION
+function switchCategory(categoryName)
+	if currentCategory == categoryName then return end
+
+	for name, content in pairs(categoryContents) do
+		if content then
+			content.Visible = false
+		end
+	end
+
+	for name, data in pairs(categoryButtons) do
+		if data and data.Button then
+			tween(data.Button, {BackgroundTransparency = 0.4}, 0.2)
+			if data.Label then
+				tween(data.Label, {TextColor3 = NeonColors.TextSoft}, 0.2)
+			end
+			if data.Indicator then
+				data.Indicator.Visible = false
+			end
+		end
+	end
+
+	if categoryContents[categoryName] then
+		categoryContents[categoryName].Visible = true
+		contentTitle.Text = categoryName
+		currentCategory = categoryName
+	end
+end
+
 	
 	-- Close content button
 	local closeContentBtn = Instance.new("TextButton")
