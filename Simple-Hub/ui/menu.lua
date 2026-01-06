@@ -158,7 +158,7 @@ local function createAnimatedGradient(parent, colors, speed)
 	if speed then
 		local conn = RunService.RenderStepped:Connect(function(dt)
 			if gradient and gradient.Parent then
-				gradient.Rotation = gradient.RRotation + (speed * dt * 10)
+				gradient.Rotation = gradient.Rotation + (speed * dt * 10)
 				if gradient.Rotation > 360 then
 					gradient.Rotation = 0
 				end
