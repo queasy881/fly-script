@@ -1122,7 +1122,7 @@ end
 							local tool = getTool() 
 							if tool then 
 								pcall(function() tool:Activate() end) 
-							end
+						 end
 							pcall(function() mouse2click() end)
 							break
 						end
@@ -1530,345 +1530,6 @@ end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- COMPONENTS LIBRARY (SIMPLIFIED FIXED VERSION)
-	-- ---------------------------------------------------------------------------
-	if not Components then
-		Components = {}
-		
-		local function corner(obj, radius)
-			local c = Instance.new("UICorner")
-			c.CornerRadius = UDim.new(0, radius or 8)
-			c.Parent = obj
-			return c
-		end
-		
-		local function glowEffect(obj, color, thickness)
-			local glow = Instance.new("UIStroke")
-			glow.Color = color or NeonColors.Glow
-			glow.Thickness = thickness or 2
-			glow.Transparency = 0.3
-			glow.Parent = obj
-			return glow
-		end
-		
-		local function neonBorder(obj, color, thickness)
-			local border = Instance.new("UIStroke")
-			border.Color = color or NeonColors.Outline
-			border.Thickness = thickness or 1
-			border.Transparency = 0.5
-			border.Parent = obj
-			return border
-		end
-		
-		function Components.createToggle(parent, text, callback, initialState)
-			local button = Instance.new("TextButton")
-			button.Name = "Toggle_" .. (text or "Toggle"):gsub("%s+", "_")
-			button.Size = UDim2.new(1, -10, 0, 36)
-			button.BackgroundColor3 = NeonColors.Glass
-			button.BackgroundTransparency = 0.3
-			button.BorderSizePixel = 0
-			button.AutoButtonColor = false
-			button.Text = ""
-			button.Parent = parent
-			
-			corner(button, 8)
-			glowEffect(button, NeonColors.ElectricPurple)
-			neonBorder(button, NeonColors.BrightCyan)
-			
-			local label = Instance.new("TextLabel")
-			label.Size = UDim2.new(0.7, 0, 1, 0)
-			label.Position = UDim2.new(0, 10, 0, 0)
-			label.BackgroundTransparency = 1
-			label.Text = text or "Toggle"
-			label.TextColor3 = NeonColors.TextSoft
-			label.TextXAlignment = Enum.TextXAlignment.Left
-			label.Font = Enum.Font.GothamBold
-			label.TextSize = 12
-			label.Parent = button
-			
-			local toggleFrame = Instance.new("Frame")
-			toggleFrame.Size = UDim2.new(0, 50, 0, 24)
-			toggleFrame.Position = UDim2.new(1, -60, 0.5, 0)
-			toggleFrame.AnchorPoint = Vector2.new(0, 0.5)
-			toggleFrame.BackgroundColor3 = NeonColors.Glass
-			toggleFrame.BorderSizePixel = 0
-			toggleFrame.Parent = button
-			
-			corner(toggleFrame, 12)
-			glowEffect(toggleFrame)
-			
-			local toggleKnob = Instance.new("Frame")
-			toggleKnob.Size = UDim2.new(0, 20, 0, 20)
-			toggleKnob.Position = UDim2.new(0, 2, 0.5, 0)
-			toggleKnob.AnchorPoint = Vector2.new(0, 0.5)
-			toggleKnob.BackgroundColor3 = NeonColors.BrightCyan
-			toggleKnob.BorderSizePixel = 0
-			toggleKnob.Parent = toggleFrame
-			
-			corner(toggleKnob, 10)
-			glowEffect(toggleKnob, NeonColors.BrightCyan, 3)
-			
-			local state = initialState or false
-			
-			local function updateVisual()
-				if state then
-					tween(toggleKnob, {
-						Position = UDim2.new(1, -22, 0.5, 0),
-						BackgroundColor3 = NeonColors.LimeGreen
-					}, 0.2)
-					tween(toggleFrame, {BackgroundColor3 = NeonColors.GlassLight}, 0.2)
-					tween(label, {TextColor3 = NeonColors.Text}, 0.2)
-					tween(button, {BackgroundTransparency = 0.1}, 0.2)
-				else
-					tween(toggleKnob, {
-						Position = UDim2.new(0, 2, 0.5, 0),
-						BackgroundColor3 = NeonColors.BrightCyan
-					}, 0.2)
-					tween(toggleFrame, {BackgroundColor3 = NeonColors.Glass}, 0.2)
-					tween(label, {TextColor3 = NeonColors.TextSoft}, 0.2)
-					tween(button, {BackgroundTransparency = 0.3}, 0.2)
-				end
-			end
-			
-			button.MouseButton1Click:Connect(function()
-				state = not state
-				updateVisual()
-				if callback then 
-					task.spawn(callback, state)
-				end
-			end)
-			
-			updateVisual()
-			
-			-- Hover effects
-			button.MouseEnter:Connect(function()
-				if not state then
-					tween(button, {BackgroundTransparency = 0.2}, 0.15)
-				end
-			end)
-			
-			button.MouseLeave:Connect(function()
-				if not state then
-					tween(button, {BackgroundTransparency = 0.3}, 0.15)
-				end
-			end)
-			
-			return {
-				Button = button,
-				SetState = function(self, newState)
-					if typeof(newState) == "boolean" then
-						state = newState
-						updateVisual()
-					end
-				end,
-				GetState = function() return state end
-			}
-		end
-		
-		function Components.createSlider(parent, text, min, max, defaultValue, callback)
-			local container = Instance.new("Frame")
-			container.Name = "Slider_" .. (text or ""):gsub("%s+", "")
-			container.Size = UDim2.new(1, -10, 0, 60)
-			container.BackgroundColor3 = NeonColors.Glass
-			container.BackgroundTransparency = 0.3
-			container.BorderSizePixel = 0
-			container.Parent = parent
-			
-			corner(container, 8)
-			glowEffect(container, NeonColors.HotPink)
-			neonBorder(container)
-			
-			local label = Instance.new("TextLabel")
-			label.Size = UDim2.new(1, -20, 0, 20)
-			label.Position = UDim2.new(0, 10, 0, 5)
-			label.BackgroundTransparency = 1
-			label.Text = text or "Slider"
-			label.TextColor3 = NeonColors.TextSoft
-			label.TextXAlignment = Enum.TextXAlignment.Left
-			label.Font = Enum.Font.GothamBold
-			label.TextSize = 11
-			label.Parent = container
-			
-			local valueLabel = Instance.new("TextLabel")
-			valueLabel.Size = UDim2.new(0, 50, 0, 20)
-			valueLabel.Position = UDim2.new(1, -60, 0, 5)
-			valueLabel.BackgroundTransparency = 1
-			valueLabel.Text = tostring(defaultValue or min)
-			valueLabel.TextColor3 = NeonColors.BrightCyan
-			valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-			valueLabel.Font = Enum.Font.GothamBold
-			valueLabel.TextSize = 12
-			valueLabel.Parent = container
-			
-			local track = Instance.new("Frame")
-			track.Size = UDim2.new(1, -20, 0, 6)
-			track.Position = UDim2.new(0, 10, 1, -20)
-			track.BackgroundColor3 = NeonColors.GlassLight
-			track.BorderSizePixel = 0
-			track.Parent = container
-			
-			corner(track, 3)
-			glowEffect(track, NeonColors.FieryOrange)
-			
-			local fill = Instance.new("Frame")
-			fill.Size = UDim2.new((defaultValue - min) / (max - min), 0, 1, 0)
-			fill.BackgroundColor3 = NeonColors.FieryOrange
-			fill.BorderSizePixel = 0
-			fill.Parent = track
-			
-			corner(fill, 3)
-			
-			local handle = Instance.new("Frame")
-			handle.Size = UDim2.new(0, 16, 0, 16)
-			handle.Position = UDim2.new((defaultValue - min) / (max - min), 0, 0.5, 0)
-			handle.AnchorPoint = Vector2.new(0.5, 0.5)
-			handle.BackgroundColor3 = NeonColors.BrightCyan
-			handle.BorderSizePixel = 0
-			handle.Parent = track
-			
-			corner(handle, 8)
-			glowEffect(handle, NeonColors.BrightCyan, 3)
-			
-			local value = defaultValue or min
-			local dragging = false
-			
-			local function updateVisual(percent)
-				percent = math.clamp(percent, 0, 1)
-				value = math.floor(min + (max - min) * percent)
-				valueLabel.Text = tostring(value)
-				
-				tween(fill, {Size = UDim2.new(percent, 0, 1, 0)}, 0.1)
-				tween(handle, {Position = UDim2.new(percent, 0, 0.5, 0)}, 0.1)
-				
-				if callback then 
-					task.spawn(callback, value)
-				end
-			end
-			
-			track.InputBegan:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
-					dragging = true
-					local relativeX = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
-					updateVisual(relativeX)
-				end
-			end)
-			
-			UIS.InputEnded:Connect(function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 then
-					dragging = false
-				end
-			end)
-			
-			UIS.InputChanged:Connect(function(input)
-				if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-					local relativeX = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
-					updateVisual(relativeX)
-				end
-			end)
-			
-			container.MouseEnter:Connect(function()
-				tween(container, {BackgroundTransparency = 0.2}, 0.15)
-			end)
-			
-			container.MouseLeave:Connect(function()
-				tween(container, {BackgroundTransparency = 0.3}, 0.15)
-			end)
-			
-			return {
-				Container = container,
-				SetValue = function(self, newValue)
-					local percent = (math.clamp(newValue, min, max) - min) / (max - min)
-					updateVisual(percent)
-				end,
-				GetValue = function() return value end
-			}
-		end
-		
-		function Components.createSection(parent, text)
-			local section = Instance.new("Frame")
-			section.Name = "Section_" .. (text or ""):gsub("%s+", "")
-			section.Size = UDim2.new(1, -10, 0, 28)
-			section.BackgroundTransparency = 1
-			section.Parent = parent
-			
-			local label = Instance.new("TextLabel")
-			label.Size = UDim2.new(1, 0, 1, 0)
-			label.BackgroundTransparency = 1
-			label.Text = "| " .. (text or "SECTION") .. " |"
-			label.TextColor3 = NeonColors.ElectricPurple
-			label.TextXAlignment = Enum.TextXAlignment.Center
-			label.Font = Enum.Font.GothamBold
-			label.TextSize = 12
-			label.Parent = section
-			
-			return section
-		end
-		
-		function Components.createLabel(parent, text)
-			local label = Instance.new("TextLabel")
-			label.Size = UDim2.new(1, -10, 0, 24)
-			label.BackgroundTransparency = 1
-			label.Text = text or ""
-			label.TextColor3 = NeonColors.TextMuted
-			label.TextXAlignment = Enum.TextXAlignment.Left
-			label.Font = Enum.Font.Gotham
-			label.TextSize = 11
-			label.TextWrapped = true
-			label.Parent = parent
-			return label
-		end
-		
-		function Components.createDivider(parent)
-			local divider = Instance.new("Frame")
-			divider.Size = UDim2.new(1, -20, 0, 1)
-			divider.Position = UDim2.new(0, 10, 0, 0)
-			divider.BackgroundColor3 = NeonColors.ElectricPurple
-			divider.BackgroundTransparency = 0.5
-			divider.BorderSizePixel = 0
-			divider.Parent = parent
-			return divider
-		end
-		
-		function Components.createButton(parent, text, callback)
-			local btn = Instance.new("TextButton")
-			btn.Size = UDim2.new(1, -10, 0, 40)
-			btn.BackgroundColor3 = NeonColors.ElectricPurple
-			btn.BackgroundTransparency = 0.3
-			btn.BorderSizePixel = 0
-			btn.AutoButtonColor = false
-			btn.Text = text or "Button"
-			btn.TextColor3 = NeonColors.Text
-			btn.Font = Enum.Font.GothamBold
-			btn.TextSize = 13
-			btn.Parent = parent
-			
-			corner(btn, 8)
-			glowEffect(btn, NeonColors.ElectricPurple)
-			
-			btn.MouseEnter:Connect(function()
-				tween(btn, {BackgroundTransparency = 0.1}, 0.15)
-			end)
-			
-			btn.MouseLeave:Connect(function()
-				tween(btn, {BackgroundTransparency = 0.3}, 0.15)
-			end)
-			
-			btn.MouseButton1Click:Connect(function()
-				tween(btn, {BackgroundTransparency = 0.05}, 0.1)
-				task.delay(0.1, function()
-					tween(btn, {BackgroundTransparency = 0.3}, 0.15)
-				end)
-				if callback then 
-					task.spawn(callback)
-				end
-			end)
-			
-			return btn
-		end
-	end
-	_G.VertexComponents = Components
-	
-	-- ---------------------------------------------------------------------------
 	-- FIXED GUI: VERTICAL FLOATING SIDEBAR WITH WORKING BUTTONS
 	-- ---------------------------------------------------------------------------
 	local gui = Instance.new("ScreenGui")
@@ -2043,8 +1704,8 @@ end
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(0, 2)
 		corner.Parent = indicator
+		
 		categoryButtons[category.Name] = {Button = btn, Color = category.Color}
-
 		
 		btn.MouseEnter:Connect(function()
 			if currentCategory ~= category.Name then
@@ -2091,7 +1752,7 @@ end
 	
 	local contentTitle = Instance.new("TextLabel")
 	contentTitle.Name = "Title"
-	contentTitle.Size = UDim2.new(1, -20, 1, 0)
+	contentTitle.Size = UDim2.new(1, -80, 1, 0)
 	contentTitle.Position = UDim2.new(0, 20, 0, 0)
 	contentTitle.BackgroundTransparency = 1
 	contentTitle.Text = "SELECT CATEGORY"
@@ -2105,7 +1766,7 @@ end
 	local closeContentBtn = Instance.new("TextButton")
 	closeContentBtn.Size = UDim2.new(0, 40, 0, 40)
 	closeContentBtn.Position = UDim2.new(1, -50, 0.5, 0)
-	closeContentBtn.AnchorPoint = Vector2.new(0, 0.5)
+	closeContentBtn.AnchorPoint = Vector2.new(1, 0.5)
 	closeContentBtn.BackgroundColor3 = NeonColors.Glass
 	closeContentBtn.BackgroundTransparency = 0.3
 	closeContentBtn.BorderSizePixel = 0
@@ -2148,7 +1809,7 @@ end
 	contentPadding.Parent = contentScroll
 	
 	-- Function to create category content
-	local function createCategoryContent(categoryName, settings)
+	local function createCategoryContent(categoryName)
 		local container = Instance.new("Frame")
 		container.Name = categoryName
 		container.Size = UDim2.new(1, 0, 0, 0)
@@ -2157,19 +1818,25 @@ end
 		container.Visible = false
 		container.Parent = contentScroll
 		
+		local layout = Instance.new("UIListLayout")
+		layout.Padding = UDim.new(0, 10)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Parent = container
+		
+		local padding = Instance.new("UIPadding")
+		padding.PaddingTop = UDim.new(0, 5)
+		padding.PaddingLeft = UDim.new(0, 5)
+		padding.PaddingRight = UDim.new(0, 5)
+		padding.Parent = container
+		
 		categoryContents[categoryName] = container
 		return container
 	end
 	
 	-- Create all category contents
-	local combatContent = createCategoryContent("COMBAT")
-	local movementContent = createCategoryContent("MOVEMENT")
-	local espContent = createCategoryContent("ESP")
-	local visualsContent = createCategoryContent("VISUALS")
-	local worldContent = createCategoryContent("WORLD")
-	local playerContent = createCategoryContent("PLAYER")
-	local trollContent = createCategoryContent("TROLL")
-	local miscContent = createCategoryContent("MISC")
+	for _, category in ipairs(categories) do
+		createCategoryContent(category.Name)
+	end
 	
 	-- Function to switch category - FIXED VERSION
 	local function switchCategory(categoryName)
@@ -2233,9 +1900,7 @@ end
 			
 			-- Ensure content is properly sized
 			task.wait(0.1)
-			if contentScroll then
-				contentScroll.CanvasSize = UDim2.new(0, 0, 0, contentScroll.AbsoluteContentSize.Y)
-			end
+			contentScroll.CanvasSize = UDim2.new(0, 0, 0, contentScroll.AbsoluteContentSize.Y)
 		end
 	end
 	
@@ -2346,7 +2011,7 @@ end
 	
 	-- COMBAT CATEGORY
 	do
-		local content = combatContent
+		local content = categoryContents["COMBAT"]
 		
 		-- AIM ASSIST Section
 		local aimAssistToggle = Components.createToggle(content, "Aim Assist", function(v)
@@ -2439,7 +2104,7 @@ end
 	
 	-- MOVEMENT CATEGORY
 	do
-		local content = movementContent
+		local content = categoryContents["MOVEMENT"]
 		
 		-- FLIGHT Section
 		local flyToggle = Components.createToggle(content, "Fly", function(v)
@@ -2503,7 +2168,7 @@ end
 	
 	-- ESP CATEGORY
 	do
-		local content = espContent
+		local content = categoryContents["ESP"]
 		
 		-- PLAYER ESP Section
 		local nameESPToggle = Components.createToggle(content, "Name ESP", function(v)
@@ -2546,7 +2211,7 @@ end
 	
 	-- VISUALS CATEGORY
 	do
-		local content = visualsContent
+		local content = categoryContents["VISUALS"]
 		
 		-- LIGHTING Section
 		local fullbrightToggle = Components.createToggle(content, "Fullbright", function(v)
@@ -2588,7 +2253,7 @@ end
 	
 	-- WORLD CATEGORY
 	do
-		local content = worldContent
+		local content = categoryContents["WORLD"]
 		
 		-- ENVIRONMENT Section
 		local timeSlider = Components.createSlider(content, "Time of Day", 0, 24, State.World.TimeOfDay, function(v)
@@ -2614,7 +2279,7 @@ end
 	
 	-- PLAYER CATEGORY
 	do
-		local content = playerContent
+		local content = categoryContents["PLAYER"]
 		
 		-- CHARACTER Section
 		local godModeToggle = Components.createToggle(content, "God Mode", function(v)
@@ -2643,7 +2308,7 @@ end
 	
 	-- TROLL CATEGORY
 	do
-		local content = trollContent
+		local content = categoryContents["TROLL"]
 		
 		-- FOLLOW / ORBIT Section
 		local annoyToggle = Components.createToggle(content, "Annoy Player", function(v)
@@ -2670,9 +2335,9 @@ end
 		end)
 	end
 	
-	-- MISC CATEGORY
+	-- MISC CATEGORY (SETTINGS)
 	do
-		local content = miscContent
+		local content = categoryContents["MISC"]
 		
 		-- HUD ELEMENTS Section
 		local watermarkToggle = Components.createToggle(content, "Watermark", function(v)
@@ -2712,6 +2377,14 @@ end
 		
 		-- CONFIGURATION Section
 		Components.createLabel(content, "Menu Toggle Key: " .. tostring(State.Settings.MenuKey):gsub("Enum.KeyCode.", ""))
+		
+		-- Keybind changer
+		local keybind = Components.createKeybind(content, "Change Menu Key", State.Settings.MenuKey, function(newKey)
+			if newKey then
+				State.Settings.MenuKey = newKey
+				saveStateToConfig()
+			end
+		end, saveStateToConfig)
 	end
 	
 	-- Initialize with first category
@@ -2734,16 +2407,15 @@ end
 			
 			-- Show menu with animation
 			sidebar.Visible = true
-tween(sidebar, {Position = UDim2.new(0, 20, 0.5, 0)}, {Time = 0.4})
-
+			tween(sidebar, {Position = UDim2.new(0, 20, 0.5, 0)}, 0.4)
 			
 			-- Unlock mouse
 			UIS.MouseBehavior = Enum.MouseBehavior.Default
 			UIS.MouseIconEnabled = true
 		else
 			-- Hide menu with animation
-			tween(sidebar, {Position = UDim2.new(0, -240, 0.5, 0)}, {Time = 0.3})
-
+			tween(sidebar, {Position = UDim2.new(0, -240, 0.5, 0)}, 0.3)
+			
 			task.delay(0.3, function()
 				sidebar.Visible = false
 				contentArea.Visible = false
