@@ -1527,10 +1527,46 @@ return function(Components)
 		{Name = "MISC", Icon = "⚙️", Color = NeonColors.TextSoft},
 		{Name = "SETTINGS", Icon = "⚙️", Color = NeonColors.BrightCyan}
 	}
+local categoryButtons = {}
+local categoryContents = {}
+local currentCategory = nil
+
+-- Forward declaration
+local function switchCategory(categoryName) end
+
+-- REAL IMPLEMENTATION (replace the empty one)
+function switchCategory(categoryName)
+	if currentCategory == categoryName then return end
+
+	-- Hide all contents
+	for name, content in pairs(categoryContents) do
+		if content then
+			content.Visible = false
+		end
+	end
+
+	-- Reset all buttons
+	for name, data in pairs(categoryButtons) do
+		if data and data.Button then
+			tween(data.Button, {BackgroundTransparency = 0.4}, 0.2)
+			if data.Label then
+				tween(data.Label, {TextColor3 = NeonColors.TextSoft}, 0.2)
+			end
+			if data.Indicator then
+				data.Indicator.Visible = false
+			end
+		end
+	end
+
+	-- Show selected category
+	if categoryContents[categoryName] then
+		categoryContents[categoryName].Visible = true
+		contentTitle.Text = categoryName
+		currentCategory = categoryName
+	end
+end
+
 	
-	local categoryButtons = {}
-	local categoryContents = {}
-	local currentCategory = nil
 	
 	-- Category buttons container
 	local categoryContainer = Instance.new("ScrollingFrame")
@@ -1763,51 +1799,7 @@ return function(Components)
 	local settingsContent = createCategoryContent("SETTINGS")
 	
 	-- Function to switch category
-	local function switchCategory(categoryName)
-		if currentCategory == categoryName then return end
-		
-		-- Hide all contents
-		for name, content in pairs(categoryContents) do
-			content.Visible = false
-		end
-		
-		-- Reset all buttons
-		for name, data in pairs(categoryButtons) do
-			if data and data.Button then
-				tween(data.Button, {BackgroundTransparency = 0.4}, 0.2)
-				if data.Label then
-					tween(data.Label, {TextColor3 = NeonColors.TextSoft}, 0.2)
-				end
-				if data.Indicator then
-					data.Indicator.Visible = false
-				end
-			end
-		end
-		
-		-- Show selected category
-		if categoryContents[categoryName] then
-			categoryContents[categoryName].Visible = true
-			contentTitle.Text = categoryName
-			
-			-- Highlight selected button
-			local selectedData = categoryButtons[categoryName]
-			if selectedData then
-				tween(selectedData.Button, {BackgroundTransparency = 0.1}, 0.2)
-				if selectedData.Label then
-					tween(selectedData.Label, {TextColor3 = selectedData.Color}, 0.2)
-				end
-				if selectedData.Indicator then
-					selectedData.Indicator.Visible = true
-				end
-			end
-			
-			-- Animate title color
-			local selectedColor = selectedData and selectedData.Color or NeonColors.ElectricPurple
-			tween(contentTitle, {TextColor3 = selectedColor}, 0.3)
-			contentArea.Visible = true
-			currentCategory = categoryName
-		end
-	end
+
 	
 	-- Save/Load buttons
 	local saveLoadContainer = Instance.new("Frame")
