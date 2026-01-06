@@ -2124,14 +2124,20 @@ categoryButtons[category.Name] = {
 		
 		-- Reset all buttons
 		for name, data in pairs(categoryButtons) do
-			local btn = data.Button
-			tween(btn, {BackgroundTransparency = 0.4}, 0.2)
-			tween(btn:FindFirstChildOfClass("TextLabel"), {TextColor3 = NeonColors.TextSoft}, 0.2)
-			if data.Indicator then
-	data.Indicator.Visible = true
+	local btn = data and data.Button
+	if not btn then continue end
+
+	tween(btn, {BackgroundTransparency = 0.4}, 0.2)
+	local lbl = btn:FindFirstChildOfClass("TextLabel")
+	if lbl then
+		tween(lbl, {TextColor3 = NeonColors.TextSoft}, 0.2)
+	end
+
+	if data and data.Indicator then
+		data.Indicator.Visible = false
+	end
 end
 
-		end
 		
 		-- Show selected category
 		if categoryContents[categoryName] then
@@ -2140,6 +2146,8 @@ end
 			
 			-- Highlight selected button
 			local selectedData = categoryButtons[categoryName]
+if not selectedData then return end
+
 			if selectedData then
 				local btn = selectedData.Button
 				tween(btn, {BackgroundTransparency = 0.1}, 0.2)
