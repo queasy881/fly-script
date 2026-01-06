@@ -3,21 +3,8 @@
 -- Fully integrated with config file
 -- ---------------------------------------------------------------------------
 
-return function(arg1, arg2, arg3)
-	-- Handle both: func({Tabs=..., Components=..., Animations=...}) AND func(Tabs, Components, Animations)
-	local Tabs, Components, Animations
-	if type(arg1) == "table" and arg1.Tabs then
-		Tabs = arg1.Tabs
-		Components = arg1.Components
-		Animations = arg1.Animations
-	else
-		Tabs = arg1
-		Components = arg2
-		Animations = arg3
-	end
-	Tabs = Tabs or _G.VertexTabs
+return function(Components)
 	Components = Components or _G.VertexComponents
-	Animations = Animations or _G.VertexAnimations
 	
 	-- ---------------------------------------------------------------------------
 	-- SERVICES
@@ -40,18 +27,15 @@ return function(arg1, arg2, arg3)
 	-- ---------------------------------------------------------------------------
 	-- CONFIGURATION SYSTEM INTEGRATION
 	-- ---------------------------------------------------------------------------
-	-- Load config from the provided config file
 	local Config = {}
 	local ConfigLoaded = false
 	
 	-- Try to load the config module
 	local function loadConfig()
 		local success, configModule = pcall(function()
-			-- Try to require or load the config
 			if _G.VertexConfig then
 				return _G.VertexConfig
 			end
-			-- Try to find in game
 			for _, obj in pairs(game:GetDescendants()) do
 				if obj.Name == "config" and obj:IsA("ModuleScript") then
 					return require(obj)
@@ -66,7 +50,6 @@ return function(arg1, arg2, arg3)
 			print("[CONFIG] Configuration loaded successfully")
 			return true
 		else
-			-- Create default config structure
 			print("[CONFIG] Using default configuration")
 			Config = {
 				get = function(key, default)
@@ -83,7 +66,6 @@ return function(arg1, arg2, arg3)
 					return true
 				end,
 				reset = function()
-					-- Default values
 					return true
 				end,
 				getAll = function()
@@ -106,14 +88,12 @@ return function(arg1, arg2, arg3)
 		end
 	end
 	
-	-- Initialize config
 	loadConfig()
 	
 	-- ---------------------------------------------------------------------------
 	-- VIBRANT NEON COLOR PALETTE
 	-- ---------------------------------------------------------------------------
 	local NeonColors = {
-		-- Primary vibrant colors
 		ElectricPurple = Color3.fromRGB(180, 70, 255),
 		BrightCyan = Color3.fromRGB(0, 255, 255),
 		HotPink = Color3.fromRGB(255, 20, 147),
@@ -121,61 +101,20 @@ return function(arg1, arg2, arg3)
 		FieryOrange = Color3.fromRGB(255, 100, 0),
 		NeonBlue = Color3.fromRGB(0, 150, 255),
 		VibrantYellow = Color3.fromRGB(255, 255, 0),
-		
-		-- UI Colors
 		Background = Color3.fromRGB(10, 10, 15),
 		Glass = Color3.fromRGB(20, 20, 30),
 		GlassLight = Color3.fromRGB(30, 30, 45),
 		GlassHover = Color3.fromRGB(40, 40, 60),
-		
-		-- Text
 		Text = Color3.fromRGB(255, 255, 255),
 		TextSoft = Color3.fromRGB(220, 220, 240),
 		TextMuted = Color3.fromRGB(150, 150, 180),
-		
-		-- Accent gradients (for animated effects)
-		Accent1 = Color3.fromRGB(180, 70, 255),  -- Purple
-		Accent2 = Color3.fromRGB(0, 255, 255),   -- Cyan
-		Accent3 = Color3.fromRGB(255, 20, 147),  -- Pink
-		
-		-- Special effects
 		Glow = Color3.fromRGB(100, 200, 255),
 		Outline = Color3.fromRGB(0, 200, 255),
 		Shadow = Color3.fromRGB(0, 0, 0, 0.8)
 	}
 	
-	-- Dynamic gradient function
-	local function createAnimatedGradient(parent, colors, speed)
-		local gradient = Instance.new("UIGradient")
-		gradient.Color = ColorSequence.new{
-			ColorSequenceKeypoint.new(0, colors[1] or NeonColors.ElectricPurple),
-			ColorSequenceKeypoint.new(0.5, colors[2] or NeonColors.BrightCyan),
-			ColorSequenceKeypoint.new(1, colors[3] or NeonColors.HotPink)
-		}
-		gradient.Rotation = 45
-		gradient.Parent = parent
-		
-		-- Animate the gradient
-		if speed then
-			local connection
-			connection = RunService.RenderStepped:Connect(function(dt)
-				gradient.Rotation = gradient.Rotation + (speed * dt * 10)
-				if gradient.Rotation > 360 then
-					gradient.Rotation = 0
-				end
-			end)
-			parent:GetPropertyChangedSignal("Parent"):Connect(function()
-				if not parent.Parent then
-					connection:Disconnect()
-				end
-			end)
-		end
-		
-		return gradient
-	end
-	
 	-- ---------------------------------------------------------------------------
-	-- UTILITY FUNCTIONS (UNCHANGED)
+	-- UTILITY FUNCTIONS
 	-- ---------------------------------------------------------------------------
 	local function getCharacter() return player.Character end
 	local function getRoot() local c = getCharacter() return c and c:FindFirstChild("HumanoidRootPart") end
@@ -183,42 +122,32 @@ return function(arg1, arg2, arg3)
 	local function getHead() local c = getCharacter() return c and c:FindFirstChild("Head") end
 	local function getTool() local c = getCharacter() return c and c:FindFirstChildOfClass("Tool") end
 	
-	-- Simple tween function
 	local function tween(obj, props, tweenInfo)
-	if not obj then return end
+		if not obj then return end
+		local t = 0.2
+		local style = Enum.EasingStyle.Quad
+		local direction = Enum.EasingDirection.Out
 
-	-- ALLOW BOTH number and table as tweenInfo
-	if type(tweenInfo) == "number" then
-		tweenInfo = { Time = tweenInfo }
+		if type(tweenInfo) == "table" then
+			t = tweenInfo.Time or t
+			style = tweenInfo.Style or style
+			direction = tweenInfo.Direction or direction
+		elseif type(tweenInfo) == "number" then
+			t = tweenInfo
+		end
+
+		local ti = TweenInfo.new(t, style, direction)
+		local tw = TweenService:Create(obj, ti, props)
+		tw:Play()
+		return tw
 	end
-
-	tweenInfo = tweenInfo or {}
-
-	local ti = TweenInfo.new(
-		tweenInfo.Time or 0.2,
-		tweenInfo.Style or Enum.EasingStyle.Quad,
-		tweenInfo.Direction or Enum.EasingDirection.Out
-	)
-
-	local t = TweenService:Create(obj, ti, props)
-	t:Play()
-	return t
-end
-
-	
-	-- Use provided Animations or fallback
-	if not Animations then
-		Animations = { tween = tween }
-	end
-	_G.VertexAnimations = Animations
 	
 	-- ---------------------------------------------------------------------------
-	-- ENTITY CACHE (UNCHANGED)
+	-- ENTITY CACHE
 	-- ---------------------------------------------------------------------------
 	local EntityCache = { players = {}, npcs = {}, items = {} }
 	
 	local function updateEntityCache()
-		-- Clean dead player entries
 		for name, data in pairs(EntityCache.players) do
 			if not data.Player or not data.Player.Parent then
 				EntityCache.players[name] = nil
@@ -232,7 +161,6 @@ end
 			end
 		end
 		
-		-- Update players
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= player then
 				if not EntityCache.players[plr.Name] then
@@ -249,7 +177,6 @@ end
 			end
 		end
 		
-		-- Update NPCs
 		EntityCache.npcs = {}
 		for _, obj in ipairs(workspace:GetDescendants()) do
 			if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(obj) then
@@ -264,7 +191,6 @@ end
 			end
 		end
 		
-		-- Update Items
 		EntityCache.items = {}
 		for _, obj in ipairs(workspace:GetDescendants()) do
 			if obj:IsA("Tool") then
@@ -282,20 +208,19 @@ end
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- CHECK IF DRAWING API EXISTS
+	-- DRAWING API CHECK
 	-- ---------------------------------------------------------------------------
 	local DrawingEnabled = false
-	local DrawingTest = nil
 	pcall(function()
-		DrawingTest = Drawing.new("Line")
-		if DrawingTest then
-			DrawingTest:Remove()
+		local test = Drawing.new("Line")
+		if test then
+			test:Remove()
 			DrawingEnabled = true
 		end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- DRAWING OBJECT POOL (UNCHANGED)
+	-- DRAWING OBJECT POOL (FIXED VERSION)
 	-- ---------------------------------------------------------------------------
 	local DrawingPool = { text = {}, square = {}, line = {}, triangle = {}, circle = {} }
 	local ActiveDrawings = {}
@@ -305,7 +230,7 @@ end
 		local pool = DrawingPool[drawType]
 		if not pool then return nil end
 		
-		for _, obj in ipairs(pool) do
+		for i, obj in ipairs(pool) do
 			if not obj._inUse then
 				obj._inUse = true
 				obj.Visible = true
@@ -321,21 +246,26 @@ end
 				newDraw.Size = 14
 				newDraw.Center = true
 				newDraw.Outline = true
+				newDraw._inUse = false
 			elseif drawType == "square" then
 				newDraw = Drawing.new("Square")
 				newDraw.Thickness = 1
 				newDraw.Filled = false
+				newDraw._inUse = false
 			elseif drawType == "line" then
 				newDraw = Drawing.new("Line")
 				newDraw.Thickness = 1
+				newDraw._inUse = false
 			elseif drawType == "triangle" then
 				newDraw = Drawing.new("Triangle")
 				newDraw.Filled = true
+				newDraw._inUse = false
 			elseif drawType == "circle" then
 				newDraw = Drawing.new("Circle")
 				newDraw.Thickness = 2
 				newDraw.NumSides = 64
 				newDraw.Filled = false
+				newDraw._inUse = false
 			end
 		end)
 		
@@ -360,7 +290,7 @@ end
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- STATIC HUD DRAWINGS (UNCHANGED)
+	-- STATIC HUD DRAWINGS
 	-- ---------------------------------------------------------------------------
 	local HUD = {}
 	if DrawingEnabled then
@@ -390,31 +320,37 @@ end
 			HUD.Watermark.Outline = true
 			HUD.Watermark.Position = Vector2.new(10, 10)
 			HUD.Watermark.Visible = false
+			
 			HUD.FPS = Drawing.new("Text")
 			HUD.FPS.Size = 16
 			HUD.FPS.Outline = true
 			HUD.FPS.Position = Vector2.new(10, 35)
 			HUD.FPS.Visible = false
+			
 			HUD.Ping = Drawing.new("Text")
 			HUD.Ping.Size = 16
 			HUD.Ping.Outline = true
 			HUD.Ping.Position = Vector2.new(10, 55)
 			HUD.Ping.Visible = false
+			
 			HUD.PlrCount = Drawing.new("Text")
 			HUD.PlrCount.Size = 16
 			HUD.PlrCount.Outline = true
 			HUD.PlrCount.Position = Vector2.new(10, 75)
 			HUD.PlrCount.Visible = false
+			
 			HUD.Velocity = Drawing.new("Text")
 			HUD.Velocity.Size = 16
 			HUD.Velocity.Outline = true
 			HUD.Velocity.Position = Vector2.new(10, 95)
 			HUD.Velocity.Visible = false
+			
 			HUD.TargetInfo = Drawing.new("Text")
 			HUD.TargetInfo.Size = 16
 			HUD.TargetInfo.Outline = true
 			HUD.TargetInfo.Position = Vector2.new(10, 115)
 			HUD.TargetInfo.Visible = false
+			
 			HUD.Keybinds = Drawing.new("Text")
 			HUD.Keybinds.Size = 14
 			HUD.Keybinds.Outline = true
@@ -423,7 +359,7 @@ end
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- ALL STATE VARIABLES (NOW CONFIG-INTEGRATED)
+	-- ALL STATE VARIABLES
 	-- ---------------------------------------------------------------------------
 	local State = {
 		ESP = {
@@ -482,19 +418,16 @@ end
 		if ConfigLoaded then
 			local configData = Config.getAll()
 			if configData then
-				-- Load MenuKey from config
 				local menuKeyStr = Config.get("MenuKey", "M")
 				if menuKeyStr and Enum.KeyCode[menuKeyStr] then
 					State.Settings.MenuKey = Enum.KeyCode[menuKeyStr]
 				end
 				
-				-- Load AccentColor from config
 				local accentColor = Config.get("AccentColor", {60, 120, 255})
 				if accentColor then
 					State.Settings.AccentColor = Color3.fromRGB(accentColor[1] or 60, accentColor[2] or 120, accentColor[3] or 255)
 				end
 				
-				-- Load all other settings
 				for category, values in pairs(State) do
 					if category ~= "Settings" then
 						for key, _ in pairs(values) do
@@ -515,16 +448,13 @@ end
 		if ConfigLoaded then
 			local configValues = {}
 			
-			-- Save MenuKey
 			configValues["MenuKey"] = tostring(State.Settings.MenuKey):gsub("Enum.KeyCode.", "")
 			
-			-- Save AccentColor
 			local r, g, b = math.floor(State.Settings.AccentColor.r * 255), 
 						   math.floor(State.Settings.AccentColor.g * 255), 
 						   math.floor(State.Settings.AccentColor.b * 255)
 			configValues["AccentColor"] = {r, g, b}
 			
-			-- Save all other settings
 			for category, values in pairs(State) do
 				if category ~= "Settings" then
 					for key, value in pairs(values) do
@@ -539,11 +469,10 @@ end
 		end
 	end
 	
-	-- Initialize state from config
 	loadStateFromConfig()
 	
 	-- ---------------------------------------------------------------------------
-	-- STORAGE (UNCHANGED)
+	-- STORAGE
 	-- ---------------------------------------------------------------------------
 	local BacktrackPositions = {}
 	local CurrentTarget = nil
@@ -563,7 +492,7 @@ end
 	local OriginalGravity = workspace.Gravity
 	
 	-- ---------------------------------------------------------------------------
-	-- TARGET ACQUISITION SYSTEM (UNCHANGED)
+	-- TARGET ACQUISITION SYSTEM
 	-- ---------------------------------------------------------------------------
 	local function getBestTarget(options)
 		options = options or {}
@@ -642,7 +571,7 @@ end
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- FLY SYSTEM (UNCHANGED)
+	-- FLY SYSTEM
 	-- ---------------------------------------------------------------------------
 	local FlySystem = { enabled = false, bodyGyro = nil, bodyVelocity = nil, currentVel = Vector3.new() }
 	
@@ -699,7 +628,7 @@ end
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- INVISIBILITY SYSTEM (UNCHANGED)
+	-- INVISIBILITY SYSTEM
 	-- ---------------------------------------------------------------------------
 	local InvisSystem = {
 		enabled = false,
@@ -714,7 +643,6 @@ end
 		self.enabled = true
 		self.originalTransparencies = {}
 		
-		-- Store original transparencies and make invisible
 		for _, part in ipairs(char:GetDescendants()) do
 			if part:IsA("BasePart") then
 				self.originalTransparencies[part] = part.Transparency
@@ -725,7 +653,6 @@ end
 			end
 		end
 		
-		-- Hide accessories
 		for _, acc in ipairs(char:GetChildren()) do
 			if acc:IsA("Accessory") then
 				local handle = acc:FindFirstChild("Handle")
@@ -740,7 +667,6 @@ end
 	function InvisSystem:Disable()
 		self.enabled = false
 		
-		-- Restore original transparencies
 		for part, trans in pairs(self.originalTransparencies) do
 			if part and part.Parent then
 				pcall(function()
@@ -752,7 +678,7 @@ end
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- EXECUTOR API SAFETY CHECK (UNCHANGED)
+	-- EXECUTOR API SAFETY CHECK
 	-- ---------------------------------------------------------------------------
 	local function safeGetGlobal(name)
 		local ok, val = pcall(function() return getfenv()[name] end)
@@ -769,7 +695,7 @@ end
 	local mouse2click = safeGetGlobal("mouse2click")
 	
 	-- ---------------------------------------------------------------------------
-	-- KILLAURA - SERVER VALIDATED (UNCHANGED)
+	-- KILLAURA - SERVER VALIDATED
 	-- ---------------------------------------------------------------------------
 	local LEGIT_RANGE = 14.4
 	local OriginalRemotes = {}
@@ -828,7 +754,7 @@ end
 	task.defer(hookKillAura)
 	
 	-- ---------------------------------------------------------------------------
-	-- SILENT AIM HOOKS (UNCHANGED)
+	-- SILENT AIM HOOKS
 	-- ---------------------------------------------------------------------------
 	local function getAimTarget()
 		return getBestTarget({
@@ -894,9 +820,8 @@ end
 	task.defer(initSilentAimHooks)
 	
 	-- ---------------------------------------------------------------------------
-	-- BACKGROUND LOOPS (UNCHANGED)
+	-- BACKGROUND LOOPS
 	-- ---------------------------------------------------------------------------
-	
 	task.spawn(function()
 		while true do
 			if State.Misc.ChatSpam then
@@ -928,7 +853,7 @@ end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- CHAMS UPDATE (UNCHANGED)
+	-- CHAMS UPDATE
 	-- ---------------------------------------------------------------------------
 	local function updateChams()
 		for name, data in pairs(EntityCache.players) do
@@ -968,7 +893,7 @@ end
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- SINGLE MAIN UPDATE LOOP (UNCHANGED)
+	-- MAIN UPDATE LOOP (RESTORED FROM ORIGINAL)
 	-- ---------------------------------------------------------------------------
 	local lastCacheUpdate = 0
 	
@@ -1122,7 +1047,7 @@ end
 							local tool = getTool() 
 							if tool then 
 								pcall(function() tool:Activate() end) 
-						 end
+							end
 							pcall(function() mouse2click() end)
 							break
 						end
@@ -1270,11 +1195,13 @@ end
 			HUD.Watermark.Text = "Vertex Hub"
 			HUD.Watermark.Color = State.Settings.AccentColor
 		end
+		
 		if HUD.FPS then
 			HUD.FPS.Visible = State.Misc.FPSCounter
 			HUD.FPS.Text = "FPS: " .. FPSData.fps
 			HUD.FPS.Color = Color3.new(1, 1, 1)
 		end
+		
 		if HUD.Ping then
 			HUD.Ping.Visible = State.Misc.PingDisplay
 			local p = 0
@@ -1282,17 +1209,20 @@ end
 			HUD.Ping.Text = "Ping: " .. math.floor(p) .. "ms"
 			HUD.Ping.Color = Color3.new(1, 1, 1)
 		end
+		
 		if HUD.PlrCount then
 			HUD.PlrCount.Visible = State.Misc.PlayerCount
 			HUD.PlrCount.Text = "Players: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers
 			HUD.PlrCount.Color = Color3.new(1, 1, 1)
 		end
+		
 		if HUD.Velocity then
 			HUD.Velocity.Visible = State.Misc.VelocityDisplay
 			local v = root and root.Velocity.Magnitude or 0
 			HUD.Velocity.Text = "Speed: " .. math.floor(v) .. " studs/s"
 			HUD.Velocity.Color = Color3.new(1, 1, 1)
 		end
+		
 		if HUD.TargetInfo then
 			HUD.TargetInfo.Visible = State.Misc.TargetInfo
 			if CurrentTarget and CurrentTarget.Humanoid then
@@ -1303,6 +1233,7 @@ end
 			end
 			HUD.TargetInfo.Color = Color3.new(1, 1, 1)
 		end
+		
 		if HUD.Keybinds then
 			HUD.Keybinds.Visible = State.Misc.KeybindsDisplay
 			HUD.Keybinds.Position = Vector2.new(camera.ViewportSize.X - 150, 10)
@@ -1459,7 +1390,7 @@ end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- INPUT HANDLING (UNCHANGED)
+	-- INPUT HANDLING
 	-- ---------------------------------------------------------------------------
 	UIS.InputBegan:Connect(function(input, gp)
 		if gp then return end
@@ -1530,7 +1461,7 @@ end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- FIXED GUI: VERTICAL FLOATING SIDEBAR WITH WORKING BUTTONS
+	-- UI CREATION (SIDEBAR FIRST - NO AUTO OPEN CATEGORY)
 	-- ---------------------------------------------------------------------------
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "VertexHubNeon"
@@ -1538,34 +1469,18 @@ end
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
 	
-	-- Main sidebar container (floating on left)
+	-- Main sidebar container - VISIBLE ON LAUNCH
 	local sidebar = Instance.new("Frame")
 	sidebar.Name = "Sidebar"
 	sidebar.Size = UDim2.new(0, 220, 0, 600)
-	sidebar.Position = UDim2.new(0, -240, 0.5, 0)
+	sidebar.Position = UDim2.new(0, 20, 0.5, 0)
 	sidebar.AnchorPoint = Vector2.new(0, 0.5)
 	sidebar.BackgroundColor3 = NeonColors.Background
 	sidebar.BackgroundTransparency = 0.1
 	sidebar.BorderSizePixel = 0
 	sidebar.ClipsDescendants = true
-	sidebar.Visible = false
+	sidebar.Visible = true
 	sidebar.Parent = gui
-	
-	-- Animated gradient background
-	local gradientBg = Instance.new("Frame")
-	gradientBg.Size = UDim2.new(1, 0, 1, 0)
-	gradientBg.BackgroundTransparency = 1
-	gradientBg.Parent = sidebar
-	
-	createAnimatedGradient(gradientBg, {NeonColors.ElectricPurple, NeonColors.BrightCyan, NeonColors.HotPink}, 1)
-	
-	-- Glass effect overlay
-	local glassOverlay = Instance.new("Frame")
-	glassOverlay.Size = UDim2.new(1, 0, 1, 0)
-	glassOverlay.BackgroundColor3 = NeonColors.Glass
-	glassOverlay.BackgroundTransparency = 0.7
-	glassOverlay.BorderSizePixel = 0
-	glassOverlay.Parent = sidebar
 	
 	-- Neon border
 	local neonBorder = Instance.new("UIStroke")
@@ -1579,7 +1494,7 @@ end
 	corner.CornerRadius = UDim.new(0, 16)
 	corner.Parent = sidebar
 	
-	-- Header with animated title
+	-- Header with title
 	local header = Instance.new("Frame")
 	header.Size = UDim2.new(1, 0, 0, 70)
 	header.BackgroundTransparency = 1
@@ -1596,19 +1511,7 @@ end
 	title.TextSize = 24
 	title.Parent = header
 	
-	-- Animate title color
-	task.spawn(function()
-		local colors = {NeonColors.ElectricPurple, NeonColors.BrightCyan, NeonColors.HotPink, NeonColors.LimeGreen, NeonColors.FieryOrange}
-		local i = 1
-		while true do
-			tween(title, {TextColor3 = colors[i]}, 1)
-			i = i + 1
-			if i > #colors then i = 1 end
-			task.wait(1)
-		end
-	end)
-	
-	-- Category navigation (vertical icons)
+	-- Category navigation
 	local categories = {
 		{Name = "COMBAT", Icon = "⚔️", Color = NeonColors.ElectricPurple},
 		{Name = "MOVEMENT", Icon = "🏃", Color = NeonColors.BrightCyan},
@@ -1617,7 +1520,8 @@ end
 		{Name = "WORLD", Icon = "🌍", Color = NeonColors.FieryOrange},
 		{Name = "PLAYER", Icon = "👤", Color = NeonColors.NeonBlue},
 		{Name = "TROLL", Icon = "😈", Color = NeonColors.VibrantYellow},
-		{Name = "MISC", Icon = "⚙️", Color = NeonColors.TextSoft}
+		{Name = "MISC", Icon = "⚙️", Color = NeonColors.TextSoft},
+		{Name = "SETTINGS", Icon = "⚙️", Color = NeonColors.BrightCyan}
 	}
 	
 	local categoryButtons = {}
@@ -1626,11 +1530,13 @@ end
 	
 	-- Category buttons container
 	local categoryContainer = Instance.new("ScrollingFrame")
+	categoryContainer.Name = "CategoryContainer"
 	categoryContainer.Size = UDim2.new(1, 0, 0, 380)
 	categoryContainer.Position = UDim2.new(0, 0, 0, 70)
 	categoryContainer.BackgroundTransparency = 1
-	categoryContainer.ScrollBarThickness = 0
-	categoryContainer.CanvasSize = UDim2.new(0, 0, 0, #categories * 50)
+	categoryContainer.ScrollBarThickness = 6
+	categoryContainer.ScrollBarImageColor3 = NeonColors.BrightCyan
+	categoryContainer.CanvasSize = UDim2.new(0, 0, 0, #categories * 50 + 20)
 	categoryContainer.Parent = sidebar
 	
 	local categoryLayout = Instance.new("UIListLayout")
@@ -1647,7 +1553,7 @@ end
 	-- Create category buttons
 	for i, category in ipairs(categories) do
 		local btn = Instance.new("TextButton")
-		btn.Name = "Btn_" .. category.Name
+		btn.Name = "CategoryBtn_" .. category.Name
 		btn.Size = UDim2.new(1, -20, 0, 45)
 		btn.BackgroundColor3 = NeonColors.Glass
 		btn.BackgroundTransparency = 0.4
@@ -1701,11 +1607,13 @@ end
 		indicator.Visible = false
 		indicator.Parent = btn
 		
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 2)
-		corner.Parent = indicator
-		
-		categoryButtons[category.Name] = {Button = btn, Color = category.Color}
+		categoryButtons[category.Name] = {
+			Button = btn,
+			Icon = icon,
+			Label = label,
+			Indicator = indicator,
+			Color = category.Color
+		}
 		
 		btn.MouseEnter:Connect(function()
 			if currentCategory ~= category.Name then
@@ -1720,9 +1628,13 @@ end
 				tween(label, {TextColor3 = NeonColors.TextSoft}, 0.2)
 			end
 		end)
+		
+		btn.MouseButton1Click:Connect(function()
+			switchCategory(category.Name)
+		end)
 	end
 	
-	-- Content area (right side)
+	-- Content area (right side) - HIDDEN ON LAUNCH
 	local contentArea = Instance.new("Frame")
 	contentArea.Name = "ContentArea"
 	contentArea.Size = UDim2.new(0, 700, 0, 600)
@@ -1751,8 +1663,7 @@ end
 	contentHeader.Parent = contentArea
 	
 	local contentTitle = Instance.new("TextLabel")
-	contentTitle.Name = "Title"
-	contentTitle.Size = UDim2.new(1, -80, 1, 0)
+	contentTitle.Size = UDim2.new(1, -20, 1, 0)
 	contentTitle.Position = UDim2.new(0, 20, 0, 0)
 	contentTitle.BackgroundTransparency = 1
 	contentTitle.Text = "SELECT CATEGORY"
@@ -1766,7 +1677,7 @@ end
 	local closeContentBtn = Instance.new("TextButton")
 	closeContentBtn.Size = UDim2.new(0, 40, 0, 40)
 	closeContentBtn.Position = UDim2.new(1, -50, 0.5, 0)
-	closeContentBtn.AnchorPoint = Vector2.new(1, 0.5)
+	closeContentBtn.AnchorPoint = Vector2.new(0, 0.5)
 	closeContentBtn.BackgroundColor3 = NeonColors.Glass
 	closeContentBtn.BackgroundTransparency = 0.3
 	closeContentBtn.BorderSizePixel = 0
@@ -1783,6 +1694,20 @@ end
 	
 	closeContentBtn.MouseButton1Click:Connect(function()
 		contentArea.Visible = false
+		currentCategory = nil
+		
+		-- Reset all buttons
+		for name, data in pairs(categoryButtons) do
+			if data and data.Button then
+				tween(data.Button, {BackgroundTransparency = 0.4}, 0.2)
+				if data.Label then
+					tween(data.Label, {TextColor3 = NeonColors.TextSoft}, 0.2)
+				end
+				if data.Indicator then
+					data.Indicator.Visible = false
+				end
+			end
+		end
 	end)
 	
 	-- Content scroll frame
@@ -1811,62 +1736,47 @@ end
 	-- Function to create category content
 	local function createCategoryContent(categoryName)
 		local container = Instance.new("Frame")
-		container.Name = categoryName
+		container.Name = "Content_" .. categoryName
 		container.Size = UDim2.new(1, 0, 0, 0)
 		container.BackgroundTransparency = 1
 		container.AutomaticSize = Enum.AutomaticSize.Y
 		container.Visible = false
 		container.Parent = contentScroll
 		
-		local layout = Instance.new("UIListLayout")
-		layout.Padding = UDim.new(0, 10)
-		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		layout.Parent = container
-		
-		local padding = Instance.new("UIPadding")
-		padding.PaddingTop = UDim.new(0, 5)
-		padding.PaddingLeft = UDim.new(0, 5)
-		padding.PaddingRight = UDim.new(0, 5)
-		padding.Parent = container
-		
 		categoryContents[categoryName] = container
 		return container
 	end
 	
 	-- Create all category contents
-	for _, category in ipairs(categories) do
-		createCategoryContent(category.Name)
-	end
+	local combatContent = createCategoryContent("COMBAT")
+	local movementContent = createCategoryContent("MOVEMENT")
+	local espContent = createCategoryContent("ESP")
+	local visualsContent = createCategoryContent("VISUALS")
+	local worldContent = createCategoryContent("WORLD")
+	local playerContent = createCategoryContent("PLAYER")
+	local trollContent = createCategoryContent("TROLL")
+	local miscContent = createCategoryContent("MISC")
+	local settingsContent = createCategoryContent("SETTINGS")
 	
-	-- Function to switch category - FIXED VERSION
+	-- Function to switch category
 	local function switchCategory(categoryName)
-		if currentCategory == categoryName then 
-			return 
-		end
+		if currentCategory == categoryName then return end
 		
 		-- Hide all contents
 		for name, content in pairs(categoryContents) do
-			if content then
-				content.Visible = false
-			end
+			content.Visible = false
 		end
 		
 		-- Reset all buttons
 		for name, data in pairs(categoryButtons) do
 			if data and data.Button then
-				local btn = data.Button
-				local label = btn:FindFirstChild("Label")
-				local indicator = btn:FindFirstChild("Indicator")
-				
-				if label then
-					tween(label, {TextColor3 = NeonColors.TextSoft}, 0.2)
+				tween(data.Button, {BackgroundTransparency = 0.4}, 0.2)
+				if data.Label then
+					tween(data.Label, {TextColor3 = NeonColors.TextSoft}, 0.2)
 				end
-				
-				if indicator then
-					indicator.Visible = false
+				if data.Indicator then
+					data.Indicator.Visible = false
 				end
-				
-				tween(btn, {BackgroundTransparency = 0.4}, 0.2)
 			end
 		end
 		
@@ -1878,78 +1788,22 @@ end
 			-- Highlight selected button
 			local selectedData = categoryButtons[categoryName]
 			if selectedData then
-				local btn = selectedData.Button
-				local label = btn:FindFirstChild("Label")
-				local indicator = btn:FindFirstChild("Indicator")
-				
-				if label then
-					tween(label, {TextColor3 = selectedData.Color}, 0.2)
+				tween(selectedData.Button, {BackgroundTransparency = 0.1}, 0.2)
+				if selectedData.Label then
+					tween(selectedData.Label, {TextColor3 = selectedData.Color}, 0.2)
 				end
-				
-				if indicator then
-					indicator.Visible = true
+				if selectedData.Indicator then
+					selectedData.Indicator.Visible = true
 				end
-				
-				tween(btn, {BackgroundTransparency = 0.1}, 0.2)
 			end
 			
 			-- Animate title color
-			tween(contentTitle, {TextColor3 = selectedData.Color}, 0.3)
+			local selectedColor = selectedData and selectedData.Color or NeonColors.ElectricPurple
+			tween(contentTitle, {TextColor3 = selectedColor}, 0.3)
 			contentArea.Visible = true
 			currentCategory = categoryName
-			
-			-- Ensure content is properly sized
-			task.wait(0.1)
-			contentScroll.CanvasSize = UDim2.new(0, 0, 0, contentScroll.AbsoluteContentSize.Y)
 		end
 	end
-	
-	-- Connect category buttons - FIXED EVENT HANDLERS
-	for categoryName, data in pairs(categoryButtons) do
-		if data and data.Button then
-			data.Button.MouseButton1Click:Connect(function()
-				switchCategory(categoryName)
-			end)
-		end
-	end
-	
-	-- Settings button at bottom
-	local settingsBtn = Instance.new("TextButton")
-	settingsBtn.Size = UDim2.new(1, -20, 0, 45)
-	settingsBtn.Position = UDim2.new(0, 10, 1, -60)
-	settingsBtn.BackgroundColor3 = NeonColors.Glass
-	settingsBtn.BackgroundTransparency = 0.3
-	settingsBtn.BorderSizePixel = 0
-	settingsBtn.AutoButtonColor = false
-	settingsBtn.Text = "⚙️ SETTINGS"
-	settingsBtn.TextColor3 = NeonColors.TextSoft
-	settingsBtn.Font = Enum.Font.GothamBold
-	settingsBtn.TextSize = 12
-	settingsBtn.Parent = sidebar
-	
-	local settingsCorner = Instance.new("UICorner")
-	settingsCorner.CornerRadius = UDim.new(0, 10)
-	settingsCorner.Parent = settingsBtn
-	
-	local settingsGlow = Instance.new("UIStroke")
-	settingsGlow.Color = NeonColors.NeonBlue
-	settingsGlow.Thickness = 2
-	settingsGlow.Transparency = 0.5
-	settingsGlow.Parent = settingsBtn
-	
-	settingsBtn.MouseEnter:Connect(function()
-		tween(settingsBtn, {BackgroundTransparency = 0.1}, 0.2)
-		tween(settingsBtn, {TextColor3 = NeonColors.Text}, 0.2)
-	end)
-	
-	settingsBtn.MouseLeave:Connect(function()
-		tween(settingsBtn, {BackgroundTransparency = 0.3}, 0.2)
-		tween(settingsBtn, {TextColor3 = NeonColors.TextSoft}, 0.2)
-	end)
-	
-	settingsBtn.MouseButton1Click:Connect(function()
-		switchCategory("MISC")
-	end)
 	
 	-- Save/Load buttons
 	local saveLoadContainer = Instance.new("Frame")
@@ -1959,6 +1813,7 @@ end
 	saveLoadContainer.Parent = sidebar
 	
 	local saveBtn = Instance.new("TextButton")
+	saveBtn.Name = "SaveButton"
 	saveBtn.Size = UDim2.new(0.48, 0, 1, 0)
 	saveBtn.BackgroundColor3 = NeonColors.LimeGreen
 	saveBtn.BackgroundTransparency = 0.3
@@ -1976,12 +1831,13 @@ end
 	
 	saveBtn.MouseButton1Click:Connect(function()
 		saveStateToConfig()
-		tween(saveBtn, {BackgroundColor3 = NeonColors.LimeGreen}, 0.1)
-		task.wait(0.1)
-		tween(saveBtn, {BackgroundColor3 = NeonColors.LimeGreen}, 0.3)
+		tween(saveBtn, {BackgroundTransparency = 0.1}, 0.1)
+		task.wait(0.2)
+		tween(saveBtn, {BackgroundTransparency = 0.3}, 0.3)
 	end)
 	
 	local loadBtn = Instance.new("TextButton")
+	loadBtn.Name = "LoadButton"
 	loadBtn.Size = UDim2.new(0.48, 0, 1, 0)
 	loadBtn.Position = UDim2.new(1, -0.48, 0, 0)
 	loadBtn.BackgroundColor3 = NeonColors.NeonBlue
@@ -2000,103 +1856,98 @@ end
 	
 	loadBtn.MouseButton1Click:Connect(function()
 		loadStateFromConfig()
-		tween(loadBtn, {BackgroundColor3 = NeonColors.Accent1}, 0.1)
-		task.wait(0.1)
-		tween(loadBtn, {BackgroundColor3 = NeonColors.NeonBlue}, 0.3)
+		tween(loadBtn, {BackgroundTransparency = 0.1}, 0.1)
+		task.wait(0.2)
+		tween(loadBtn, {BackgroundTransparency = 0.3}, 0.3)
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- POPULATE CATEGORIES WITH WORKING CONTROLS
+	-- POPULATE CATEGORIES
 	-- ---------------------------------------------------------------------------
 	
 	-- COMBAT CATEGORY
 	do
-		local content = categoryContents["COMBAT"]
-		
-		-- AIM ASSIST Section
-		local aimAssistToggle = Components.createToggle(content, "Aim Assist", function(v)
+		local content = combatContent
+		Components.createSection(content, "AIM ASSIST")
+		Components.createToggle(content, "Aim Assist", function(v)
 			State.Combat.AimAssist = v
 			saveStateToConfig()
 		end, State.Combat.AimAssist)
 		
-		local smoothnessSlider = Components.createSlider(content, "Smoothness", 1, 100, State.Combat.AimSmoothness * 200, function(v)
+		Components.createSlider(content, "Smoothness", 1, 100, State.Combat.AimSmoothness * 200, function(v)
 			State.Combat.AimSmoothness = v / 200
 			saveStateToConfig()
 		end)
 		
-		local fovSlider = Components.createSlider(content, "FOV", 50, 600, State.Combat.AimFOV, function(v)
+		Components.createSlider(content, "FOV", 50, 600, State.Combat.AimFOV, function(v)
 			State.Combat.AimFOV = v
 			saveStateToConfig()
 		end)
 		
-		local showFOVToggle = Components.createToggle(content, "Show FOV Circle", function(v)
+		Components.createToggle(content, "Show FOV Circle", function(v)
 			State.Combat.ShowFOVCircle = v
 			saveStateToConfig()
 		end, State.Combat.ShowFOVCircle)
 		
 		Components.createDivider(content)
-		
-		-- SILENT AIM Section
-		local silentAimToggle = Components.createToggle(content, "Silent Aim", function(v)
+		Components.createSection(content, "SILENT AIM")
+		Components.createToggle(content, "Silent Aim", function(v)
 			State.Combat.SilentAim = v
 			saveStateToConfig()
 		end, State.Combat.SilentAim)
 		
-		local hitChanceSlider = Components.createSlider(content, "Hit Chance", 0, 100, State.Combat.SilentAimHitChance, function(v)
+		Components.createSlider(content, "Hit Chance", 0, 100, State.Combat.SilentAimHitChance, function(v)
 			State.Combat.SilentAimHitChance = v
 			saveStateToConfig()
 		end)
 		
 		Components.createDivider(content)
-		
-		-- KILL AURA Section
-		local killAuraToggle = Components.createToggle(content, "Kill Aura", function(v)
+		Components.createSection(content, "KILL AURA")
+		Components.createToggle(content, "Kill Aura", function(v)
 			State.Combat.KillAura = v
 			saveStateToConfig()
 		end, State.Combat.KillAura)
 		
-		local auraRangeSlider = Components.createSlider(content, "Range", 5, 50, State.Combat.KillAuraRange, function(v)
+		Components.createSlider(content, "Range", 5, 50, State.Combat.KillAuraRange, function(v)
 			State.Combat.KillAuraRange = v
 			saveStateToConfig()
 		end)
 		
-		local cpsSlider = Components.createSlider(content, "CPS", 1, 20, State.Combat.KillAuraCPS, function(v)
+		Components.createSlider(content, "CPS", 1, 20, State.Combat.KillAuraCPS, function(v)
 			State.Combat.KillAuraCPS = v
 			saveStateToConfig()
 		end)
 		
-		local targetPlayersToggle = Components.createToggle(content, "Target Players", function(v)
+		Components.createToggle(content, "Target Players", function(v)
 			State.Combat.KillAuraPlayers = v
 			saveStateToConfig()
 		end, State.Combat.KillAuraPlayers)
 		
-		local targetNPCsToggle = Components.createToggle(content, "Target NPCs", function(v)
+		Components.createToggle(content, "Target NPCs", function(v)
 			State.Combat.KillAuraNPCs = v
 			saveStateToConfig()
 		end, State.Combat.KillAuraNPCs)
 		
 		Components.createDivider(content)
-		
-		-- AUTO FEATURES
-		local triggerbotToggle = Components.createToggle(content, "Triggerbot", function(v)
+		Components.createSection(content, "AUTO FEATURES")
+		Components.createToggle(content, "Triggerbot", function(v)
 			State.Combat.Triggerbot = v
 			saveStateToConfig()
 		end, State.Combat.Triggerbot)
 		
-		local autoParryToggle = Components.createToggle(content, "Auto Parry", function(v)
+		Components.createToggle(content, "Auto Parry", function(v)
 			State.Combat.AutoParry = v
 			saveStateToConfig()
 		end, State.Combat.AutoParry)
 		
 		Components.createDivider(content)
-		
-		-- EXPLOITS
-		local hitboxToggle = Components.createToggle(content, "Hitbox Expander", function(v)
+		Components.createSection(content, "EXPLOITS")
+		Components.createToggle(content, "Hitbox Expander", function(v)
 			State.Combat.HitboxExpander = v
 			saveStateToConfig()
 		end, State.Combat.HitboxExpander)
 		
-		local hitboxSizeSlider = Components.createSlider(content, "Hitbox Size", 1, 20, State.Combat.HitboxSize, function(v)
+		Components.createSlider(content, "Hitbox Size", 1, 20, State.Combat.HitboxSize, function(v)
 			State.Combat.HitboxSize = v
 			saveStateToConfig()
 		end)
@@ -2104,106 +1955,115 @@ end
 	
 	-- MOVEMENT CATEGORY
 	do
-		local content = categoryContents["MOVEMENT"]
-		
-		-- FLIGHT Section
-		local flyToggle = Components.createToggle(content, "Fly", function(v)
+		local content = movementContent
+		Components.createSection(content, "FLIGHT")
+		Components.createToggle(content, "Fly", function(v)
 			State.Movement.Fly = v
 			saveStateToConfig()
 		end, State.Movement.Fly)
 		
-		local flySpeedSlider = Components.createSlider(content, "Fly Speed", 10, 300, State.Movement.FlySpeed, function(v)
+		Components.createSlider(content, "Fly Speed", 10, 300, State.Movement.FlySpeed, function(v)
 			State.Movement.FlySpeed = v
 			saveStateToConfig()
 		end)
 		
-		local noclipToggle = Components.createToggle(content, "Noclip", function(v)
+		Components.createToggle(content, "Noclip", function(v)
 			State.Movement.Noclip = v
 			saveStateToConfig()
 		end, State.Movement.Noclip)
 		
 		Components.createDivider(content)
-		
-		-- SPEED & JUMP Section
-		local speedToggle = Components.createToggle(content, "Speed", function(v)
+		Components.createSection(content, "SPEED & JUMP")
+		Components.createToggle(content, "Speed", function(v)
 			State.Movement.Speed = v
-			if not v then
-				local h = getHumanoid()
-				if h then
-					h.WalkSpeed = 16
-				end
-			end
 			saveStateToConfig()
 		end, State.Movement.Speed)
 		
-		local speedSlider = Components.createSlider(content, "Speed Value", 16, 500, State.Movement.SpeedValue, function(v)
+		Components.createSlider(content, "Speed Value", 16, 500, State.Movement.SpeedValue, function(v)
 			State.Movement.SpeedValue = v
-			if State.Movement.Speed then
-				local h = getHumanoid()
-				if h then
-					h.WalkSpeed = v
-				end
-			end
 			saveStateToConfig()
 		end)
 		
-		local infiniteJumpToggle = Components.createToggle(content, "Infinite Jump", function(v)
+		Components.createToggle(content, "Infinite Jump", function(v)
 			State.Movement.InfiniteJump = v
 			saveStateToConfig()
 		end, State.Movement.InfiniteJump)
 		
 		Components.createDivider(content)
-		
-		-- TELEPORT Section
-		local clickTPToggle = Components.createToggle(content, "Click TP", function(v)
+		Components.createSection(content, "TELEPORT")
+		Components.createToggle(content, "Click TP", function(v)
 			State.Movement.ClickTP = v
 			saveStateToConfig()
 		end, State.Movement.ClickTP)
 		
-		local antiVoidToggle = Components.createToggle(content, "Anti Void", function(v)
+		Components.createToggle(content, "Anti Void", function(v)
 			State.Movement.AntiVoid = v
 			saveStateToConfig()
 		end, State.Movement.AntiVoid)
 	end
 	
-	-- ESP CATEGORY
+	-- ESP CATEGORY (RESTORED FROM ORIGINAL)
 	do
-		local content = categoryContents["ESP"]
-		
-		-- PLAYER ESP Section
-		local nameESPToggle = Components.createToggle(content, "Name ESP", function(v)
+		local content = espContent
+		Components.createSection(content, "PLAYER ESP")
+		Components.createToggle(content, "Name ESP", function(v)
 			State.ESP.NameESP = v
 			saveStateToConfig()
 		end, State.ESP.NameESP)
 		
-		local boxESPToggle = Components.createToggle(content, "Box ESP", function(v)
+		Components.createToggle(content, "Box ESP", function(v)
 			State.ESP.BoxESP = v
 			saveStateToConfig()
 		end, State.ESP.BoxESP)
 		
-		local healthESPToggle = Components.createToggle(content, "Health ESP", function(v)
+		Components.createToggle(content, "Health ESP", function(v)
 			State.ESP.HealthESP = v
 			saveStateToConfig()
 		end, State.ESP.HealthESP)
 		
-		local tracersToggle = Components.createToggle(content, "Tracers", function(v)
+		Components.createToggle(content, "Tracers", function(v)
 			State.ESP.Tracers = v
 			saveStateToConfig()
 		end, State.ESP.Tracers)
 		
-		Components.createDivider(content)
+		Components.createToggle(content, "Skeleton ESP", function(v)
+			State.ESP.SkeletonESP = v
+			saveStateToConfig()
+		end, State.ESP.SkeletonESP)
 		
-		-- HIGHLIGHTS
-		local chamsToggle = Components.createToggle(content, "Chams", function(v)
+		Components.createToggle(content, "Offscreen Arrows", function(v)
+			State.ESP.OffscreenArrows = v
+			saveStateToConfig()
+		end, State.ESP.OffscreenArrows)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "HIGHLIGHTS")
+		Components.createToggle(content, "Chams", function(v)
 			State.ESP.Chams = v
 			updateChams()
 			saveStateToConfig()
 		end, State.ESP.Chams)
 		
-		Components.createDivider(content)
+		Components.createToggle(content, "Team Check", function(v)
+			State.ESP.TeamCheck = v
+			saveStateToConfig()
+		end, State.ESP.TeamCheck)
 		
-		-- SETTINGS
-		local maxDistanceSlider = Components.createSlider(content, "Max Distance", 100, 2000, State.ESP.MaxDistance, function(v)
+		Components.createDivider(content)
+		Components.createSection(content, "OTHER ENTITIES")
+		Components.createToggle(content, "Item ESP", function(v)
+			State.ESP.ItemESP = v
+			saveStateToConfig()
+		end, State.ESP.ItemESP)
+		
+		Components.createToggle(content, "NPC ESP", function(v)
+			State.ESP.NPCESP = v
+			saveStateToConfig()
+		end, State.ESP.NPCESP)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "SETTINGS")
+		Components.createSlider(content, "Max Distance", 100, 2000, State.ESP.MaxDistance, function(v)
 			State.ESP.MaxDistance = v
 			saveStateToConfig()
 		end)
@@ -2211,10 +2071,9 @@ end
 	
 	-- VISUALS CATEGORY
 	do
-		local content = categoryContents["VISUALS"]
-		
-		-- LIGHTING Section
-		local fullbrightToggle = Components.createToggle(content, "Fullbright", function(v)
+		local content = visualsContent
+		Components.createSection(content, "LIGHTING")
+		Components.createToggle(content, "Fullbright", function(v)
 			State.Visuals.Fullbright = v
 			if v then
 				Lighting.Ambient = Color3.new(1, 1, 1)
@@ -2229,49 +2088,55 @@ end
 		end, State.Visuals.Fullbright)
 		
 		Components.createDivider(content)
-		
-		-- CROSSHAIR Section
-		local crosshairToggle = Components.createToggle(content, "Custom Crosshair", function(v)
+		Components.createSection(content, "CROSSHAIR")
+		Components.createToggle(content, "Custom Crosshair", function(v)
 			State.Visuals.Crosshair = v
 			saveStateToConfig()
 		end, State.Visuals.Crosshair)
 		
-		local crosshairSizeSlider = Components.createSlider(content, "Crosshair Size", 5, 50, State.Visuals.CrosshairSize, function(v)
+		Components.createSlider(content, "Crosshair Size", 5, 50, State.Visuals.CrosshairSize, function(v)
 			State.Visuals.CrosshairSize = v
 			saveStateToConfig()
 		end)
 		
 		Components.createDivider(content)
-		
-		-- CAMERA Section
-		local fovSlider = Components.createSlider(content, "Camera FOV", 30, 120, State.Visuals.CameraFOV, function(v)
+		Components.createSection(content, "CAMERA")
+		Components.createSlider(content, "Camera FOV", 30, 120, State.Visuals.CameraFOV, function(v)
 			State.Visuals.CameraFOV = v
 			camera.FieldOfView = v
 			saveStateToConfig()
 		end)
+		
+		Components.createToggle(content, "Freecam", function(v)
+			State.Visuals.Freecam = v
+			if v then
+				camera.CameraType = Enum.CameraType.Scriptable
+			else
+				camera.CameraType = Enum.CameraType.Custom
+			end
+			saveStateToConfig()
+		end, State.Visuals.Freecam)
 	end
 	
 	-- WORLD CATEGORY
 	do
-		local content = categoryContents["WORLD"]
-		
-		-- ENVIRONMENT Section
-		local timeSlider = Components.createSlider(content, "Time of Day", 0, 24, State.World.TimeOfDay, function(v)
+		local content = worldContent
+		Components.createSection(content, "ENVIRONMENT")
+		Components.createSlider(content, "Time of Day", 0, 24, State.World.TimeOfDay, function(v)
 			State.World.TimeOfDay = v
 			Lighting.ClockTime = v
 			saveStateToConfig()
 		end)
 		
-		local gravitySlider = Components.createSlider(content, "Gravity", 0, 500, State.World.Gravity, function(v)
+		Components.createSlider(content, "Gravity", 0, 500, State.World.Gravity, function(v)
 			State.World.Gravity = v
 			workspace.Gravity = v
 			saveStateToConfig()
 		end)
 		
 		Components.createDivider(content)
-		
-		-- TOOLS Section
-		local deleteModeToggle = Components.createToggle(content, "Delete Mode (Click)", function(v)
+		Components.createSection(content, "TOOLS")
+		Components.createToggle(content, "Delete Mode (Click)", function(v)
 			State.World.DeleteMode = v
 			saveStateToConfig()
 		end, State.World.DeleteMode)
@@ -2279,23 +2144,21 @@ end
 	
 	-- PLAYER CATEGORY
 	do
-		local content = categoryContents["PLAYER"]
-		
-		-- CHARACTER Section
-		local godModeToggle = Components.createToggle(content, "God Mode", function(v)
+		local content = playerContent
+		Components.createSection(content, "CHARACTER")
+		Components.createToggle(content, "God Mode", function(v)
 			State.Player.GodMode = v
 			saveStateToConfig()
 		end, State.Player.GodMode)
 		
-		local noRagdollToggle = Components.createToggle(content, "No Ragdoll", function(v)
+		Components.createToggle(content, "No Ragdoll", function(v)
 			State.Player.NoRagdoll = v
 			saveStateToConfig()
 		end, State.Player.NoRagdoll)
 		
 		Components.createDivider(content)
-		
-		-- INVISIBILITY Section
-		local invisToggle = Components.createToggle(content, "Invisibility", function(v)
+		Components.createSection(content, "INVISIBILITY")
+		Components.createToggle(content, "Invisibility", function(v)
 			State.Player.Invisibility = v
 			if v then
 				InvisSystem:Enable()
@@ -2308,120 +2171,206 @@ end
 	
 	-- TROLL CATEGORY
 	do
-		local content = categoryContents["TROLL"]
-		
-		-- FOLLOW / ORBIT Section
-		local annoyToggle = Components.createToggle(content, "Annoy Player", function(v)
+		local content = trollContent
+		Components.createSection(content, "FOLLOW / ORBIT")
+		Components.createToggle(content, "Annoy Player", function(v)
 			State.Troll.AnnoyPlayer = v
 			saveStateToConfig()
 		end, State.Troll.AnnoyPlayer)
 		
-		local orbitToggle = Components.createToggle(content, "Orbit Player", function(v)
+		Components.createToggle(content, "Orbit Player", function(v)
 			State.Troll.OrbitPlayer = v
 			saveStateToConfig()
 		end, State.Troll.OrbitPlayer)
 		
 		Components.createDivider(content)
-		
-		-- CHARACTER TROLL Section
-		local flingToggle = Components.createToggle(content, "Fling", function(v)
+		Components.createSection(content, "CHARACTER TROLL")
+		Components.createToggle(content, "Fling", function(v)
 			State.Troll.Fling = v
 			saveStateToConfig()
 		end, State.Troll.Fling)
 		
-		local flingPowerSlider = Components.createSlider(content, "Fling Power", 100, 1000, State.Troll.FlingPower, function(v)
+		Components.createSlider(content, "Fling Power", 100, 1000, State.Troll.FlingPower, function(v)
 			State.Troll.FlingPower = v
 			saveStateToConfig()
 		end)
 	end
 	
-	-- MISC CATEGORY (SETTINGS)
+	-- MISC CATEGORY
 	do
-		local content = categoryContents["MISC"]
-		
-		-- HUD ELEMENTS Section
-		local watermarkToggle = Components.createToggle(content, "Watermark", function(v)
+		local content = miscContent
+		Components.createSection(content, "HUD ELEMENTS")
+		Components.createToggle(content, "Watermark", function(v)
 			State.Misc.Watermark = v
 			saveStateToConfig()
 		end, State.Misc.Watermark)
 		
-		local fpsToggle = Components.createToggle(content, "FPS Counter", function(v)
+		Components.createToggle(content, "FPS Counter", function(v)
 			State.Misc.FPSCounter = v
 			saveStateToConfig()
 		end, State.Misc.FPSCounter)
 		
-		local pingToggle = Components.createToggle(content, "Ping Display", function(v)
+		Components.createToggle(content, "Ping Display", function(v)
 			State.Misc.PingDisplay = v
 			saveStateToConfig()
 		end, State.Misc.PingDisplay)
 		
-		Components.createDivider(content)
+		Components.createToggle(content, "Player Count", function(v)
+			State.Misc.PlayerCount = v
+			saveStateToConfig()
+		end, State.Misc.PlayerCount)
 		
-		-- UTILITY Section
-		local antiAFKToggle = Components.createToggle(content, "Anti AFK", function(v)
+		Components.createToggle(content, "Velocity Display", function(v)
+			State.Misc.VelocityDisplay = v
+			saveStateToConfig()
+		end, State.Misc.VelocityDisplay)
+		
+		Components.createToggle(content, "Target Info", function(v)
+			State.Misc.TargetInfo = v
+			saveStateToConfig()
+		end, State.Misc.TargetInfo)
+		
+		Components.createToggle(content, "Keybinds Display", function(v)
+			State.Misc.KeybindsDisplay = v
+			saveStateToConfig()
+		end, State.Misc.KeybindsDisplay)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "UTILITY")
+		Components.createToggle(content, "Anti AFK", function(v)
 			State.Misc.AntiAFK = v
 			saveStateToConfig()
 		end, State.Misc.AntiAFK)
 		
-		local chatSpamToggle = Components.createToggle(content, "Chat Spam", function(v)
+		Components.createToggle(content, "Chat Spam", function(v)
 			State.Misc.ChatSpam = v
 			saveStateToConfig()
 		end, State.Misc.ChatSpam)
+	end
+	
+	-- SETTINGS CATEGORY (NEW SEPARATE PAGE)
+	do
+		local content = settingsContent
+		Components.createSection(content, "CONFIGURATION")
 		
-		local spamDelaySlider = Components.createSlider(content, "Spam Delay", 1, 10, State.Misc.SpamDelay, function(v)
-			State.Misc.SpamDelay = v
-			saveStateToConfig()
-		end)
+		Components.createLabel(content, "Menu Toggle Key: " .. tostring(State.Settings.MenuKey))
 		
-		Components.createDivider(content)
-		
-		-- CONFIGURATION Section
-		Components.createLabel(content, "Menu Toggle Key: " .. tostring(State.Settings.MenuKey):gsub("Enum.KeyCode.", ""))
-		
-		-- Keybind changer
-		local keybind = Components.createKeybind(content, "Change Menu Key", State.Settings.MenuKey, function(newKey)
+		local keybindComponent = Components.createKeybind(content, "Change Menu Key", State.Settings.MenuKey, function(newKey)
 			if newKey then
 				State.Settings.MenuKey = newKey
 				saveStateToConfig()
 			end
 		end, saveStateToConfig)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "APPEARANCE")
+		
+		local colorPicker = Components.createColorPicker(content, "Accent Color", State.Settings.AccentColor, function(newColor)
+			State.Settings.AccentColor = newColor
+			saveStateToConfig()
+		end, saveStateToConfig)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "RESET")
+		
+		local resetBtn = Components.createButton(content, "Reset All Settings", function()
+			State = {
+				ESP = {
+					NameESP = false, BoxESP = false, HealthESP = false, DistanceESP = false,
+					Tracers = false, SkeletonESP = false, OffscreenArrows = false, Chams = false,
+					ItemESP = false, NPCESP = false, MaxDistance = 1000, TeamCheck = false
+				},
+				Combat = {
+					AimAssist = false, AimSmoothness = 0.15, AimFOV = 150, AimPrediction = false,
+					PredictionAmount = 0.1, ShowFOVCircle = false,
+					SilentAim = false, SilentAimHitChance = 100,
+					KillAura = false, KillAuraRange = 15, KillAuraCPS = 10, KillAuraLegit = false,
+					KillAuraPlayers = true, KillAuraNPCs = false, KillAuraWallCheck = true,
+					Reach = false, ReachDistance = 18, ReachLegit = false,
+					Triggerbot = false, TriggerbotDelay = 0.1,
+					AutoParry = false, HitboxExpander = false, HitboxSize = 5,
+					Backtrack = false, BacktrackTime = 0.2,
+					TargetStrafe = false, StrafeSpeed = 5, StrafeRadius = 10
+				},
+				Movement = {
+					Fly = false, FlySpeed = 50, FlyLegit = false, Noclip = false,
+					Speed = false, SpeedValue = 16, SpeedLegit = false,
+					JumpPower = false, JumpValue = 50, InfiniteJump = false,
+					BunnyHop = false, LongJump = false, LongJumpForce = 100,
+					SpeedGlide = false, GlideSpeed = 10,
+					Dash = false, DashForce = 100, DashCooldown = 1,
+					ClickTP = false, AntiVoid = false, VoidHeight = -100, Anchor = false,
+					SpinBot = false, SpinSpeed = 20, FakeLag = false, LagIntensity = 5, AirControl = false
+				},
+				Visuals = {
+					Fullbright = false, NoFog = false, NoShadows = false,
+					Crosshair = false, CrosshairSize = 10, CrosshairGap = 5,
+					CameraFOV = 70, ThirdPerson = false, Freecam = false, FreecamSpeed = 1,
+					XRay = false, XRayTransparency = 0.5
+				},
+				World = { TimeOfDay = 14, Gravity = 196.2, DeleteMode = false, RemoveGrass = false },
+				Player = {
+					GodMode = false, NoRagdoll = false, AutoRespawn = false, CharScale = 1,
+					Invisibility = false, InvisMode = "Safe", InvisOffset = 100,
+					NoRecoil = false, NoSpread = false, InfiniteStamina = false
+				},
+				Troll = {
+					AnnoyPlayer = false, AnnoyTarget = "", OrbitPlayer = false, OrbitTarget = "",
+					OrbitRadius = 10, OrbitSpeed = 2, Fling = false, FlingPower = 500, Headless = false
+				},
+				Misc = {
+					AntiAFK = false, ChatSpam = false, SpamMsg = "Vertex Hub!", SpamDelay = 2,
+					Watermark = false, FPSCounter = false, PingDisplay = false, PlayerCount = false,
+					VelocityDisplay = false, TargetInfo = false, KeybindsDisplay = false
+				},
+				Settings = { MenuKey = Enum.KeyCode.M, AccentColor = Color3.fromRGB(60, 120, 255) }
+			}
+			
+			-- Update all UI toggles
+			for _, category in ipairs(categories) do
+				local container = categoryContents[category.Name]
+				if container then
+					for _, child in ipairs(container:GetChildren()) do
+						if child.Name:find("Toggle_") then
+							local toggleFunc = child:FindFirstChild("ToggleFunc")
+							if toggleFunc then
+								toggleFunc:Fire(false)
+							end
+						end
+					end
+				end
+			end
+			
+			saveStateToConfig()
+		end, NeonColors.FieryOrange)
 	end
 	
-	-- Initialize with first category
-	task.defer(function()
-		switchCategory("COMBAT")
-	end)
-	
 	-- ---------------------------------------------------------------------------
-	-- MENU TOGGLE SYSTEM WITH CONFIGURABLE KEYBIND
+	-- MENU TOGGLE SYSTEM
 	-- ---------------------------------------------------------------------------
-	local menuVisible = false
+	local menuVisible = true
 	
 	local function toggleMenu()
 		menuVisible = not menuVisible
 		
 		if menuVisible then
-			-- Store mouse state
-			PrevMouseState.behavior = UIS.MouseBehavior
-			PrevMouseState.icon = UIS.MouseIconEnabled
-			
-			-- Show menu with animation
+			-- Show menu
 			sidebar.Visible = true
-			tween(sidebar, {Position = UDim2.new(0, 20, 0.5, 0)}, 0.4)
+			tween(sidebar, {Position = UDim2.new(0, 20, 0.5, 0)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 			
 			-- Unlock mouse
 			UIS.MouseBehavior = Enum.MouseBehavior.Default
 			UIS.MouseIconEnabled = true
 		else
-			-- Hide menu with animation
+			-- Hide menu
 			tween(sidebar, {Position = UDim2.new(0, -240, 0.5, 0)}, 0.3)
-			
 			task.delay(0.3, function()
 				sidebar.Visible = false
 				contentArea.Visible = false
+				currentCategory = nil
 			end)
 			
-			-- Restore mouse state
+			-- Restore mouse
 			UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
 			UIS.MouseIconEnabled = PrevMouseState.icon ~= false
 		end
@@ -2435,6 +2384,10 @@ end
 			toggleMenu()
 		end
 	end)
+	
+	-- Store initial mouse state
+	PrevMouseState.behavior = UIS.MouseBehavior
+	PrevMouseState.icon = UIS.MouseIconEnabled
 	
 	-- Dragging for sidebar
 	local draggingSidebar = false
@@ -2497,7 +2450,7 @@ end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- CHARACTER EVENTS (UNCHANGED)
+	-- CHARACTER EVENTS
 	-- ---------------------------------------------------------------------------
 	player.CharacterAdded:Connect(function(c)
 		task.wait(0.5)
@@ -2524,7 +2477,7 @@ end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- INITIALIZATION COMPLETE
+	-- INITIALIZATION
 	-- ---------------------------------------------------------------------------
 	if DrawingEnabled then
 		print("[Vertex Hub Neon] Loaded successfully! Press " .. tostring(State.Settings.MenuKey) .. " to toggle menu.")
@@ -2538,11 +2491,13 @@ end
 		updateChams()
 	end
 	
+	-- Return API functions
 	return {
 		ToggleMenu = toggleMenu,
 		GetState = function() return State end,
 		SaveConfig = saveStateToConfig,
 		LoadConfig = loadStateFromConfig,
-		GUI = gui
+		GUI = gui,
+		SwitchCategory = switchCategory
 	}
 end
