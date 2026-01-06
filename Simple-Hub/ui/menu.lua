@@ -105,7 +105,7 @@ toMenuFormat = function()
 	end
 end
 
-loadStateFromConfig()
+
 
 
 	
