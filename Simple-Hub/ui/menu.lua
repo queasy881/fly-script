@@ -79,10 +79,15 @@ local function loadConfig()
 			end,
 
 			save = function()
-				return true
-			end,
+	return true
+end,
 
-			toMenuFormat = function()
+load = function()
+	return true
+end,
+
+toMenuFormat = function()
+
 				return {
 					MenuKey = Enum.KeyCode.M,
 					AccentColor = Color3.fromRGB(60, 120, 255),
@@ -2504,7 +2509,8 @@ end
 		ToggleMenu = toggleMenu,
 		GetState = function() return State end,
 		SaveConfig = saveStateToConfig,
-		LoadConfig = loadStateFromConfig,
+		LoadConfig = loadConfig,
+
 		GUI = gui,
 		SwitchCategory = switchCategory
 	}
