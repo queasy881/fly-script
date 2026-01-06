@@ -1482,7 +1482,10 @@ loadStateFromConfig()
 			State.Troll.OrbitTarget = nm
 		end
 	end)
-	
+local function loadStateFromConfig()
+	return true
+end
+
 	-- ---------------------------------------------------------------------------
 	-- UI CREATION (SIDEBAR FIRST - NO AUTO OPEN CATEGORY)
 	-- ---------------------------------------------------------------------------
