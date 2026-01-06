@@ -105,7 +105,8 @@ toMenuFormat = function()
 	end
 end
 
-loadConfig()
+loadStateFromConfig()
+
 
 	
 	-- ---------------------------------------------------------------------------
@@ -2509,7 +2510,7 @@ end
 		ToggleMenu = toggleMenu,
 		GetState = function() return State end,
 		SaveConfig = saveStateToConfig,
-		LoadConfig = loadConfig,
+		LoadConfig = loadStateFromConfig,
 
 		GUI = gui,
 		SwitchCategory = switchCategory
