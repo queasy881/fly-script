@@ -187,18 +187,28 @@ end
 	local function getTool() local c = getCharacter() return c and c:FindFirstChildOfClass("Tool") end
 	
 	-- Simple tween function
-	local function tween(obj, props, tweenInfo)
-		if not obj then return end
-		tweenInfo = tweenInfo or {}
-		local ti = TweenInfo.new(
-			tweenInfo.Time or 0.2,
-			tweenInfo.Style or Enum.EasingStyle.Quad,
-			tweenInfo.Direction or Enum.EasingDirection.Out
-		)
-		local t = TweenService:Create(obj, ti, props)
-		t:Play()
-		return t
+-- Simple tween function
+local function tween(obj, props, tweenInfo)
+	if not obj then return end
+
+	local t = 0.2
+	local style = Enum.EasingStyle.Quad
+	local direction = Enum.EasingDirection.Out
+
+	if type(tweenInfo) == "table" then
+		t = tweenInfo.Time or t
+		style = tweenInfo.Style or style
+		direction = tweenInfo.Direction or direction
+	elseif type(tweenInfo) == "number" then
+		t = tweenInfo
 	end
+
+	local ti = TweenInfo.new(t, style, direction)
+	local tw = TweenService:Create(obj, ti, props)
+	tw:Play()
+	return tw
+end
+
 	
 	-- Use provided Animations or fallback
 	if not Animations then
@@ -1973,8 +1983,12 @@ end
 		indicator.Visible = false
 		indicator.Parent = btn
 		
-		btn.Indicator = indicator
-		categoryButtons[category.Name] = {Button = btn, Color = category.Color}
+categoryButtons[category.Name] = {
+	Button = btn,
+	Indicator = indicator,
+	Color = category.Color
+}
+
 		
 		btn.MouseEnter:Connect(function()
 			if currentCategory ~= category.Name then
@@ -2113,9 +2127,10 @@ end
 			local btn = data.Button
 			tween(btn, {BackgroundTransparency = 0.4}, 0.2)
 			tween(btn:FindFirstChildOfClass("TextLabel"), {TextColor3 = NeonColors.TextSoft}, 0.2)
-			if btn.Indicator then
-				btn.Indicator.Visible = false
-			end
+			if data.Indicator then
+	data.Indicator.Visible = true
+end
+
 		end
 		
 		-- Show selected category
@@ -2129,9 +2144,10 @@ end
 				local btn = selectedData.Button
 				tween(btn, {BackgroundTransparency = 0.1}, 0.2)
 				tween(btn:FindFirstChildOfClass("TextLabel"), {TextColor3 = selectedData.Color}, 0.2)
-				if btn.Indicator then
-					btn.Indicator.Visible = true
-				end
+				if data.Indicator then
+	data.Indicator.Visible = true
+end
+
 			end
 			
 			-- Animate title color
