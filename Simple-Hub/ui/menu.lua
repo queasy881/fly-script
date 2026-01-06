@@ -1034,7 +1034,9 @@ return function(Components)
 				local tgt = mouse.Target
 				if tgt and Players:GetPlayerFromCharacter(tgt.Parent) then
 					LastTriggerbotTime = now
-					pcall(function() mouse1click() end)
+					if mouse1click then
+						pcall(function() mouse1click() end)
+					end
 				end
 			end
 		end
@@ -1048,7 +1050,9 @@ return function(Components)
 							if tool then 
 								pcall(function() tool:Activate() end) 
 							end
-							pcall(function() mouse2click() end)
+							if mouse2click then
+								pcall(function() mouse2click() end)
+							end
 							break
 						end
 					end
