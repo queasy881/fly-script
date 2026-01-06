@@ -144,35 +144,38 @@ return function(arg1, arg2, arg3)
 		Shadow = Color3.fromRGB(0, 0, 0, 0.8)
 	}
 	
-	-- Dynamic gradient function
-	local function createAnimatedGradient(parent, colors, speed)
-		local gradient = Instance.new("UIGradient")
-		gradient.Color = ColorSequence.new{
-			ColorSequenceKeypoint.new(0, colors[1] or NeonColors.ElectricPurple),
-			ColorSequenceKeypoint.new(0.5, colors[2] or NeonColors.BrightCyan),
-			ColorSequenceKeypoint.new(1, colors[3] or NeonColors.HotPink)
-		}
-		gradient.Rotation = 45
-		gradient.Parent = parent
-		
-		-- Animate the gradient
-		if speed then
-			local connection
-			connection = RunService.RenderStepped:Connect(function(dt)
-				gradient.Rotation = gradient.Rotation + (speed * dt * 10)
+local function createAnimatedGradient(parent, colors, speed)
+	local gradient = Instance.new("UIGradient")
+	gradient.Color = ColorSequence.new{
+		ColorSequenceKeypoint.new(0, colors[1] or NeonColors.ElectricPurple),
+		ColorSequenceKeypoint.new(0.5, colors[2] or NeonColors.BrightCyan),
+		ColorSequenceKeypoint.new(1, colors[3] or NeonColors.HotPink)
+	}
+	gradient.Rotation = 45
+	gradient.Parent = parent
+
+	-- Animate the gradient
+	if speed then
+		local conn = RunService.RenderStepped:Connect(function(dt)
+			if gradient and gradient.Parent then
+				gradient.Rotation = gradient.RRotation + (speed * dt * 10)
 				if gradient.Rotation > 360 then
 					gradient.Rotation = 0
 				end
-			end)
-			gradradient:GetPropertyChangedSignal("Parent"):Connect(function()
-				if not gradient.Parent then
-					connection:Disconnect()
-				end
-			end)
-		end
-		
-		return gradient
+			end
+		end)
+
+		gradient:GetPropertyChangedSignal("Parent"):Connect(function()
+			if not gradient.Parent then
+				conn:Disconnect()
+			end
+		end)
 	end
+
+	return gradient
+end
+
+
 	
 	-- ---------------------------------------------------------------------------
 	-- UTILITY FUNCTIONS (UNCHANGED)
