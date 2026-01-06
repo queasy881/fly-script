@@ -2034,9 +2034,8 @@ return function(arg1, arg2, arg3)
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(0, 2)
 		corner.Parent = indicator
-		
-		btn.Indicator = indicator
 		categoryButtons[category.Name] = {Button = btn, Color = category.Color}
+
 		
 		btn.MouseEnter:Connect(function()
 			if currentCategory ~= category.Name then
@@ -2726,14 +2725,16 @@ return function(arg1, arg2, arg3)
 			
 			-- Show menu with animation
 			sidebar.Visible = true
-			tween(sidebar, {Position = UDim2.new(0, 20, 0.5, 0)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+tween(sidebar, {Position = UDim2.new(0, 20, 0.5, 0)}, {Time = 0.4})
+
 			
 			-- Unlock mouse
 			UIS.MouseBehavior = Enum.MouseBehavior.Default
 			UIS.MouseIconEnabled = true
 		else
 			-- Hide menu with animation
-			tween(sidebar, {Position = UDim2.new(0, -240, 0.5, 0)}, 0.3)
+			tween(sidebar, {Position = UDim2.new(0, -240, 0.5, 0)}, {Time = 0.3})
+
 			task.delay(0.3, function()
 				sidebar.Visible = false
 				contentArea.Visible = false
