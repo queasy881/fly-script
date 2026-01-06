@@ -144,38 +144,36 @@ return function(arg1, arg2, arg3)
 		Shadow = Color3.fromRGB(0, 0, 0, 0.8)
 	}
 	
-local function createAnimatedGradient(parent, colors, speed)
-	local gradient = Instance.new("UIGradient")
-	gradient.Color = ColorSequence.new{
-		ColorSequenceKeypoint.new(0, colors[1] or NeonColors.ElectricPurple),
-		ColorSequenceKeypoint.new(0.5, colors[2] or NeonColors.BrightCyan),
-		ColorSequenceKeypoint.new(1, colors[3] or NeonColors.HotPink)
-	}
-	gradient.Rotation = 45
-	gradient.Parent = parent
+	local function createAnimatedGradient(parent, colors, speed)
+		local gradient = Instance.new("UIGradient")
+		gradient.Color = ColorSequence.new{
+			ColorSequenceKeypoint.new(0, colors[1] or NeonColors.ElectricPurple),
+			ColorSequenceKeypoint.new(0.5, colors[2] or NeonColors.BrightCyan),
+			ColorSequenceKeypoint.new(1, colors[3] or NeonColors.HotPink)
+		}
+		gradient.Rotation = 45
+		gradient.Parent = parent
 
-	-- Animate the gradient
-	if speed then
-		local conn = RunService.RenderStepped:Connect(function(dt)
-			if gradient and gradient.Parent then
-				gradient.Rotation = gradient.Rotation + (speed * dt * 10)
-				if gradient.Rotation > 360 then
-					gradient.Rotation = 0
+		-- Animate the gradient
+		if speed then
+			local conn = RunService.RenderStepped:Connect(function(dt)
+				if gradient and gradient.Parent then
+					gradient.Rotation = gradient.Rotation + (speed * dt * 10)
+					if gradient.Rotation > 360 then
+						gradient.Rotation = 0
+					end
 				end
-			end
-		end)
+			end)
 
-		gradient:GetPropertyChangedSignal("Parent"):Connect(function()
-			if not gradient.Parent then
-				conn:Disconnect()
-			end
-		end)
+			gradient:GetPropertyChangedSignal("Parent"):Connect(function()
+				if not gradient.Parent then
+					conn:Disconnect()
+				end
+			end)
+		end
+
+		return gradient
 	end
-
-	return gradient
-end
-
-
 	
 	-- ---------------------------------------------------------------------------
 	-- UTILITY FUNCTIONS (UNCHANGED)
@@ -187,28 +185,26 @@ end
 	local function getTool() local c = getCharacter() return c and c:FindFirstChildOfClass("Tool") end
 	
 	-- Simple tween function
--- Simple tween function
-local function tween(obj, props, tweenInfo)
-	if not obj then return end
+	local function tween(obj, props, tweenInfo)
+		if not obj then return end
 
-	local t = 0.2
-	local style = Enum.EasingStyle.Quad
-	local direction = Enum.EasingDirection.Out
+		local t = 0.2
+		local style = Enum.EasingStyle.Quad
+		local direction = Enum.EasingDirection.Out
 
-	if type(tweenInfo) == "table" then
-		t = tweenInfo.Time or t
-		style = tweenInfo.Style or style
-		direction = tweenInfo.Direction or direction
-	elseif type(tweenInfo) == "number" then
-		t = tweenInfo
+		if type(tweenInfo) == "table" then
+			t = tweenInfo.Time or t
+			style = tweenInfo.Style or style
+			direction = tweenInfo.Direction or direction
+		elseif type(tweenInfo) == "number" then
+			t = tweenInfo
+		end
+
+		local ti = TweenInfo.new(t, style, direction)
+		local tw = TweenService:Create(obj, ti, props)
+		tw:Play()
+		return tw
 	end
-
-	local ti = TweenInfo.new(t, style, direction)
-	local tw = TweenService:Create(obj, ti, props)
-	tw:Play()
-	return tw
-end
-
 	
 	-- Use provided Animations or fallback
 	if not Animations then
@@ -1126,7 +1122,7 @@ end
 							local tool = getTool() 
 							if tool then 
 								pcall(function() tool:Activate() end) 
-							end
+						 end
 							pcall(function() mouse2click() end)
 							break
 						end
@@ -1911,12 +1907,13 @@ end
 	
 	-- Category buttons container
 	local categoryContainer = Instance.new("ScrollingFrame")
+	categoryContainer.Name = "CategoryContainer"
 	categoryContainer.Size = UDim2.new(1, 0, 0, 380)
 	categoryContainer.Position = UDim2.new(0, 0, 0, 70)
 	categoryContainer.BackgroundTransparency = 1
-	categoryContainer.ScrollBarThickness = 0
-	categoryContainer.CanvasSize = UDim2.new(0, 0, 0, #categories * 50)
-	categoryContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	categoryContainer.ScrollBarThickness = 6
+	categoryContainer.ScrollBarImageColor3 = NeonColors.BrightCyan
+	categoryContainer.CanvasSize = UDim2.new(0, 0, 0, #categories * 50 + 20)
 	categoryContainer.Parent = sidebar
 	
 	local categoryLayout = Instance.new("UIListLayout")
@@ -1933,6 +1930,7 @@ end
 	-- Create category buttons
 	for i, category in ipairs(categories) do
 		local btn = Instance.new("TextButton")
+		btn.Name = "CategoryBtn_" .. category.Name
 		btn.Size = UDim2.new(1, -20, 0, 45)
 		btn.BackgroundColor3 = NeonColors.Glass
 		btn.BackgroundTransparency = 0.4
@@ -1953,6 +1951,7 @@ end
 		btnGlow.Parent = btn
 		
 		local icon = Instance.new("TextLabel")
+		icon.Name = "Icon"
 		icon.Size = UDim2.new(0, 30, 0, 30)
 		icon.Position = UDim2.new(0, 10, 0.5, 0)
 		icon.AnchorPoint = Vector2.new(0, 0.5)
@@ -1964,6 +1963,7 @@ end
 		icon.Parent = btn
 		
 		local label = Instance.new("TextLabel")
+		label.Name = "Label"
 		label.Size = UDim2.new(1, -50, 1, 0)
 		label.Position = UDim2.new(0, 45, 0, 0)
 		label.BackgroundTransparency = 1
@@ -1975,6 +1975,7 @@ end
 		label.Parent = btn
 		
 		local indicator = Instance.new("Frame")
+		indicator.Name = "Indicator"
 		indicator.Size = UDim2.new(0, 4, 0.7, 0)
 		indicator.Position = UDim2.new(1, -4, 0.15, 0)
 		indicator.BackgroundColor3 = category.Color
@@ -1983,12 +1984,13 @@ end
 		indicator.Visible = false
 		indicator.Parent = btn
 		
-categoryButtons[category.Name] = {
-	Button = btn,
-	Indicator = indicator,
-	Color = category.Color
-}
-
+		categoryButtons[category.Name] = {
+			Button = btn,
+			Icon = icon,
+			Label = label,
+			Indicator = indicator,
+			Color = category.Color
+		}
 		
 		btn.MouseEnter:Connect(function()
 			if currentCategory ~= category.Name then
@@ -2001,6 +2003,13 @@ categoryButtons[category.Name] = {
 			if currentCategory ~= category.Name then
 				tween(btn, {BackgroundTransparency = 0.4}, 0.2)
 				tween(label, {TextColor3 = NeonColors.TextSoft}, 0.2)
+			end
+		end)
+		
+		btn.MouseButton1Click:Connect(function()
+			local selectedData = categoryButtons[category.Name]
+			if selectedData then
+				switchCategory(category.Name)
 			end
 		end)
 	end
@@ -2069,6 +2078,7 @@ categoryButtons[category.Name] = {
 	
 	-- Content scroll frame
 	local contentScroll = Instance.new("ScrollingFrame")
+	contentScroll.Name = "ContentScroll"
 	contentScroll.Size = UDim2.new(1, -20, 1, -80)
 	contentScroll.Position = UDim2.new(0, 10, 0, 70)
 	contentScroll.BackgroundTransparency = 1
@@ -2092,7 +2102,7 @@ categoryButtons[category.Name] = {
 	-- Function to create category content
 	local function createCategoryContent(categoryName, settings)
 		local container = Instance.new("Frame")
-		container.Name = categoryName
+		container.Name = "Content_" .. categoryName
 		container.Size = UDim2.new(1, 0, 0, 0)
 		container.BackgroundTransparency = 1
 		container.AutomaticSize = Enum.AutomaticSize.Y
@@ -2124,20 +2134,16 @@ categoryButtons[category.Name] = {
 		
 		-- Reset all buttons
 		for name, data in pairs(categoryButtons) do
-	local btn = data and data.Button
-	if not btn then continue end
-
-	tween(btn, {BackgroundTransparency = 0.4}, 0.2)
-	local lbl = btn:FindFirstChildOfClass("TextLabel")
-	if lbl then
-		tween(lbl, {TextColor3 = NeonColors.TextSoft}, 0.2)
-	end
-
-	if data and data.Indicator then
-		data.Indicator.Visible = false
-	end
-end
-
+			if data and data.Button then
+				tween(data.Button, {BackgroundTransparency = 0.4}, 0.2)
+				if data.Label then
+					tween(data.Label, {TextColor3 = NeonColors.TextSoft}, 0.2)
+				end
+				if data.Indicator then
+					data.Indicator.Visible = false
+				end
+			end
+		end
 		
 		-- Show selected category
 		if categoryContents[categoryName] then
@@ -2146,42 +2152,27 @@ end
 			
 			-- Highlight selected button
 			local selectedData = categoryButtons[categoryName]
-if not selectedData then return end
-
 			if selectedData then
-				local btn = selectedData.Button
-				tween(btn, {BackgroundTransparency = 0.1}, 0.2)
-				local textLabel = btn:FindFirstChildOfClass("TextLabel")
-if textLabel then
-    tween(textLabel, {TextColor3 = selectedData.Color}, 0.2)
-end
-
+				tween(selectedData.Button, {BackgroundTransparency = 0.1}, 0.2)
+				if selectedData.Label then
+					tween(selectedData.Label, {TextColor3 = selectedData.Color}, 0.2)
+				end
 				if selectedData.Indicator then
-    selectedData.Indicator.Visible = true
-end
-
-
+					selectedData.Indicator.Visible = true
+				end
 			end
 			
 			-- Animate title color
-			tween(contentTitle, {TextColor3 = selectedData.Color}, 0.3)
+			local selectedColor = selectedData and selectedData.Color or NeonColors.ElectricPurple
+			tween(contentTitle, {TextColor3 = selectedColor}, 0.3)
 			contentArea.Visible = true
 			currentCategory = categoryName
 		end
 	end
 	
-	-- Connect category buttons
-	for categoryName, data in pairs(categoryButtons) do
-		data.Button.MouseButton1Click:Connect(function()
-			switchCategory(categoryName)
-		end)
-	end
-	
-	-- Initialize with first category
-	switchCategory("COMBAT")
-	
 	-- Settings button at bottom
 	local settingsBtn = Instance.new("TextButton")
+	settingsBtn.Name = "SettingsButton"
 	settingsBtn.Size = UDim2.new(1, -20, 0, 45)
 	settingsBtn.Position = UDim2.new(0, 10, 1, -60)
 	settingsBtn.BackgroundColor3 = NeonColors.Glass
@@ -2226,6 +2217,7 @@ end
 	saveLoadContainer.Parent = sidebar
 	
 	local saveBtn = Instance.new("TextButton")
+	saveBtn.Name = "SaveButton"
 	saveBtn.Size = UDim2.new(0.48, 0, 1, 0)
 	saveBtn.BackgroundColor3 = NeonColors.LimeGreen
 	saveBtn.BackgroundTransparency = 0.3
@@ -2243,12 +2235,13 @@ end
 	
 	saveBtn.MouseButton1Click:Connect(function()
 		saveStateToConfig()
-		tween(saveBtn, {BackgroundColor3 = NeonColors.Success}, 0.1)
+		tween(saveBtn, {BackgroundColor3 = NeonColors.LimeGreen}, 0.1)
 		task.wait(0.1)
 		tween(saveBtn, {BackgroundColor3 = NeonColors.LimeGreen}, 0.3)
 	end)
 	
 	local loadBtn = Instance.new("TextButton")
+	loadBtn.Name = "LoadButton"
 	loadBtn.Size = UDim2.new(0.48, 0, 1, 0)
 	loadBtn.Position = UDim2.new(1, -0.48, 0, 0)
 	loadBtn.BackgroundColor3 = NeonColors.NeonBlue
@@ -2267,7 +2260,7 @@ end
 	
 	loadBtn.MouseButton1Click:Connect(function()
 		loadStateFromConfig()
-		tween(loadBtn, {BackgroundColor3 = NeonColors.Accent1}, 0.1)
+		tween(loadBtn, {BackgroundColor3 = NeonColors.NeonBlue}, 0.1)
 		task.wait(0.1)
 		tween(loadBtn, {BackgroundColor3 = NeonColors.NeonBlue}, 0.3)
 	end)
@@ -2737,7 +2730,7 @@ end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- INITIALIZATION COMPLETE
+	-- INITIALIZATION - NO AUTOMATIC CATEGORY SELECTION
 	-- ---------------------------------------------------------------------------
 	if DrawingEnabled then
 		print("[Vertex Hub Neon] Loaded successfully! Press " .. tostring(State.Settings.MenuKey) .. " to toggle menu.")
@@ -2751,11 +2744,13 @@ end
 		updateChams()
 	end
 	
+	-- Return API functions
 	return {
 		ToggleMenu = toggleMenu,
 		GetState = function() return State end,
 		SaveConfig = saveStateToConfig,
 		LoadConfig = loadStateFromConfig,
-		GUI = gui
+		GUI = gui,
+		SwitchCategory = switchCategory
 	}
 end
