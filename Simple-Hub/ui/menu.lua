@@ -498,21 +498,21 @@ return function(arg1, arg2, arg3)
             
             local function updateVisual()
                 if state then
-                    tween(btn, {BackgroundTransparency = 0.1})
-                    tween(lbl, {TextColor3 = NeoColors.Text})
-                    tween(toggleBg, {BackgroundColor3 = NeoColors.ToggleOn})
-                    tween(toggleKnob, {
+                    Animations.tween(btn, {BackgroundTransparency = 0.1})
+                    Animations.tween(lbl, {TextColor3 = NeoColors.Text})
+                    Animations.tween(toggleBg, {BackgroundColor3 = NeoColors.ToggleOn})
+                    Animations.tween(toggleKnob, {
                         Position = UDim2.new(1, -20, 0.5, 0),
                         BackgroundColor3 = NeoColors.Accent
-                    }, 0.2, Enum.EasingStyle.Back)
+                    }, {Time = 0.2, Style = Enum.EasingStyle.Back})
                 else
-                    tween(btn, {BackgroundTransparency = 0.2})
-                    tween(lbl, {TextColor3 = NeoColors.TextSoft})
-                    tween(toggleBg, {BackgroundColor3 = NeoColors.ToggleOff})
-                    tween(toggleKnob, {
+                    Animations.tween(btn, {BackgroundTransparency = 0.2})
+                    Animations.tween(lbl, {TextColor3 = NeoColors.TextSoft})
+                    Animations.tween(toggleBg, {BackgroundColor3 = NeoColors.ToggleOff})
+                    Animations.tween(toggleKnob, {
                         Position = UDim2.new(0, 2, 0.5, 0),
                         BackgroundColor3 = Color3.new(1, 1, 1)
-                    }, 0.2, Enum.EasingStyle.Back)
+                    }, {Time = 0.2, Style = Enum.EasingStyle.Back})
                 end
             end
             
@@ -524,13 +524,13 @@ return function(arg1, arg2, arg3)
             
             btn.MouseEnter:Connect(function()
                 if not state then
-                    tween(btn, {BackgroundTransparency = 0.15})
+                    Animations.tween(btn, {BackgroundTransparency = 0.15})
                 end
             end)
             
             btn.MouseLeave:Connect(function()
                 if not state then
-                    tween(btn, {BackgroundTransparency = 0.2})
+                    Animations.tween(btn, {BackgroundTransparency = 0.2})
                 end
             end)
             
@@ -615,8 +615,8 @@ return function(arg1, arg2, arg3)
                 value = math.floor(min + (max - min) * percent)
                 val.Text = tostring(value)
                 
-                tween(fill, {Size = UDim2.new(percent, 0, 1, 0)}, 0.1)
-                tween(handle, {Position = UDim2.new(percent, 0, 0.5, 0)}, 0.1)
+                Animations.tween(fill, {Size = UDim2.new(percent, 0, 1, 0)}, {Time = 0.1})
+                Animations.tween(handle, {Position = UDim2.new(percent, 0, 0.5, 0)}, {Time = 0.1})
                 
                 if callback then callback(value) end
             end
@@ -705,11 +705,11 @@ return function(arg1, arg2, arg3)
             end)
             
             dropBtn.MouseEnter:Connect(function()
-                tween(dropBtn, {BackgroundColor3 = NeoColors.GlassHover})
+                Animations.tween(dropBtn, {BackgroundColor3 = NeoColors.GlassHover})
             end)
             
             dropBtn.MouseLeave:Connect(function()
-                tween(dropBtn, {BackgroundColor3 = NeoColors.DropdownBg})
+                Animations.tween(dropBtn, {BackgroundColor3 = NeoColors.DropdownBg})
             end)
             
             return cont
@@ -847,11 +847,11 @@ return function(arg1, arg2, arg3)
     end)
     
     closeBtn.MouseEnter:Connect(function()
-        tween(closeBtn, {BackgroundColor3 = NeoColors.Error, BackgroundTransparency = 0.2})
+        Animations.tween(closeBtn, {BackgroundColor3 = NeoColors.Error, BackgroundTransparency = 0.2})
     end)
     
     closeBtn.MouseLeave:Connect(function()
-        tween(closeBtn, {BackgroundColor3 = NeoColors.GlassLight, BackgroundTransparency = 0.3})
+        Animations.tween(closeBtn, {BackgroundColor3 = NeoColors.GlassLight, BackgroundTransparency = 0.3})
     end)
     
     -- Tab bar
@@ -943,7 +943,7 @@ return function(arg1, arg2, arg3)
             -- Reset all tab buttons
             for _, child in ipairs(tabBar:GetChildren()) do
                 if child:IsA("TextButton") then
-                    tween(child, {
+                    Animations.tween(child, {
                         BackgroundColor3 = NeoColors.GlassLight,
                         BackgroundTransparency = 0.3,
                         TextColor3 = NeoColors.TextSoft
@@ -952,7 +952,7 @@ return function(arg1, arg2, arg3)
             end
             -- Show selected tab
             tabContent.Visible = true
-            tween(tabBtn, {
+            Animations.tween(tabBtn, {
                 BackgroundColor3 = NeoColors.Accent,
                 BackgroundTransparency = 0.2,
                 TextColor3 = NeoColors.Text
@@ -961,7 +961,7 @@ return function(arg1, arg2, arg3)
         
         tabBtn.MouseEnter:Connect(function()
             if not tabContent.Visible then
-                tween(tabBtn, {
+                Animations.tween(tabBtn, {
                     BackgroundTransparency = 0.2,
                     TextColor3 = NeoColors.Text
                 })
@@ -970,7 +970,7 @@ return function(arg1, arg2, arg3)
         
         tabBtn.MouseLeave:Connect(function()
             if not tabContent.Visible then
-                tween(tabBtn, {
+                Animations.tween(tabBtn, {
                     BackgroundTransparency = 0.3,
                     TextColor3 = NeoColors.TextSoft
                 })
@@ -992,7 +992,7 @@ return function(arg1, arg2, arg3)
     
     -- Activate first tab
     combatTab.Visible = true
-    tween(tabBar:GetChildren()[1], {
+    Animations.tween(tabBar:GetChildren()[1], {
         BackgroundColor3 = NeoColors.Accent,
         BackgroundTransparency = 0.2,
         TextColor3 = NeoColors.Text
@@ -1071,9 +1071,9 @@ return function(arg1, arg2, arg3)
                 UIS.MouseIconEnabled = true
                 
                 main.Size = UDim2.new(0, 0, 0, 0)
-                tween(main, {
+                Animations.tween(main, {
                     Size = UDim2.new(0, 1000, 0, 700)
-                }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+                }, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
             else
                 UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
                 UIS.MouseIconEnabled = PrevMouseState.icon ~= false
