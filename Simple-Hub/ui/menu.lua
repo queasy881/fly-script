@@ -72,7 +72,8 @@ return function(Components)
 					return Config
 				end,
 				save = function() return true end,
-				load = function() return true end,
+			loadStateFromConfig = function() return true end,
+
 				toMenuFormat = function()
 					return {
 						MenuKey = Enum.KeyCode.M,
