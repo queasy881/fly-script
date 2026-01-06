@@ -1,6 +1,6 @@
 -- ---------------------------------------------------------------------------
--- VERTEX HUB - FULLY LOADSTRING COMPATIBLE
--- No require(), No script.Parent, No undefined dependencies
+-- VERTEX HUB - NEON SIDEBAR REDESIGN
+-- Fully integrated with config file
 -- ---------------------------------------------------------------------------
 
 return function(arg1, arg2, arg3)
@@ -18,10 +18,6 @@ return function(arg1, arg2, arg3)
 	Tabs = Tabs or _G.VertexTabs
 	Components = Components or _G.VertexComponents
 	Animations = Animations or _G.VertexAnimations
-	
-	-- ---------------------------------------------------------------------------
-	-- BUILT-IN: Tabs, Components, Animations (no external deps needed)
-	-- ---------------------------------------------------------------------------
 	
 	-- ---------------------------------------------------------------------------
 	-- SERVICES
@@ -42,7 +38,144 @@ return function(arg1, arg2, arg3)
 	local mouse = player:GetMouse()
 	
 	-- ---------------------------------------------------------------------------
-	-- UTILITY FUNCTIONS
+	-- CONFIGURATION SYSTEM INTEGRATION
+	-- ---------------------------------------------------------------------------
+	-- Load config from the provided config file
+	local Config = {}
+	local ConfigLoaded = false
+	
+	-- Try to load the config module
+	local function loadConfig()
+		local success, configModule = pcall(function()
+			-- Try to require or load the config
+			if _G.VertexConfig then
+				return _G.VertexConfig
+			end
+			-- Try to find in game
+			for _, obj in pairs(game:GetDescendants()) do
+				if obj.Name == "config" and obj:IsA("ModuleScript") then
+					return require(obj)
+				end
+			end
+			return nil
+		end)
+		
+		if success and configModule then
+			Config = configModule
+			ConfigLoaded = true
+			print("[CONFIG] Configuration loaded successfully")
+			return true
+		else
+			-- Create default config structure
+			print("[CONFIG] Using default configuration")
+			Config = {
+				get = function(key, default)
+					return Config[key] or default
+				end,
+				set = function(key, value)
+					Config[key] = value
+					return true
+				end,
+				setMultiple = function(values)
+					for k, v in pairs(values) do
+						Config[k] = v
+					end
+					return true
+				end,
+				reset = function()
+					-- Default values
+					return true
+				end,
+				getAll = function()
+					return Config
+				end,
+				save = function() return true end,
+				load = function() return true end,
+				toMenuFormat = function()
+					return {
+						MenuKey = Enum.KeyCode.M,
+						AccentColor = Color3.fromRGB(60, 120, 255),
+						DefaultTab = "Combat",
+						Settings = {}
+					}
+				end,
+				DEFAULTS = {},
+				VERSION = "1.0.0"
+			}
+			return false
+		end
+	end
+	
+	-- Initialize config
+	loadConfig()
+	
+	-- ---------------------------------------------------------------------------
+	-- VIBRANT NEON COLOR PALETTE
+	-- ---------------------------------------------------------------------------
+	local NeonColors = {
+		-- Primary vibrant colors
+		ElectricPurple = Color3.fromRGB(180, 70, 255),
+		BrightCyan = Color3.fromRGB(0, 255, 255),
+		HotPink = Color3.fromRGB(255, 20, 147),
+		LimeGreen = Color3.fromRGB(50, 255, 50),
+		FieryOrange = Color3.fromRGB(255, 100, 0),
+		NeonBlue = Color3.fromRGB(0, 150, 255),
+		VibrantYellow = Color3.fromRGB(255, 255, 0),
+		
+		-- UI Colors
+		Background = Color3.fromRGB(10, 10, 15),
+		Glass = Color3.fromRGB(20, 20, 30),
+		GlassLight = Color3.fromRGB(30, 30, 45),
+		GlassHover = Color3.fromRGB(40, 40, 60),
+		
+		-- Text
+		Text = Color3.fromRGB(255, 255, 255),
+		TextSoft = Color3.fromRGB(220, 220, 240),
+		TextMuted = Color3.fromRGB(150, 150, 180),
+		
+		-- Accent gradients (for animated effects)
+		Accent1 = Color3.fromRGB(180, 70, 255),  -- Purple
+		Accent2 = Color3.fromRGB(0, 255, 255),   -- Cyan
+		Accent3 = Color3.fromRGB(255, 20, 147),  -- Pink
+		
+		-- Special effects
+		Glow = Color3.fromRGB(100, 200, 255),
+		Outline = Color3.fromRGB(0, 200, 255),
+		Shadow = Color3.fromRGB(0, 0, 0, 0.8)
+	}
+	
+	-- Dynamic gradient function
+	local function createAnimatedGradient(parent, colors, speed)
+		local gradient = Instance.new("UIGradient")
+		gradient.Color = ColorSequence.new{
+			ColorSequenceKeypoint.new(0, colors[1] or NeonColors.ElectricPurple),
+			ColorSequenceKeypoint.new(0.5, colors[2] or NeonColors.BrightCyan),
+			ColorSequenceKeypoint.new(1, colors[3] or NeonColors.HotPink)
+		}
+		gradient.Rotation = 45
+		gradient.Parent = parent
+		
+		-- Animate the gradient
+		if speed then
+			local connection
+			connection = RunService.RenderStepped:Connect(function(dt)
+				gradient.Rotation = gradient.Rotation + (speed * dt * 10)
+				if gradient.Rotation > 360 then
+					gradient.Rotation = 0
+				end
+			end)
+			gradradient:GetPropertyChangedSignal("Parent"):Connect(function()
+				if not gradient.Parent then
+					connection:Disconnect()
+				end
+			end)
+		end
+		
+		return gradient
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- UTILITY FUNCTIONS (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local function getCharacter() return player.Character end
 	local function getRoot() local c = getCharacter() return c and c:FindFirstChild("HumanoidRootPart") end
@@ -50,7 +183,7 @@ return function(arg1, arg2, arg3)
 	local function getHead() local c = getCharacter() return c and c:FindFirstChild("Head") end
 	local function getTool() local c = getCharacter() return c and c:FindFirstChildOfClass("Tool") end
 	
-	-- Simple tween function (fallback if Animations not provided)
+	-- Simple tween function
 	local function tween(obj, props, tweenInfo)
 		if not obj then return end
 		tweenInfo = tweenInfo or {}
@@ -71,7 +204,7 @@ return function(arg1, arg2, arg3)
 	_G.VertexAnimations = Animations
 	
 	-- ---------------------------------------------------------------------------
-	-- ENTITY CACHE (Updated every 0.5s, not every frame)
+	-- ENTITY CACHE (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local EntityCache = { players = {}, npcs = {}, items = {} }
 	
@@ -153,7 +286,7 @@ return function(arg1, arg2, arg3)
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- DRAWING OBJECT POOL (Reuse drawings, don't recreate)
+	-- DRAWING OBJECT POOL (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local DrawingPool = { text = {}, square = {}, line = {}, triangle = {}, circle = {} }
 	local ActiveDrawings = {}
@@ -218,7 +351,7 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- STATIC HUD DRAWINGS (Created once, reused)
+	-- STATIC HUD DRAWINGS (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local HUD = {}
 	if DrawingEnabled then
@@ -281,7 +414,7 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- ALL STATE VARIABLES
+	-- ALL STATE VARIABLES (NOW CONFIG-INTEGRATED)
 	-- ---------------------------------------------------------------------------
 	local State = {
 		ESP = {
@@ -335,8 +468,73 @@ return function(arg1, arg2, arg3)
 		Settings = { MenuKey = Enum.KeyCode.M, AccentColor = Color3.fromRGB(60, 120, 255) }
 	}
 	
+	-- Load state from config
+	local function loadStateFromConfig()
+		if ConfigLoaded then
+			local configData = Config.getAll()
+			if configData then
+				-- Load MenuKey from config
+				local menuKeyStr = Config.get("MenuKey", "M")
+				if menuKeyStr and Enum.KeyCode[menuKeyStr] then
+					State.Settings.MenuKey = Enum.KeyCode[menuKeyStr]
+				end
+				
+				-- Load AccentColor from config
+				local accentColor = Config.get("AccentColor", {60, 120, 255})
+				if accentColor then
+					State.Settings.AccentColor = Color3.fromRGB(accentColor[1] or 60, accentColor[2] or 120, accentColor[3] or 255)
+				end
+				
+				-- Load all other settings
+				for category, values in pairs(State) do
+					if category ~= "Settings" then
+						for key, _ in pairs(values) do
+							local configValue = Config.get(key)
+							if configValue ~= nil then
+								State[category][key] = configValue
+							end
+						end
+					end
+				end
+				print("[CONFIG] State loaded from configuration")
+			end
+		end
+	end
+	
+	-- Save state to config
+	local function saveStateToConfig()
+		if ConfigLoaded then
+			local configValues = {}
+			
+			-- Save MenuKey
+			configValues["MenuKey"] = tostring(State.Settings.MenuKey):gsub("Enum.KeyCode.", "")
+			
+			-- Save AccentColor
+			local r, g, b = math.floor(State.Settings.AccentColor.r * 255), 
+						   math.floor(State.Settings.AccentColor.g * 255), 
+						   math.floor(State.Settings.AccentColor.b * 255)
+			configValues["AccentColor"] = {r, g, b}
+			
+			-- Save all other settings
+			for category, values in pairs(State) do
+				if category ~= "Settings" then
+					for key, value in pairs(values) do
+						configValues[key] = value
+					end
+				end
+			end
+			
+			Config.setMultiple(configValues)
+			Config.save()
+			print("[CONFIG] State saved to configuration")
+		end
+	end
+	
+	-- Initialize state from config
+	loadStateFromConfig()
+	
 	-- ---------------------------------------------------------------------------
-	-- STORAGE
+	-- STORAGE (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local BacktrackPositions = {}
 	local CurrentTarget = nil
@@ -356,7 +554,7 @@ return function(arg1, arg2, arg3)
 	local OriginalGravity = workspace.Gravity
 	
 	-- ---------------------------------------------------------------------------
-	-- TARGET ACQUISITION SYSTEM
+	-- TARGET ACQUISITION SYSTEM (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local function getBestTarget(options)
 		options = options or {}
@@ -435,7 +633,7 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- FLY SYSTEM
+	-- FLY SYSTEM (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local FlySystem = { enabled = false, bodyGyro = nil, bodyVelocity = nil, currentVel = Vector3.new() }
 	
@@ -492,7 +690,7 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- INVISIBILITY SYSTEM (Transparency-based - WORKS PROPERLY)
+	-- INVISIBILITY SYSTEM (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local InvisSystem = {
 		enabled = false,
@@ -545,7 +743,7 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- EXECUTOR API SAFETY CHECK
+	-- EXECUTOR API SAFETY CHECK (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local function safeGetGlobal(name)
 		local ok, val = pcall(function() return getfenv()[name] end)
@@ -562,11 +760,9 @@ return function(arg1, arg2, arg3)
 	local mouse2click = safeGetGlobal("mouse2click")
 	
 	-- ---------------------------------------------------------------------------
-	-- KILLAURA - SERVER VALIDATED (Per spec: modify reported position only)
-	-- NO teleporting, NO spamming remotes, NO fake damage
-	-- Hook the legitimate attack, modify reported self position
+	-- KILLAURA - SERVER VALIDATED (UNCHANGED)
 	-- ---------------------------------------------------------------------------
-	local LEGIT_RANGE = 14.4 -- Default sword range
+	local LEGIT_RANGE = 14.4
 	local OriginalRemotes = {}
 	local KillAuraHooked = false
 	
@@ -575,18 +771,15 @@ return function(arg1, arg2, arg3)
 		if not hookmetamethod or not getnamecallmethod then return end
 		KillAuraHooked = true
 		
-		-- Hook remote events that handle combat
 		pcall(function()
 			local oldNamecall
 			oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
 				local method = getnamecallmethod()
 				local args = {...}
 				
-				-- Hook FireServer for combat remotes
 				if method == "FireServer" and State.Combat.KillAura then
 					local remoteName = self.Name:lower()
 					
-					-- Common combat remote patterns
 					if remoteName:find("attack") or remoteName:find("hit") or remoteName:find("damage") or remoteName:find("swing") then
 						local myRoot = getRoot()
 						local target = CurrentTarget
@@ -594,21 +787,17 @@ return function(arg1, arg2, arg3)
 						if myRoot and target and target.RootPart then
 							local distance = (myRoot.Position - target.RootPart.Position).Magnitude
 							
-							-- Only modify if target is within our extended range but outside legit range
 							if distance <= State.Combat.KillAuraRange and distance > LEGIT_RANGE then
-								-- Calculate the offset needed to make the attack valid
 								local lookVector = (target.RootPart.Position - myRoot.Position).Unit
 								local offsetDistance = math.max(distance - LEGIT_RANGE, 0)
 								local reportedPosition = myRoot.Position + lookVector * offsetDistance
 								
-								-- Modify args if they contain position data
 								for i, arg in ipairs(args) do
 									if typeof(arg) == "Vector3" then
 										args[i] = reportedPosition
 									elseif typeof(arg) == "CFrame" then
 										args[i] = CFrame.new(reportedPosition) * (arg - arg.Position)
 									elseif typeof(arg) == "table" then
-										-- Check for position in table
 										if arg.Position then
 											arg.Position = reportedPosition
 										end
@@ -627,12 +816,10 @@ return function(arg1, arg2, arg3)
 		end)
 	end
 	
-	-- Initialize hook
-	-- DEFERRED: Hook after script fully loads
 	task.defer(hookKillAura)
 	
 	-- ---------------------------------------------------------------------------
-	-- SILENT AIM HOOKS
+	-- SILENT AIM HOOKS (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local function getAimTarget()
 		return getBestTarget({
@@ -695,14 +882,12 @@ return function(arg1, arg2, arg3)
 		end)
 	end
 	
-	-- DEFERRED: Initialize hooks after script fully loads
 	task.defer(initSilentAimHooks)
 	
 	-- ---------------------------------------------------------------------------
-	-- BACKGROUND LOOPS (Spawned once, not per-frame)
+	-- BACKGROUND LOOPS (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	
-	-- Chat Spam (runs in background, respects delay)
 	task.spawn(function()
 		while true do
 			if State.Misc.ChatSpam then
@@ -720,7 +905,6 @@ return function(arg1, arg2, arg3)
 		end
 	end)
 	
-	-- Auto Respawn (runs in background)
 	task.spawn(function()
 		while true do
 			if State.Player.AutoRespawn then
@@ -735,7 +919,7 @@ return function(arg1, arg2, arg3)
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- CHAMS UPDATE (Called when needed, not every frame)
+	-- CHAMS UPDATE (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local function updateChams()
 		for name, data in pairs(EntityCache.players) do
@@ -775,7 +959,7 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- SINGLE MAIN UPDATE LOOP (Per spec: ONE RenderStepped, not multiple)
+	-- SINGLE MAIN UPDATE LOOP (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	local lastCacheUpdate = 0
 	
@@ -785,13 +969,11 @@ return function(arg1, arg2, arg3)
 		local root = getRoot()
 		local hum = getHumanoid()
 		
-		-- Update cache every 0.5s (not every frame)
 		if tick() - lastCacheUpdate > 0.5 then
 			lastCacheUpdate = tick()
 			updateEntityCache()
 		end
 		
-		-- FPS counter
 		FPSData.frames = FPSData.frames + 1
 		if tick() - FPSData.lastTime >= 1 then
 			FPSData.fps = FPSData.frames
@@ -799,9 +981,6 @@ return function(arg1, arg2, arg3)
 			FPSData.lastTime = tick()
 		end
 		
-		-- -----------------------------------------------------------------------
-		-- MOVEMENT
-		-- -----------------------------------------------------------------------
 		if State.Movement.Fly then
 			if not FlySystem.enabled then FlySystem:Enable() end
 			FlySystem:Update()
@@ -864,9 +1043,6 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- -----------------------------------------------------------------------
-		-- COMBAT
-		-- -----------------------------------------------------------------------
 		if State.Combat.AimAssist and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
 			local target = getBestTarget({ Range = 1000, Players = true, NPCs = true, UseFOV = true, FOV = State.Combat.AimFOV, Sort = "Angle" })
 			if target and (target.Head or target.RootPart) then
@@ -887,7 +1063,6 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- KillAura - respects CPS, uses validated position offset
 		if State.Combat.KillAura and root then
 			local now = tick()
 			local cooldown = 1 / State.Combat.KillAuraCPS
@@ -972,9 +1147,6 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- -----------------------------------------------------------------------
-		-- PLAYER
-		-- -----------------------------------------------------------------------
 		if State.Player.GodMode and hum then hum.Health = hum.MaxHealth end
 		
 		if State.Player.NoRagdoll and hum then
@@ -992,9 +1164,6 @@ return function(arg1, arg2, arg3)
 			end)
 		end
 		
-		-- -----------------------------------------------------------------------
-		-- TROLL
-		-- -----------------------------------------------------------------------
 		if State.Troll.AnnoyPlayer and State.Troll.AnnoyTarget ~= "" and root then
 			local tp = Players:FindFirstChild(State.Troll.AnnoyTarget)
 			if tp and tp.Character then
@@ -1033,9 +1202,6 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- -----------------------------------------------------------------------
-		-- VISUALS
-		-- -----------------------------------------------------------------------
 		if State.Visuals.Freecam then
 			local spd = State.Visuals.FreecamSpeed * 2
 			local dir = Vector3.new()
@@ -1060,9 +1226,6 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- -----------------------------------------------------------------------
-		-- HUD
-		-- -----------------------------------------------------------------------
 		if HUD.FOVCircle then
 			HUD.FOVCircle.Visible = State.Combat.ShowFOVCircle
 			HUD.FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
@@ -1144,9 +1307,6 @@ return function(arg1, arg2, arg3)
 			HUD.Keybinds.Color = Color3.new(1, 1, 1)
 		end
 		
-		-- -----------------------------------------------------------------------
-		-- ESP RENDERING (Uses pooled drawings)
-		-- -----------------------------------------------------------------------
 		releaseAllDrawings()
 		
 		local anyESP = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or State.ESP.DistanceESP or State.ESP.Tracers or State.ESP.SkeletonESP or State.ESP.OffscreenArrows or State.ESP.ItemESP or State.ESP.NPCESP
@@ -1280,9 +1440,6 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- -----------------------------------------------------------------------
-		-- MISC
-		-- -----------------------------------------------------------------------
 		if State.Misc.AntiAFK then
 			pcall(function()
 				local vu = game:GetService("VirtualUser")
@@ -1293,7 +1450,7 @@ return function(arg1, arg2, arg3)
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- INPUT HANDLING
+	-- INPUT HANDLING (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	UIS.InputBegan:Connect(function(input, gp)
 		if gp then return end
@@ -1364,813 +1521,1164 @@ return function(arg1, arg2, arg3)
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- GUI COLORS
-	-- ---------------------------------------------------------------------------
-	local Colors = {
-		Background = Color3.fromRGB(12, 12, 18),
-		Panel = Color3.fromRGB(18, 18, 26),
-		Surface = Color3.fromRGB(22, 22, 32),
-		Content = Color3.fromRGB(16, 16, 24),
-		Scroll = Color3.fromRGB(14, 14, 20),
-		Accent = Color3.fromRGB(60, 120, 255),
-		Text = Color3.fromRGB(220, 220, 240),
-		Dim = Color3.fromRGB(120, 120, 140),
-		Border = Color3.fromRGB(40, 45, 60),
-		Btn = Color3.fromRGB(28, 30, 40),
-		BtnHover = Color3.fromRGB(38, 42, 55),
-		SliderBg = Color3.fromRGB(22, 24, 32)
-	}
-	
-	-- ---------------------------------------------------------------------------
-	-- BUILT-IN COMPONENTS (No external dependency)
+	-- COMPONENTS LIBRARY (NEW VERSION WITH NEON COLORS)
 	-- ---------------------------------------------------------------------------
 	if not Components then
 		Components = {}
 		
-		local function corner(o, r)
+		local function corner(obj, radius)
 			local c = Instance.new("UICorner")
-			c.CornerRadius = UDim.new(0, r or 6)
-			c.Parent = o
-		end
-		local function stroke(o)
-			local s = Instance.new("UIStroke")
-			s.Color = Colors.Border
-			s.Thickness = 1
-			s.Transparency = 0.4
-			s.Parent = o
+			c.CornerRadius = UDim.new(0, radius or 8)
+			c.Parent = obj
+			return c
 		end
 		
-		function Components.createSection(parent, text)
-			local f = Instance.new("Frame")
-			f.Size = UDim2.new(1, -16, 0, 26)
-			f.BackgroundTransparency = 1
-			f.Parent = parent
-			local line = Instance.new("Frame")
-			line.Size = UDim2.new(0, 3, 0, 14)
-			line.Position = UDim2.new(0, 0, 0.5, 0)
-			line.AnchorPoint = Vector2.new(0, 0.5)
-			line.BackgroundColor3 = Colors.Accent
-			line.BorderSizePixel = 0
-			line.Parent = f
-			corner(line, 2)
-			local lbl = Instance.new("TextLabel")
-			lbl.Size = UDim2.new(1, -12, 1, 0)
-			lbl.Position = UDim2.new(0, 10, 0, 0)
-			lbl.BackgroundTransparency = 1
-			lbl.Text = text:upper()
-			lbl.TextColor3 = Colors.Text
-			lbl.TextXAlignment = Enum.TextXAlignment.Left
-			lbl.Font = Enum.Font.GothamBold
-			lbl.TextSize = 10
-			lbl.Parent = f
+		local function glowEffect(obj, color, thickness)
+			local glow = Instance.new("UIStroke")
+			glow.Color = color or NeonColors.Glow
+			glow.Thickness = thickness or 2
+			glow.Transparency = 0.3
+			glow.Parent = obj
+			return glow
 		end
 		
-		function Components.createDivider(parent)
-			local d = Instance.new("Frame")
-			d.Size = UDim2.new(1, -32, 0, 1)
-			d.BackgroundColor3 = Colors.Border
-			d.BorderSizePixel = 0
-			d.BackgroundTransparency = 0.4
-			d.Parent = parent
+		local function neonBorder(obj, color, thickness)
+			local border = Instance.new("UIStroke")
+			border.Color = color or NeonColors.Outline
+			border.Thickness = thickness or 1
+			border.Transparency = 0.5
+			border.Parent = obj
+			return border
 		end
 		
-		function Components.createLabel(parent, text)
-			local lbl = Instance.new("TextLabel")
-			lbl.Size = UDim2.new(1, -16, 0, 22)
-			lbl.BackgroundTransparency = 1
-			lbl.Text = text
-			lbl.TextColor3 = Colors.Dim
-			lbl.TextXAlignment = Enum.TextXAlignment.Left
-			lbl.Font = Enum.Font.Gotham
-			lbl.TextSize = 11
-			lbl.TextWrapped = true
-			lbl.Parent = parent
-		end
-		
-		function Components.createToggle(parent, text, callback)
-			local btn = Instance.new("TextButton")
-			btn.Size = UDim2.new(1, -16, 0, 32)
-			btn.BackgroundColor3 = Colors.Btn
-			btn.BorderSizePixel = 0
-			btn.AutoButtonColor = false
-			btn.Text = ""
-			btn.Parent = parent
-			corner(btn)
-			stroke(btn)
-			local lbl = Instance.new("TextLabel")
-			lbl.Size = UDim2.new(1, -50, 1, 0)
-			lbl.Position = UDim2.new(0, 12, 0, 0)
-			lbl.BackgroundTransparency = 1
-			lbl.Text = text
-			lbl.TextColor3 = Colors.Dim
-			lbl.TextXAlignment = Enum.TextXAlignment.Left
-			lbl.Font = Enum.Font.GothamMedium
-			lbl.TextSize = 12
-			lbl.Parent = btn
-			local ind = Instance.new("Frame")
-			ind.Size = UDim2.new(0, 0, 0, 2)
-			ind.Position = UDim2.new(0, 0, 1, -2)
-			ind.BackgroundColor3 = Colors.Accent
-			ind.BorderSizePixel = 0
-			ind.Parent = btn
-			corner(ind, 1)
-			local tbg = Instance.new("Frame")
-			tbg.Size = UDim2.new(0, 34, 0, 18)
-			tbg.Position = UDim2.new(1, -44, 0.5, 0)
-			tbg.AnchorPoint = Vector2.new(0, 0.5)
-			tbg.BackgroundColor3 = Colors.SliderBg
-			tbg.BorderSizePixel = 0
-			tbg.Parent = btn
-			corner(tbg, 9)
-			local tc = Instance.new("Frame")
-			tc.Size = UDim2.new(0, 14, 0, 14)
-			tc.Position = UDim2.new(0, 2, 0.5, 0)
-			tc.AnchorPoint = Vector2.new(0, 0.5)
-			tc.BackgroundColor3 = Colors.Dim
-			tc.BorderSizePixel = 0
-			tc.Parent = tbg
-			corner(tc, 7)
-			local state = false
+		function Components.createToggle(parent, text, callback, initialState)
+			local button = Instance.new("TextButton")
+			button.Size = UDim2.new(1, -10, 0, 36)
+			button.BackgroundColor3 = NeonColors.Glass
+			button.BackgroundTransparency = 0.3
+			button.BorderSizePixel = 0
+			button.AutoButtonColor = false
+			button.Text = ""
+			button.Parent = parent
+			
+			corner(button, 8)
+			glowEffect(button, NeonColors.ElectricPurple)
+			neonBorder(button, NeonColors.BrightCyan)
+			
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.new(0.7, 0, 1, 0)
+			label.Position = UDim2.new(0, 10, 0, 0)
+			label.BackgroundTransparency = 1
+			label.Text = text or "Toggle"
+			label.TextColor3 = NeonColors.TextSoft
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Font = Enum.Font.GothamBold
+			label.TextSize = 12
+			label.Parent = button
+			
+			local toggleFrame = Instance.new("Frame")
+			toggleFrame.Size = UDim2.new(0, 50, 0, 24)
+			toggleFrame.Position = UDim2.new(1, -60, 0.5, 0)
+			toggleFrame.AnchorPoint = Vector2.new(0, 0.5)
+			toggleFrame.BackgroundColor3 = NeonColors.Glass
+			toggleFrame.BorderSizePixel = 0
+			toggleFrame.Parent = button
+			
+			corner(toggleFrame, 12)
+			glowEffect(toggleFrame)
+			
+			local toggleKnob = Instance.new("Frame")
+			toggleKnob.Size = UDim2.new(0, 20, 0, 20)
+			toggleKnob.Position = UDim2.new(0, 2, 0.5, 0)
+			toggleKnob.AnchorPoint = Vector2.new(0, 0.5)
+			toggleKnob.BackgroundColor3 = NeonColors.BrightCyan
+			toggleKnob.BorderSizePixel = 0
+			toggleKnob.Parent = toggleFrame
+			
+			corner(toggleKnob, 10)
+			glowEffect(toggleKnob, NeonColors.BrightCyan, 3)
+			
+			local state = initialState or false
+			
 			local function updateVisual()
 				if state then
-					tween(btn, {BackgroundColor3 = Color3.fromRGB(35, 50, 80)})
-					tween(lbl, {TextColor3 = Color3.new(1, 1, 1)})
-					tween(ind, {Size = UDim2.new(1, 0, 0, 2)})
-					tween(tbg, {BackgroundColor3 = Colors.Accent})
-					tween(tc, {Position = UDim2.new(1, -16, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1)})
+					tween(toggleKnob, {
+						Position = UDim2.new(1, -22, 0.5, 0),
+						BackgroundColor3 = NeonColors.LimeGreen
+					}, 0.2)
+					tween(toggleFrame, {BackgroundColor3 = NeonColors.GlassLight}, 0.2)
+					tween(label, {TextColor3 = NeonColors.Text}, 0.2)
+					tween(button, {BackgroundTransparency = 0.1}, 0.2)
 				else
-					tween(btn, {BackgroundColor3 = Colors.Btn})
-					tween(lbl, {TextColor3 = Colors.Dim})
-					tween(ind, {Size = UDim2.new(0, 0, 0, 2)})
-					tween(tbg, {BackgroundColor3 = Colors.SliderBg})
-					tween(tc, {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Colors.Dim})
+					tween(toggleKnob, {
+						Position = UDim2.new(0, 2, 0.5, 0),
+						BackgroundColor3 = NeonColors.BrightCyan
+					}, 0.2)
+					tween(toggleFrame, {BackgroundColor3 = NeonColors.Glass}, 0.2)
+					tween(label, {TextColor3 = NeonColors.TextSoft}, 0.2)
+					tween(button, {BackgroundTransparency = 0.3}, 0.2)
 				end
 			end
-			btn.MouseButton1Click:Connect(function()
+			
+			button.MouseButton1Click:Connect(function()
 				state = not state
 				updateVisual()
 				if callback then task.spawn(callback, state) end
 			end)
-			local toggleObject = {
-				Button = btn,
+			
+			updateVisual()
+			
+			return {
+				Button = button,
 				SetState = function(self, newState)
-					if typeof(newState) ~= "boolean" then return end
-					state = newState
-					updateVisual()
+					if typeof(newState) == "boolean" then
+						state = newState
+						updateVisual()
+					end
 				end,
 				UpdateState = function(self, newState)
-					if typeof(newState) ~= "boolean" then return end
-					state = newState
-					updateVisual()
-					if callback then task.spawn(callback, state) end
+					if typeof(newState) == "boolean" then
+						state = newState
+						updateVisual()
+						if callback then task.spawn(callback, state) end
+					end
 				end,
-				GetState = function(self)
-					return state
-				end
+				GetState = function() return state end
 			}
-			return toggleObject
 		end
 		
-		function Components.createSlider(parent, text, min, max, default, callback)
-			local cont = Instance.new("Frame")
-			cont.Size = UDim2.new(1, -16, 0, 50)
-			cont.BackgroundColor3 = Colors.Btn
-			cont.BorderSizePixel = 0
-			cont.Parent = parent
-			corner(cont)
-			stroke(cont)
-			local lbl = Instance.new("TextLabel")
-			lbl.Size = UDim2.new(1, -60, 0, 18)
-			lbl.Position = UDim2.new(0, 12, 0, 5)
-			lbl.BackgroundTransparency = 1
-			lbl.Text = text
-			lbl.TextColor3 = Colors.Dim
-			lbl.TextXAlignment = Enum.TextXAlignment.Left
-			lbl.Font = Enum.Font.GothamMedium
-			lbl.TextSize = 11
-			lbl.Parent = cont
-			local val = Instance.new("TextLabel")
-			val.Size = UDim2.new(0, 48, 0, 18)
-			val.Position = UDim2.new(1, -60, 0, 5)
-			val.BackgroundTransparency = 1
-			val.Text = tostring(default)
-			val.TextColor3 = Colors.Accent
-			val.TextXAlignment = Enum.TextXAlignment.Right
-			val.Font = Enum.Font.GothamBold
-			val.TextSize = 11
-			val.Parent = cont
-			local sbg = Instance.new("Frame")
-			sbg.Size = UDim2.new(1, -24, 0, 6)
-			sbg.Position = UDim2.new(0, 12, 1, -15)
-			sbg.BackgroundColor3 = Colors.SliderBg
-			sbg.BorderSizePixel = 0
-			sbg.Parent = cont
-			corner(sbg, 3)
+		function Components.createSlider(parent, text, min, max, defaultValue, callback)
+			local container = Instance.new("Frame")
+			container.Size = UDim2.new(1, -10, 0, 60)
+			container.BackgroundColor3 = NeonColors.Glass
+			container.BackgroundTransparency = 0.3
+			container.BorderSizePixel = 0
+			container.Parent = parent
+			
+			corner(container, 8)
+			glowEffect(container, NeonColors.HotPink)
+			neonBorder(container)
+			
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.new(1, -20, 0, 20)
+			label.Position = UDim2.new(0, 10, 0, 5)
+			label.BackgroundTransparency = 1
+			label.Text = text or "Slider"
+			label.TextColor3 = NeonColors.TextSoft
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Font = Enum.Font.GothamBold
+			label.TextSize = 11
+			label.Parent = container
+			
+			local valueLabel = Instance.new("TextLabel")
+			valueLabel.Size = UDim2.new(0, 50, 0, 20)
+			valueLabel.Position = UDim2.new(1, -60, 0, 5)
+			valueLabel.BackgroundTransparency = 1
+			valueLabel.Text = tostring(defaultValue or min)
+			valueLabel.TextColor3 = NeonColors.BrightCyan
+			valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+			valueLabel.Font = Enum.Font.GothamBold
+			valueLabel.TextSize = 12
+			valueLabel.Parent = container
+			
+			local track = Instance.new("Frame")
+			track.Size = UDim2.new(1, -20, 0, 6)
+			track.Position = UDim2.new(0, 10, 1, -20)
+			track.BackgroundColor3 = NeonColors.GlassLight
+			track.BorderSizePixel = 0
+			track.Parent = container
+			
+			corner(track, 3)
+			glowEffect(track, NeonColors.FieryOrange)
+			
 			local fill = Instance.new("Frame")
-			fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-			fill.BackgroundColor3 = Colors.Accent
+			fill.Size = UDim2.new((defaultValue - min) / (max - min), 0, 1, 0)
+			fill.BackgroundColor3 = NeonColors.FieryOrange
 			fill.BorderSizePixel = 0
-			fill.Parent = sbg
+			fill.Parent = track
+			
 			corner(fill, 3)
+			
 			local handle = Instance.new("Frame")
-			handle.Size = UDim2.new(0, 14, 0, 14)
-			handle.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
+			handle.Size = UDim2.new(0, 16, 0, 16)
+			handle.Position = UDim2.new((defaultValue - min) / (max - min), 0, 0.5, 0)
 			handle.AnchorPoint = Vector2.new(0.5, 0.5)
-			handle.BackgroundColor3 = Color3.fromRGB(100, 180, 255)
+			handle.BackgroundColor3 = NeonColors.BrightCyan
 			handle.BorderSizePixel = 0
-			handle.ZIndex = 2
-			handle.Parent = sbg
-			corner(handle, 7)
+			handle.Parent = track
+			
+			corner(handle, 8)
+			glowEffect(handle, NeonColors.BrightCyan, 3)
+			
+			local value = defaultValue or min
 			local dragging = false
-			local function upd(inp)
-				local p = math.clamp((inp.Position.X - sbg.AbsolutePosition.X) / sbg.AbsoluteSize.X, 0, 1)
-				local v = math.floor(min + (max - min) * p)
-				val.Text = tostring(v)
-				tween(fill, {Size = UDim2.new(p, 0, 1, 0)}, {Time = 0.08})
-				tween(handle, {Position = UDim2.new(p, 0, 0.5, 0)}, {Time = 0.08})
-				if callback then callback(v) end
+			
+			local function updateVisual(percent)
+				percent = math.clamp(percent, 0, 1)
+				value = math.floor(min + (max - min) * percent)
+				valueLabel.Text = tostring(value)
+				
+				tween(fill, {Size = UDim2.new(percent, 0, 1, 0)}, 0.1)
+				tween(handle, {Position = UDim2.new(percent, 0, 0.5, 0)}, 0.1)
+				
+				if callback then task.spawn(callback, value) end
 			end
-			sbg.InputBegan:Connect(function(i)
-				if i.UserInputType == Enum.UserInputType.MouseButton1 then
+			
+			track.InputBegan:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = true
-					upd(i)
+					local relativeX = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
+					updateVisual(relativeX)
 				end
 			end)
-			handle.InputBegan:Connect(function(i)
-				if i.UserInputType == Enum.UserInputType.MouseButton1 then
-					dragging = true
-				end
-			end)
-			UIS.InputEnded:Connect(function(i)
-				if i.UserInputType == Enum.UserInputType.MouseButton1 then
+			
+			UIS.InputEnded:Connect(function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = false
 				end
 			end)
-			UIS.InputChanged:Connect(function(i)
-				if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-					upd(i)
+			
+			UIS.InputChanged:Connect(function(input)
+				if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+					local relativeX = (input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X
+					updateVisual(relativeX)
 				end
 			end)
-			return cont
+			
+			return {
+				Container = container,
+				SetValue = function(self, newValue)
+					local percent = (math.clamp(newValue, min, max) - min) / (max - min)
+					updateVisual(percent)
+				end,
+				GetValue = function() return value end
+			}
+		end
+		
+		function Components.createSection(parent, text)
+			local section = Instance.new("Frame")
+			section.Size = UDim2.new(1, -10, 0, 28)
+			section.BackgroundTransparency = 1
+			section.Parent = parent
+			
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.new(1, 0, 1, 0)
+			label.BackgroundTransparency = 1
+			label.Text = "| " .. (text or "SECTION") .. " |"
+			label.TextColor3 = NeonColors.ElectricPurple
+			label.TextXAlignment = Enum.TextXAlignment.Center
+			label.Font = Enum.Font.GothamBold
+			label.TextSize = 12
+			label.Parent = section
+			
+			return section
+		end
+		
+		function Components.createLabel(parent, text)
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.new(1, -10, 0, 24)
+			label.BackgroundTransparency = 1
+			label.Text = text or ""
+			label.TextColor3 = NeonColors.TextMuted
+			label.TextXAlignment = Enum.TextXAlignment.Left
+			label.Font = Enum.Font.Gotham
+			label.TextSize = 11
+			label.TextWrapped = true
+			label.Parent = parent
+			return label
+		end
+		
+		function Components.createDivider(parent)
+			local divider = Instance.new("Frame")
+			divider.Size = UDim2.new(1, -20, 0, 1)
+			divider.Position = UDim2.new(0, 10, 0, 0)
+			divider.BackgroundColor3 = NeonColors.ElectricPurple
+			divider.BackgroundTransparency = 0.5
+			divider.BorderSizePixel = 0
+			divider.Parent = parent
+			return divider
 		end
 	end
 	_G.VertexComponents = Components
 	
 	-- ---------------------------------------------------------------------------
-	-- BUILT-IN TABS (No external dependency)
-	-- ---------------------------------------------------------------------------
-	if not Tabs then
-		Tabs = {}
-		local tabButtons = {}
-		local tabContents = {}
-		local currentTab = nil
-		
-		function Tabs.setupTabBar(bar)
-			local layout = Instance.new("UIListLayout")
-			layout.FillDirection = Enum.FillDirection.Horizontal
-			layout.Padding = UDim.new(0, 4)
-			layout.SortOrder = Enum.SortOrder.LayoutOrder
-			layout.Parent = bar
-			local pad = Instance.new("UIPadding")
-			pad.PaddingLeft = UDim.new(0, 10)
-			pad.PaddingTop = UDim.new(0, 8)
-			pad.Parent = bar
-		end
-		
-		function Tabs.create(bar, name, icon)
-			local btn = Instance.new("TextButton")
-			btn.Size = UDim2.new(0, 90, 0, 30)
-			btn.BackgroundColor3 = Colors.Surface
-			btn.BorderSizePixel = 0
-			btn.AutoButtonColor = false
-			btn.Text = (icon or "") .. " " .. name
-			btn.TextColor3 = Colors.Dim
-			btn.Font = Enum.Font.GothamMedium
-			btn.TextSize = 11
-			btn.Parent = bar
-			local c = Instance.new("UICorner")
-			c.CornerRadius = UDim.new(0, 6)
-			c.Parent = btn
-			local ind = Instance.new("Frame")
-			ind.Size = UDim2.new(0.6, 0, 0, 2)
-			ind.Position = UDim2.new(0.2, 0, 1, -2)
-			ind.BackgroundColor3 = Colors.Accent
-			ind.BackgroundTransparency = 1
-			ind.BorderSizePixel = 0
-			ind.Parent = btn
-			btn._indicator = ind
-			table.insert(tabButtons, btn)
-			return btn
-		end
-		
-		function Tabs.connectTab(btn, content)
-			table.insert(tabContents, {btn = btn, content = content})
-			btn.MouseButton1Click:Connect(function()
-				for _, tc in ipairs(tabContents) do
-					tc.content.Visible = false
-					tc.btn.TextColor3 = Colors.Dim
-					tc.btn.BackgroundColor3 = Colors.Surface
-					if tc.btn._indicator then tc.btn._indicator.BackgroundTransparency = 1 end
-				end
-				content.Visible = true
-				btn.TextColor3 = Color3.new(1, 1, 1)
-				btn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
-				if btn._indicator then btn._indicator.BackgroundTransparency = 0 end
-				currentTab = btn
-			end)
-		end
-		
-		function Tabs.activate(btn, content)
-			for _, tc in ipairs(tabContents) do
-				tc.content.Visible = false
-				tc.btn.TextColor3 = Colors.Dim
-				tc.btn.BackgroundColor3 = Colors.Surface
-				if tc.btn._indicator then tc.btn._indicator.BackgroundTransparency = 1 end
-			end
-			content.Visible = true
-			btn.TextColor3 = Color3.new(1, 1, 1)
-			btn.BackgroundColor3 = Color3.fromRGB(35, 40, 55)
-			if btn._indicator then btn._indicator.BackgroundTransparency = 0 end
-			currentTab = btn
-		end
-	end
-	_G.VertexTabs = Tabs
-	
-	-- ---------------------------------------------------------------------------
-	-- GUI CREATION
+	-- REDESIGNED GUI: VERTICAL FLOATING SIDEBAR WITH NEON COLORS
 	-- ---------------------------------------------------------------------------
 	local gui = Instance.new("ScreenGui")
-	gui.Name = "VertexHub"
+	gui.Name = "VertexHubNeon"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = player:WaitForChild("PlayerGui")
 	
-	local main = Instance.new("Frame")
-	main.Name = "Main"
-	main.Size = UDim2.new(0, 950, 0, 650)
-	main.Position = UDim2.new(0.5, 0, 0.5, 0)
-	main.AnchorPoint = Vector2.new(0.5, 0.5)
-	main.BackgroundColor3 = Colors.Background
-	main.BorderSizePixel = 0
-	main.ClipsDescendants = true
-	main.Visible = false
-	main.Parent = gui
-	local mc = Instance.new("UICorner")
-	mc.CornerRadius = UDim.new(0, 10)
-	mc.Parent = main
-	local ms = Instance.new("UIStroke")
-	ms.Color = Colors.Border
-	ms.Thickness = 2
-	ms.Parent = main
+	-- Main sidebar container (floating on left)
+	local sidebar = Instance.new("Frame")
+	sidebar.Name = "Sidebar"
+	sidebar.Size = UDim2.new(0, 220, 0, 600)
+	sidebar.Position = UDim2.new(0, -240, 0.5, 0)
+	sidebar.AnchorPoint = Vector2.new(0, 0.5)
+	sidebar.BackgroundColor3 = NeonColors.Background
+	sidebar.BackgroundTransparency = 0.1
+	sidebar.BorderSizePixel = 0
+	sidebar.ClipsDescendants = true
+	sidebar.Visible = false
+	sidebar.Parent = gui
 	
-	-- Header
-	local hdr = Instance.new("Frame")
-	hdr.Size = UDim2.new(1, 0, 0, 45)
-	hdr.BackgroundColor3 = Colors.Panel
-	hdr.BorderSizePixel = 0
-	hdr.Parent = main
-	local ttl = Instance.new("TextLabel")
-	ttl.Size = UDim2.new(0, 300, 1, 0)
-	ttl.Position = UDim2.new(0, 15, 0, 0)
-	ttl.BackgroundTransparency = 1
-	ttl.Text = "VERTEX HUB"
-	ttl.TextColor3 = Colors.Text
-	ttl.TextXAlignment = Enum.TextXAlignment.Left
-	ttl.Font = Enum.Font.GothamBold
-	ttl.TextSize = 18
-	ttl.Parent = hdr
-	local acc = Instance.new("Frame")
-	acc.Size = UDim2.new(0, 60, 0, 3)
-	acc.Position = UDim2.new(0, 15, 1, -3)
-	acc.BackgroundColor3 = Colors.Accent
-	acc.BorderSizePixel = 0
-	acc.Parent = hdr
-	local ac = Instance.new("UICorner")
-	ac.CornerRadius = UDim.new(1, 0)
-	ac.Parent = acc
+	-- Animated gradient background
+	local gradientBg = Instance.new("Frame")
+	gradientBg.Size = UDim2.new(1, 0, 1, 0)
+	gradientBg.BackgroundTransparency = 1
+	gradientBg.Parent = sidebar
 	
-	-- Close button
-	local cls = Instance.new("TextButton")
-	cls.Size = UDim2.new(0, 30, 0, 30)
-	cls.Position = UDim2.new(1, -40, 0.5, 0)
-	cls.AnchorPoint = Vector2.new(0, 0.5)
-	cls.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-	cls.Text = "X"
-	cls.TextColor3 = Colors.Text
-	cls.Font = Enum.Font.GothamBold
-	cls.TextSize = 20
-	cls.AutoButtonColor = false
-	cls.Parent = hdr
-	local clc = Instance.new("UICorner")
-	clc.CornerRadius = UDim.new(0, 6)
-	clc.Parent = cls
-	cls.MouseButton1Click:Connect(function()
-		main.Visible = false
-		UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
-		UIS.MouseIconEnabled = PrevMouseState.icon ~= false
+	createAnimatedGradient(gradientBg, {NeonColors.ElectricPurple, NeonColors.BrightCyan, NeonColors.HotPink}, 1)
+	
+	-- Glass effect overlay
+	local glassOverlay = Instance.new("Frame")
+	glassOverlay.Size = UDim2.new(1, 0, 1, 0)
+	glassOverlay.BackgroundColor3 = NeonColors.Glass
+	glassOverlay.BackgroundTransparency = 0.7
+	glassOverlay.BorderSizePixel = 0
+	glassOverlay.Parent = sidebar
+	
+	-- Neon border
+	local neonBorder = Instance.new("UIStroke")
+	neonBorder.Color = NeonColors.BrightCyan
+	neonBorder.Thickness = 3
+	neonBorder.Transparency = 0.3
+	neonBorder.Parent = sidebar
+	
+	-- Corner rounding
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 16)
+	corner.Parent = sidebar
+	
+	-- Header with animated title
+	local header = Instance.new("Frame")
+	header.Size = UDim2.new(1, 0, 0, 70)
+	header.BackgroundTransparency = 1
+	header.Parent = sidebar
+	
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, -20, 0, 40)
+	title.Position = UDim2.new(0, 10, 0, 15)
+	title.BackgroundTransparency = 1
+	title.Text = "VERTEX HUB"
+	title.TextColor3 = NeonColors.Text
+	title.TextScaled = true
+	title.Font = Enum.Font.GothamBlack
+	title.TextSize = 24
+	title.Parent = header
+	
+	-- Animate title color
+	task.spawn(function()
+		local colors = {NeonColors.ElectricPurple, NeonColors.BrightCyan, NeonColors.HotPink, NeonColors.LimeGreen, NeonColors.FieryOrange}
+		local i = 1
+		while true do
+			tween(title, {TextColor3 = colors[i]}, 1)
+			i = i + 1
+			if i > #colors then i = 1 end
+			task.wait(1)
+		end
 	end)
-	cls.MouseEnter:Connect(function() cls.BackgroundColor3 = Color3.fromRGB(180, 50, 50) end)
-	cls.MouseLeave:Connect(function() cls.BackgroundColor3 = Color3.fromRGB(30, 30, 40) end)
 	
-	-- Tab bar
-	local tabBar = Instance.new("Frame")
-	tabBar.Size = UDim2.new(1, 0, 0, 45)
-	tabBar.Position = UDim2.new(0, 0, 0, 45)
-	tabBar.BackgroundColor3 = Colors.Surface
-	tabBar.BorderSizePixel = 0
-	tabBar.Parent = main
-	Tabs.setupTabBar(tabBar)
+	-- Category navigation (vertical icons)
+	local categories = {
+		{Name = "COMBAT", Icon = "⚔️", Color = NeonColors.ElectricPurple},
+		{Name = "MOVEMENT", Icon = "🏃", Color = NeonColors.BrightCyan},
+		{Name = "ESP", Icon = "👁️", Color = NeonColors.HotPink},
+		{Name = "VISUALS", Icon = "🎨", Color = NeonColors.LimeGreen},
+		{Name = "WORLD", Icon = "🌍", Color = NeonColors.FieryOrange},
+		{Name = "PLAYER", Icon = "👤", Color = NeonColors.NeonBlue},
+		{Name = "TROLL", Icon = "😈", Color = NeonColors.VibrantYellow},
+		{Name = "MISC", Icon = "⚙️", Color = NeonColors.TextSoft}
+	}
 	
-	-- Content
-	local cArea = Instance.new("Frame")
-	cArea.Size = UDim2.new(1, 0, 1, -90)
-	cArea.Position = UDim2.new(0, 0, 0, 90)
-	cArea.BackgroundColor3 = Colors.Content
-	cArea.BorderSizePixel = 0
-	cArea.Parent = main
-	local cCont = Instance.new("Frame")
-	cCont.Size = UDim2.new(1, -20, 1, -12)
-	cCont.Position = UDim2.new(0, 10, 0, 6)
-	cCont.BackgroundTransparency = 1
-	cCont.Parent = cArea
+	local categoryButtons = {}
+	local categoryContents = {}
+	local currentCategory = nil
 	
-	local function makeTab(nm)
-		local scr = Instance.new("ScrollingFrame")
-		scr.Name = nm
-		scr.Size = UDim2.new(1, 0, 1, 0)
-		scr.BackgroundColor3 = Colors.Scroll
-		scr.BackgroundTransparency = 0
-		scr.BorderSizePixel = 0
-		scr.ScrollBarThickness = 4
-		scr.ScrollBarImageColor3 = Colors.Accent
-		scr.CanvasSize = UDim2.new(0, 0, 0, 0)
-		scr.AutomaticCanvasSize = Enum.AutomaticSize.Y
-		scr.Visible = false
-		scr.Parent = cCont
-		local lay = Instance.new("UIListLayout")
-		lay.Padding = UDim.new(0, 6)
-		lay.SortOrder = Enum.SortOrder.LayoutOrder
-		lay.Parent = scr
-		local pad = Instance.new("UIPadding")
-		pad.PaddingTop = UDim.new(0, 4)
-		pad.PaddingBottom = UDim.new(0, 8)
-		pad.PaddingLeft = UDim.new(0, 4)
-		pad.PaddingRight = UDim.new(0, 8)
-		pad.Parent = scr
-		return scr
+	-- Category buttons container
+	local categoryContainer = Instance.new("ScrollingFrame")
+	categoryContainer.Size = UDim2.new(1, 0, 0, 380)
+	categoryContainer.Position = UDim2.new(0, 0, 0, 70)
+	categoryContainer.BackgroundTransparency = 1
+	categoryContainer.ScrollBarThickness = 0
+	categoryContainer.CanvasSize = UDim2.new(0, 0, 0, #categories * 50)
+	categoryContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	categoryContainer.Parent = sidebar
+	
+	local categoryLayout = Instance.new("UIListLayout")
+	categoryLayout.Padding = UDim.new(0, 5)
+	categoryLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	categoryLayout.Parent = categoryContainer
+	
+	local categoryPadding = Instance.new("UIPadding")
+	categoryPadding.PaddingTop = UDim.new(0, 10)
+	categoryPadding.PaddingLeft = UDim.new(0, 10)
+	categoryPadding.PaddingRight = UDim.new(0, 10)
+	categoryPadding.Parent = categoryContainer
+	
+	-- Create category buttons
+	for i, category in ipairs(categories) do
+		local btn = Instance.new("TextButton")
+		btn.Size = UDim2.new(1, -20, 0, 45)
+		btn.BackgroundColor3 = NeonColors.Glass
+		btn.BackgroundTransparency = 0.4
+		btn.BorderSizePixel = 0
+		btn.AutoButtonColor = false
+		btn.Text = ""
+		btn.LayoutOrder = i
+		btn.Parent = categoryContainer
+		
+		local btnCorner = Instance.new("UICorner")
+		btnCorner.CornerRadius = UDim.new(0, 10)
+		btnCorner.Parent = btn
+		
+		local btnGlow = Instance.new("UIStroke")
+		btnGlow.Color = category.Color
+		btnGlow.Thickness = 2
+		btnGlow.Transparency = 0.7
+		btnGlow.Parent = btn
+		
+		local icon = Instance.new("TextLabel")
+		icon.Size = UDim2.new(0, 30, 0, 30)
+		icon.Position = UDim2.new(0, 10, 0.5, 0)
+		icon.AnchorPoint = Vector2.new(0, 0.5)
+		icon.BackgroundTransparency = 1
+		icon.Text = category.Icon
+		icon.TextColor3 = category.Color
+		icon.Font = Enum.Font.GothamBold
+		icon.TextSize = 18
+		icon.Parent = btn
+		
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, -50, 1, 0)
+		label.Position = UDim2.new(0, 45, 0, 0)
+		label.BackgroundTransparency = 1
+		label.Text = category.Name
+		label.TextColor3 = NeonColors.TextSoft
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.Font = Enum.Font.GothamBold
+		label.TextSize = 12
+		label.Parent = btn
+		
+		local indicator = Instance.new("Frame")
+		indicator.Size = UDim2.new(0, 4, 0.7, 0)
+		indicator.Position = UDim2.new(1, -4, 0.15, 0)
+		indicator.BackgroundColor3 = category.Color
+		indicator.BackgroundTransparency = 0.8
+		indicator.BorderSizePixel = 0
+		indicator.Visible = false
+		indicator.Parent = btn
+		
+		btn.Indicator = indicator
+		categoryButtons[category.Name] = {Button = btn, Color = category.Color}
+		
+		btn.MouseEnter:Connect(function()
+			if currentCategory ~= category.Name then
+				tween(btn, {BackgroundTransparency = 0.2}, 0.2)
+				tween(label, {TextColor3 = NeonColors.Text}, 0.2)
+			end
+		end)
+		
+		btn.MouseLeave:Connect(function()
+			if currentCategory ~= category.Name then
+				tween(btn, {BackgroundTransparency = 0.4}, 0.2)
+				tween(label, {TextColor3 = NeonColors.TextSoft}, 0.2)
+			end
+		end)
 	end
 	
-	local combatC = makeTab("Combat")
-	local moveC = makeTab("Movement")
-	local espC = makeTab("ESP")
-	local visC = makeTab("Visuals")
-	local worldC = makeTab("World")
-	local playerC = makeTab("Player")
-	local trollC = makeTab("Troll")
-	local miscC = makeTab("Misc")
+	-- Content area (right side)
+	local contentArea = Instance.new("Frame")
+	contentArea.Name = "ContentArea"
+	contentArea.Size = UDim2.new(0, 700, 0, 600)
+	contentArea.Position = UDim2.new(0, 240, 0.5, 0)
+	contentArea.AnchorPoint = Vector2.new(0, 0.5)
+	contentArea.BackgroundColor3 = NeonColors.Background
+	contentArea.BackgroundTransparency = 0.05
+	contentArea.BorderSizePixel = 0
+	contentArea.Visible = false
+	contentArea.Parent = gui
 	
-	local combatT = Tabs.create(tabBar, "Combat", "*")
-	local moveT = Tabs.create(tabBar, "Move", ">")
-	local espT = Tabs.create(tabBar, "ESP", "o")
-	local visT = Tabs.create(tabBar, "Visual", "#")
-	local worldT = Tabs.create(tabBar, "World", "@")
-	local playerT = Tabs.create(tabBar, "Player", "U")
-	local trollT = Tabs.create(tabBar, "Troll", "T")
-	local miscT = Tabs.create(tabBar, "Misc", "S")
+	local contentCorner = Instance.new("UICorner")
+	contentCorner.CornerRadius = UDim.new(0, 16)
+	contentCorner.Parent = contentArea
 	
-	Tabs.connectTab(combatT, combatC)
-	Tabs.connectTab(moveT, moveC)
-	Tabs.connectTab(espT, espC)
-	Tabs.connectTab(visT, visC)
-	Tabs.connectTab(worldT, worldC)
-	Tabs.connectTab(playerT, playerC)
-	Tabs.connectTab(trollT, trollC)
-	Tabs.connectTab(miscT, miscC)
+	local contentGlow = Instance.new("UIStroke")
+	contentGlow.Color = NeonColors.BrightCyan
+	contentGlow.Thickness = 3
+	contentGlow.Transparency = 0.3
+	contentGlow.Parent = contentArea
 	
-	-- ---------------------------------------------------------------------------
-	-- COMBAT TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(combatC, "Aim Assist")
-	Components.createToggle(combatC, "Aim Assist", function(v) State.Combat.AimAssist = v end)
-	Components.createSlider(combatC, "Smoothness", 1, 100, 15, function(v) State.Combat.AimSmoothness = v / 200 end)
-	Components.createSlider(combatC, "FOV", 50, 600, 150, function(v) State.Combat.AimFOV = v end)
-	Components.createToggle(combatC, "Show FOV Circle", function(v) State.Combat.ShowFOVCircle = v end)
-	Components.createToggle(combatC, "Prediction", function(v) State.Combat.AimPrediction = v end)
-	Components.createSlider(combatC, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Silent Aim")
-	Components.createToggle(combatC, "Silent Aim", function(v) State.Combat.SilentAim = v end)
-	Components.createSlider(combatC, "Hit Chance", 0, 100, 100, function(v) State.Combat.SilentAimHitChance = v end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Kill Aura")
-	Components.createToggle(combatC, "Kill Aura", function(v) State.Combat.KillAura = v end)
-	Components.createSlider(combatC, "Range", 5, 50, 15, function(v) State.Combat.KillAuraRange = v end)
-	Components.createSlider(combatC, "CPS", 1, 20, 10, function(v) State.Combat.KillAuraCPS = v end)
-	Components.createToggle(combatC, "Target Players", function(v) State.Combat.KillAuraPlayers = v end)
-	Components.createToggle(combatC, "Target NPCs", function(v) State.Combat.KillAuraNPCs = v end)
-	Components.createToggle(combatC, "Wall Check", function(v) State.Combat.KillAuraWallCheck = v end)
-	Components.createToggle(combatC, "Legit Mode", function(v) State.Combat.KillAuraLegit = v end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Reach")
-	Components.createToggle(combatC, "Reach", function(v) State.Combat.Reach = v end)
-	Components.createSlider(combatC, "Reach Distance", 10, 30, 18, function(v) State.Combat.ReachDistance = v end)
-	Components.createToggle(combatC, "Reach Legit", function(v) State.Combat.ReachLegit = v end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Auto Features")
-	Components.createToggle(combatC, "Triggerbot", function(v) State.Combat.Triggerbot = v end)
-	Components.createSlider(combatC, "Trigger Delay", 1, 50, 10, function(v) State.Combat.TriggerbotDelay = v / 100 end)
-	Components.createToggle(combatC, "Auto Parry", function(v) State.Combat.AutoParry = v end)
-	Components.createDivider(combatC)
-	Components.createSection(combatC, "Exploits")
-	Components.createToggle(combatC, "Hitbox Expander", function(v) State.Combat.HitboxExpander = v end)
-	Components.createSlider(combatC, "Hitbox Size", 1, 20, 5, function(v) State.Combat.HitboxSize = v end)
-	Components.createToggle(combatC, "Backtrack", function(v) State.Combat.Backtrack = v end)
-	Components.createSlider(combatC, "Backtrack Time", 1, 50, 20, function(v) State.Combat.BacktrackTime = v / 100 end)
-	Components.createToggle(combatC, "Target Strafe", function(v) State.Combat.TargetStrafe = v end)
-	Components.createSlider(combatC, "Strafe Speed", 1, 20, 5, function(v) State.Combat.StrafeSpeed = v end)
-	Components.createSlider(combatC, "Strafe Radius", 5, 30, 10, function(v) State.Combat.StrafeRadius = v end)
+	-- Content header
+	local contentHeader = Instance.new("Frame")
+	contentHeader.Size = UDim2.new(1, 0, 0, 60)
+	contentHeader.BackgroundTransparency = 1
+	contentHeader.Parent = contentArea
 	
-	-- ---------------------------------------------------------------------------
-	-- MOVEMENT TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(moveC, "Flight")
-	Components.createToggle(moveC, "Fly", function(v) State.Movement.Fly = v end)
-	Components.createSlider(moveC, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
-	Components.createToggle(moveC, "Fly Legit", function(v) State.Movement.FlyLegit = v end)
-	Components.createToggle(moveC, "Noclip", function(v) State.Movement.Noclip = v end)
-	Components.createDivider(moveC)
-	Components.createSection(moveC, "Speed & Jump")
-	Components.createToggle(moveC, "Speed", function(v)
-		State.Movement.Speed = v
-		if not v then
-			local h = getHumanoid()
-			if h then
-				h.WalkSpeed = 16
+	local contentTitle = Instance.new("TextLabel")
+	contentTitle.Size = UDim2.new(1, -20, 1, 0)
+	contentTitle.Position = UDim2.new(0, 20, 0, 0)
+	contentTitle.BackgroundTransparency = 1
+	contentTitle.Text = "SELECT CATEGORY"
+	contentTitle.TextColor3 = NeonColors.Text
+	contentTitle.TextXAlignment = Enum.TextXAlignment.Left
+	contentTitle.Font = Enum.Font.GothamBlack
+	contentTitle.TextSize = 22
+	contentTitle.Parent = contentHeader
+	
+	-- Close content button
+	local closeContentBtn = Instance.new("TextButton")
+	closeContentBtn.Size = UDim2.new(0, 40, 0, 40)
+	closeContentBtn.Position = UDim2.new(1, -50, 0.5, 0)
+	closeContentBtn.AnchorPoint = Vector2.new(0, 0.5)
+	closeContentBtn.BackgroundColor3 = NeonColors.Glass
+	closeContentBtn.BackgroundTransparency = 0.3
+	closeContentBtn.BorderSizePixel = 0
+	closeContentBtn.AutoButtonColor = false
+	closeContentBtn.Text = "✕"
+	closeContentBtn.TextColor3 = NeonColors.Text
+	closeContentBtn.Font = Enum.Font.GothamBold
+	closeContentBtn.TextSize = 20
+	closeContentBtn.Parent = contentHeader
+	
+	local closeCorner = Instance.new("UICorner")
+	closeCorner.CornerRadius = UDim.new(0, 8)
+	closeCorner.Parent = closeContentBtn
+	
+	closeContentBtn.MouseButton1Click:Connect(function()
+		contentArea.Visible = false
+	end)
+	
+	-- Content scroll frame
+	local contentScroll = Instance.new("ScrollingFrame")
+	contentScroll.Size = UDim2.new(1, -20, 1, -80)
+	contentScroll.Position = UDim2.new(0, 10, 0, 70)
+	contentScroll.BackgroundTransparency = 1
+	contentScroll.ScrollBarThickness = 6
+	contentScroll.ScrollBarImageColor3 = NeonColors.BrightCyan
+	contentScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	contentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	contentScroll.Parent = contentArea
+	
+	local contentLayout = Instance.new("UIListLayout")
+	contentLayout.Padding = UDim.new(0, 10)
+	contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	contentLayout.Parent = contentScroll
+	
+	local contentPadding = Instance.new("UIPadding")
+	contentPadding.PaddingTop = UDim.new(0, 10)
+	contentPadding.PaddingLeft = UDim.new(0, 10)
+	contentPadding.PaddingRight = UDim.new(0, 10)
+	contentPadding.Parent = contentScroll
+	
+	-- Function to create category content
+	local function createCategoryContent(categoryName, settings)
+		local container = Instance.new("Frame")
+		container.Name = categoryName
+		container.Size = UDim2.new(1, 0, 0, 0)
+		container.BackgroundTransparency = 1
+		container.AutomaticSize = Enum.AutomaticSize.Y
+		container.Visible = false
+		container.Parent = contentScroll
+		
+		categoryContents[categoryName] = container
+		return container
+	end
+	
+	-- Create all category contents
+	local combatContent = createCategoryContent("COMBAT")
+	local movementContent = createCategoryContent("MOVEMENT")
+	local espContent = createCategoryContent("ESP")
+	local visualsContent = createCategoryContent("VISUALS")
+	local worldContent = createCategoryContent("WORLD")
+	local playerContent = createCategoryContent("PLAYER")
+	local trollContent = createCategoryContent("TROLL")
+	local miscContent = createCategoryContent("MISC")
+	
+	-- Function to switch category
+	local function switchCategory(categoryName)
+		if currentCategory == categoryName then return end
+		
+		-- Hide all contents
+		for name, content in pairs(categoryContents) do
+			content.Visible = false
+		end
+		
+		-- Reset all buttons
+		for name, data in pairs(categoryButtons) do
+			local btn = data.Button
+			tween(btn, {BackgroundTransparency = 0.4}, 0.2)
+			tween(btn:FindFirstChildOfClass("TextLabel"), {TextColor3 = NeonColors.TextSoft}, 0.2)
+			if btn.Indicator then
+				btn.Indicator.Visible = false
 			end
 		end
-	end)
-	Components.createSlider(moveC, "Speed Value", 16, 500, 16, function(v) State.Movement.SpeedValue = v end)
-	Components.createToggle(moveC, "Speed Legit", function(v) State.Movement.SpeedLegit = v end)
-	Components.createToggle(moveC, "Jump Power", function(v)
-		State.Movement.JumpPower = v
-		if not v then
-			local h = getHumanoid()
-			if h then
-				h.JumpPower = 50
-			end
-		end
-	end)
-	Components.createSlider(moveC, "Jump Value", 50, 500, 50, function(v) State.Movement.JumpValue = v end)
-	Components.createToggle(moveC, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
-	Components.createDivider(moveC)
-	Components.createSection(moveC, "Special Movement")
-	Components.createToggle(moveC, "Bunny Hop", function(v) State.Movement.BunnyHop = v end)
-	Components.createToggle(moveC, "Long Jump (Space)", function(v) State.Movement.LongJump = v end)
-	Components.createSlider(moveC, "Long Jump Force", 50, 400, 100, function(v) State.Movement.LongJumpForce = v end)
-	Components.createToggle(moveC, "Speed Glide", function(v) State.Movement.SpeedGlide = v end)
-	Components.createSlider(moveC, "Glide Speed", 1, 50, 10, function(v) State.Movement.GlideSpeed = v end)
-	Components.createToggle(moveC, "Dash (Q)", function(v) State.Movement.Dash = v end)
-	Components.createSlider(moveC, "Dash Force", 50, 300, 100, function(v) State.Movement.DashForce = v end)
-	Components.createSlider(moveC, "Dash Cooldown", 1, 50, 10, function(v) State.Movement.DashCooldown = v / 10 end)
-	Components.createToggle(moveC, "Air Control", function(v) State.Movement.AirControl = v end)
-	Components.createDivider(moveC)
-	Components.createSection(moveC, "Teleport & Safety")
-	Components.createToggle(moveC, "Click TP", function(v) State.Movement.ClickTP = v end)
-	Components.createToggle(moveC, "Anti Void", function(v) State.Movement.AntiVoid = v end)
-	Components.createSlider(moveC, "Void Height", -500, 0, -100, function(v) State.Movement.VoidHeight = v end)
-	Components.createToggle(moveC, "Anchor", function(v) State.Movement.Anchor = v end)
-	Components.createDivider(moveC)
-	Components.createSection(moveC, "Exploits")
-	Components.createToggle(moveC, "Spin Bot", function(v) State.Movement.SpinBot = v end)
-	Components.createSlider(moveC, "Spin Speed", 1, 50, 20, function(v) State.Movement.SpinSpeed = v end)
-	Components.createToggle(moveC, "Fake Lag", function(v) State.Movement.FakeLag = v end)
-	Components.createSlider(moveC, "Lag Intensity", 1, 10, 5, function(v) State.Movement.LagIntensity = v end)
-	
-	-- ---------------------------------------------------------------------------
-	-- ESP TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(espC, "Player ESP")
-	Components.createToggle(espC, "Name ESP", function(v) State.ESP.NameESP = v end)
-	Components.createToggle(espC, "Box ESP", function(v) State.ESP.BoxESP = v end)
-	Components.createToggle(espC, "Health ESP", function(v) State.ESP.HealthESP = v end)
-	Components.createToggle(espC, "Distance ESP", function(v) State.ESP.DistanceESP = v end)
-	Components.createToggle(espC, "Tracers", function(v) State.ESP.Tracers = v end)
-	Components.createToggle(espC, "Skeleton ESP", function(v) State.ESP.SkeletonESP = v end)
-	Components.createToggle(espC, "Offscreen Arrows", function(v) State.ESP.OffscreenArrows = v end)
-	Components.createDivider(espC)
-	Components.createSection(espC, "World ESP")
-	Components.createToggle(espC, "NPC ESP", function(v) State.ESP.NPCESP = v end)
-	Components.createToggle(espC, "Item ESP", function(v) State.ESP.ItemESP = v end)
-	Components.createDivider(espC)
-	Components.createSection(espC, "Highlights")
-	Components.createToggle(espC, "Chams", function(v) State.ESP.Chams = v updateChams() end)
-	Components.createDivider(espC)
-	Components.createSection(espC, "Settings")
-	Components.createSlider(espC, "Max Distance", 100, 2000, 1000, function(v) State.ESP.MaxDistance = v end)
-	Components.createToggle(espC, "Team Check", function(v) State.ESP.TeamCheck = v end)
-	
-	-- ---------------------------------------------------------------------------
-	-- VISUALS TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(visC, "Lighting")
-	Components.createToggle(visC, "Fullbright", function(v)
-		State.Visuals.Fullbright = v
-		if v then
-			Lighting.Ambient = Color3.new(1, 1, 1)
-			Lighting.Brightness = 2
-			Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
-		else
-			Lighting.Ambient = OriginalLighting.Ambient
-			Lighting.Brightness = OriginalLighting.Brightness
-			Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
-		end
-	end)
-	Components.createToggle(visC, "No Fog", function(v)
-		State.Visuals.NoFog = v
-		if v then
-			Lighting.FogEnd = 1e10
-			Lighting.FogStart = 1e10
-		else
-			Lighting.FogEnd = OriginalLighting.FogEnd
-			Lighting.FogStart = OriginalLighting.FogStart
-		end
-	end)
-	Components.createToggle(visC, "No Shadows", function(v) State.Visuals.NoShadows = v Lighting.GlobalShadows = not v end)
-	Components.createDivider(visC)
-	Components.createSection(visC, "Crosshair")
-	Components.createToggle(visC, "Custom Crosshair", function(v) State.Visuals.Crosshair = v end)
-	Components.createSlider(visC, "Crosshair Size", 5, 50, 10, function(v) State.Visuals.CrosshairSize = v end)
-	Components.createSlider(visC, "Crosshair Gap", 0, 20, 5, function(v) State.Visuals.CrosshairGap = v end)
-	Components.createDivider(visC)
-	Components.createSection(visC, "Camera")
-	Components.createSlider(visC, "Camera FOV", 30, 120, 70, function(v) State.Visuals.CameraFOV = v camera.FieldOfView = v end)
-	Components.createToggle(visC, "Third Person", function(v) State.Visuals.ThirdPerson = v player.CameraMaxZoomDistance = v and 100 or 128 player.CameraMinZoomDistance = v and 15 or 0.5 end)
-	Components.createToggle(visC, "Freecam", function(v) State.Visuals.Freecam = v if v then FreecamPos = camera.CFrame.Position UIS.MouseBehavior = Enum.MouseBehavior.LockCenter else camera.CameraType = Enum.CameraType.Custom UIS.MouseBehavior = Enum.MouseBehavior.Default end end)
-	Components.createSlider(visC, "Freecam Speed", 1, 20, 1, function(v) State.Visuals.FreecamSpeed = v end)
-	Components.createDivider(visC)
-	Components.createSection(visC, "World Visuals")
-	Components.createToggle(visC, "X-Ray", function(v) State.Visuals.XRay = v end)
-	Components.createSlider(visC, "X-Ray Transparency", 0, 100, 50, function(v) State.Visuals.XRayTransparency = v / 100 end)
-	
-	-- ---------------------------------------------------------------------------
-	-- WORLD TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(worldC, "Environment")
-	Components.createSlider(worldC, "Time of Day", 0, 24, 14, function(v) State.World.TimeOfDay = v Lighting.ClockTime = v end)
-	Components.createSlider(worldC, "Gravity", 0, 500, 196, function(v) State.World.Gravity = v workspace.Gravity = v end)
-	Components.createDivider(worldC)
-	Components.createSection(worldC, "Terrain")
-	Components.createToggle(worldC, "Remove Grass", function(v)
-		State.World.RemoveGrass = v
-		local t = workspace:FindFirstChildOfClass("Terrain")
-		if t then
-			t.Decoration = not v
-		end
-		for _, o in ipairs(workspace:GetDescendants()) do
-			if o:IsA("BasePart") and (o.Name:lower():find("grass") or o.Name:lower():find("foliage")) then
-				o.Transparency = v and 1 or 0
-			end
-		end
-	end)
-	Components.createDivider(worldC)
-	Components.createSection(worldC, "Tools")
-	Components.createToggle(worldC, "Delete Mode (Click)", function(v) State.World.DeleteMode = v end)
-	
-	-- ---------------------------------------------------------------------------
-	-- PLAYER TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(playerC, "Character")
-	Components.createToggle(playerC, "God Mode", function(v) State.Player.GodMode = v end)
-	Components.createToggle(playerC, "No Ragdoll", function(v) State.Player.NoRagdoll = v end)
-	Components.createToggle(playerC, "Auto Respawn", function(v) State.Player.AutoRespawn = v end)
-	Components.createSlider(playerC, "Character Scale", 50, 200, 100, function(v) State.Player.CharScale = v / 100 end)
-	Components.createDivider(playerC)
-	Components.createSection(playerC, "Invisibility (Hitbox-Only)")
-	Components.createLabel(playerC, "Model moves away, hitbox stays. NO transparency.")
-	Components.createToggle(playerC, "Invisibility", function(v)
-		State.Player.Invisibility = v
-		if v then
-			InvisSystem:Enable()
-		else
-			InvisSystem:Disable()
-		end
-	end)
-	Components.createSlider(playerC, "Invis Offset", 50, 500, 100, function(v) State.Player.InvisOffset = v end)
-	Components.createDivider(playerC)
-	Components.createSection(playerC, "Weapon")
-	Components.createToggle(playerC, "No Recoil", function(v) State.Player.NoRecoil = v end)
-	Components.createToggle(playerC, "No Spread", function(v) State.Player.NoSpread = v end)
-	Components.createToggle(playerC, "Infinite Stamina", function(v) State.Player.InfiniteStamina = v end)
-	
-	-- ---------------------------------------------------------------------------
-	-- TROLL TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(trollC, "Follow / Orbit")
-	Components.createToggle(trollC, "Annoy Player", function(v) State.Troll.AnnoyPlayer = v end)
-	Components.createToggle(trollC, "Orbit Player", function(v) State.Troll.OrbitPlayer = v end)
-	Components.createSlider(trollC, "Orbit Radius", 5, 30, 10, function(v) State.Troll.OrbitRadius = v end)
-	Components.createSlider(trollC, "Orbit Speed", 1, 10, 2, function(v) State.Troll.OrbitSpeed = v end)
-	Components.createDivider(trollC)
-	Components.createSection(trollC, "Character Troll")
-	Components.createToggle(trollC, "Fling", function(v) State.Troll.Fling = v end)
-	Components.createSlider(trollC, "Fling Power", 100, 1000, 500, function(v) State.Troll.FlingPower = v end)
-	Components.createToggle(trollC, "Headless", function(v) State.Troll.Headless = v end)
-	Components.createDivider(trollC)
-	Components.createSection(trollC, "Info")
-	Components.createLabel(trollC, "Type /target [name] in chat to set target")
-	
-	-- ---------------------------------------------------------------------------
-	-- MISC TAB
-	-- ---------------------------------------------------------------------------
-	Components.createSection(miscC, "HUD Elements")
-	Components.createToggle(miscC, "Watermark", function(v) State.Misc.Watermark = v end)
-	Components.createToggle(miscC, "FPS Counter", function(v) State.Misc.FPSCounter = v end)
-	Components.createToggle(miscC, "Ping Display", function(v) State.Misc.PingDisplay = v end)
-	Components.createToggle(miscC, "Player Count", function(v) State.Misc.PlayerCount = v end)
-	Components.createToggle(miscC, "Velocity Display", function(v) State.Misc.VelocityDisplay = v end)
-	Components.createToggle(miscC, "Target Info", function(v) State.Misc.TargetInfo = v end)
-	Components.createToggle(miscC, "Keybinds Display", function(v) State.Misc.KeybindsDisplay = v end)
-	Components.createDivider(miscC)
-	Components.createSection(miscC, "Utility")
-	Components.createToggle(miscC, "Anti AFK", function(v) State.Misc.AntiAFK = v end)
-	Components.createToggle(miscC, "Chat Spam", function(v) State.Misc.ChatSpam = v end)
-	Components.createSlider(miscC, "Spam Delay", 1, 10, 2, function(v) State.Misc.SpamDelay = v end)
-	Components.createDivider(miscC)
-	Components.createSection(miscC, "Server")
-	Components.createToggle(miscC, "Server Hop", function(v)
-		if v then
-			pcall(function()
-				local s = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-				for _, srv in ipairs(s.data) do
-					if srv.id ~= game.JobId then
-						TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id)
-						break
-					end
+		
+		-- Show selected category
+		if categoryContents[categoryName] then
+			categoryContents[categoryName].Visible = true
+			contentTitle.Text = categoryName
+			
+			-- Highlight selected button
+			local selectedData = categoryButtons[categoryName]
+			if selectedData then
+				local btn = selectedData.Button
+				tween(btn, {BackgroundTransparency = 0.1}, 0.2)
+				tween(btn:FindFirstChildOfClass("TextLabel"), {TextColor3 = selectedData.Color}, 0.2)
+				if btn.Indicator then
+					btn.Indicator.Visible = true
 				end
+			end
+			
+			-- Animate title color
+			tween(contentTitle, {TextColor3 = selectedData.Color}, 0.3)
+			contentArea.Visible = true
+			currentCategory = categoryName
+		end
+	end
+	
+	-- Connect category buttons
+	for categoryName, data in pairs(categoryButtons) do
+		data.Button.MouseButton1Click:Connect(function()
+			switchCategory(categoryName)
+		end)
+	end
+	
+	-- Initialize with first category
+	switchCategory("COMBAT")
+	
+	-- Settings button at bottom
+	local settingsBtn = Instance.new("TextButton")
+	settingsBtn.Size = UDim2.new(1, -20, 0, 45)
+	settingsBtn.Position = UDim2.new(0, 10, 1, -60)
+	settingsBtn.BackgroundColor3 = NeonColors.Glass
+	settingsBtn.BackgroundTransparency = 0.3
+	settingsBtn.BorderSizePixel = 0
+	settingsBtn.AutoButtonColor = false
+	settingsBtn.Text = "⚙️ SETTINGS"
+	settingsBtn.TextColor3 = NeonColors.TextSoft
+	settingsBtn.Font = Enum.Font.GothamBold
+	settingsBtn.TextSize = 12
+	settingsBtn.Parent = sidebar
+	
+	local settingsCorner = Instance.new("UICorner")
+	settingsCorner.CornerRadius = UDim.new(0, 10)
+	settingsCorner.Parent = settingsBtn
+	
+	local settingsGlow = Instance.new("UIStroke")
+	settingsGlow.Color = NeonColors.NeonBlue
+	settingsGlow.Thickness = 2
+	settingsGlow.Transparency = 0.5
+	settingsGlow.Parent = settingsBtn
+	
+	settingsBtn.MouseEnter:Connect(function()
+		tween(settingsBtn, {BackgroundTransparency = 0.1}, 0.2)
+		tween(settingsBtn, {TextColor3 = NeonColors.Text}, 0.2)
+	end)
+	
+	settingsBtn.MouseLeave:Connect(function()
+		tween(settingsBtn, {BackgroundTransparency = 0.3}, 0.2)
+		tween(settingsBtn, {TextColor3 = NeonColors.TextSoft}, 0.2)
+	end)
+	
+	settingsBtn.MouseButton1Click:Connect(function()
+		switchCategory("MISC")
+	end)
+	
+	-- Save/Load buttons
+	local saveLoadContainer = Instance.new("Frame")
+	saveLoadContainer.Size = UDim2.new(1, -20, 0, 40)
+	saveLoadContainer.Position = UDim2.new(0, 10, 1, -110)
+	saveLoadContainer.BackgroundTransparency = 1
+	saveLoadContainer.Parent = sidebar
+	
+	local saveBtn = Instance.new("TextButton")
+	saveBtn.Size = UDim2.new(0.48, 0, 1, 0)
+	saveBtn.BackgroundColor3 = NeonColors.LimeGreen
+	saveBtn.BackgroundTransparency = 0.3
+	saveBtn.BorderSizePixel = 0
+	saveBtn.AutoButtonColor = false
+	saveBtn.Text = "💾 SAVE"
+	saveBtn.TextColor3 = NeonColors.Text
+	saveBtn.Font = Enum.Font.GothamBold
+	saveBtn.TextSize = 11
+	saveBtn.Parent = saveLoadContainer
+	
+	local saveCorner = Instance.new("UICorner")
+	saveCorner.CornerRadius = UDim.new(0, 8)
+	saveCorner.Parent = saveBtn
+	
+	saveBtn.MouseButton1Click:Connect(function()
+		saveStateToConfig()
+		tween(saveBtn, {BackgroundColor3 = NeonColors.Success}, 0.1)
+		task.wait(0.1)
+		tween(saveBtn, {BackgroundColor3 = NeonColors.LimeGreen}, 0.3)
+	end)
+	
+	local loadBtn = Instance.new("TextButton")
+	loadBtn.Size = UDim2.new(0.48, 0, 1, 0)
+	loadBtn.Position = UDim2.new(1, -0.48, 0, 0)
+	loadBtn.BackgroundColor3 = NeonColors.NeonBlue
+	loadBtn.BackgroundTransparency = 0.3
+	loadBtn.BorderSizePixel = 0
+	loadBtn.AutoButtonColor = false
+	loadBtn.Text = "📂 LOAD"
+	loadBtn.TextColor3 = NeonColors.Text
+	loadBtn.Font = Enum.Font.GothamBold
+	loadBtn.TextSize = 11
+	loadBtn.Parent = saveLoadContainer
+	
+	local loadCorner = Instance.new("UICorner")
+	loadCorner.CornerRadius = UDim.new(0, 8)
+	loadCorner.Parent = loadBtn
+	
+	loadBtn.MouseButton1Click:Connect(function()
+		loadStateFromConfig()
+		tween(loadBtn, {BackgroundColor3 = NeonColors.Accent1}, 0.1)
+		task.wait(0.1)
+		tween(loadBtn, {BackgroundColor3 = NeonColors.NeonBlue}, 0.3)
+	end)
+	
+	-- ---------------------------------------------------------------------------
+	-- POPULATE CATEGORIES WITH CONFIG-INTEGRATED CONTROLS
+	-- ---------------------------------------------------------------------------
+	
+	-- COMBAT CATEGORY
+	do
+		local content = combatContent
+		Components.createSection(content, "AIM ASSIST")
+		Components.createToggle(content, "Aim Assist", function(v)
+			State.Combat.AimAssist = v
+			saveStateToConfig()
+		end, State.Combat.AimAssist)
+		
+		Components.createSlider(content, "Smoothness", 1, 100, State.Combat.AimSmoothness * 200, function(v)
+			State.Combat.AimSmoothness = v / 200
+			saveStateToConfig()
+		end)
+		
+		Components.createSlider(content, "FOV", 50, 600, State.Combat.AimFOV, function(v)
+			State.Combat.AimFOV = v
+			saveStateToConfig()
+		end)
+		
+		Components.createToggle(content, "Show FOV Circle", function(v)
+			State.Combat.ShowFOVCircle = v
+			saveStateToConfig()
+		end, State.Combat.ShowFOVCircle)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "SILENT AIM")
+		Components.createToggle(content, "Silent Aim", function(v)
+			State.Combat.SilentAim = v
+			saveStateToConfig()
+		end, State.Combat.SilentAim)
+		
+		Components.createSlider(content, "Hit Chance", 0, 100, State.Combat.SilentAimHitChance, function(v)
+			State.Combat.SilentAimHitChance = v
+			saveStateToConfig()
+		end)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "KILL AURA")
+		Components.createToggle(content, "Kill Aura", function(v)
+			State.Combat.KillAura = v
+			saveStateToConfig()
+		end, State.Combat.KillAura)
+		
+		Components.createSlider(content, "Range", 5, 50, State.Combat.KillAuraRange, function(v)
+			State.Combat.KillAuraRange = v
+			saveStateToConfig()
+		end)
+		
+		Components.createSlider(content, "CPS", 1, 20, State.Combat.KillAuraCPS, function(v)
+			State.Combat.KillAuraCPS = v
+			saveStateToConfig()
+		end)
+		
+		Components.createToggle(content, "Target Players", function(v)
+			State.Combat.KillAuraPlayers = v
+			saveStateToConfig()
+		end, State.Combat.KillAuraPlayers)
+		
+		Components.createToggle(content, "Target NPCs", function(v)
+			State.Combat.KillAuraNPCs = v
+			saveStateToConfig()
+		end, State.Combat.KillAuraNPCs)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "AUTO FEATURES")
+		Components.createToggle(content, "Triggerbot", function(v)
+			State.Combat.Triggerbot = v
+			saveStateToConfig()
+		end, State.Combat.Triggerbot)
+		
+		Components.createToggle(content, "Auto Parry", function(v)
+			State.Combat.AutoParry = v
+			saveStateToConfig()
+		end, State.Combat.AutoParry)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "EXPLOITS")
+		Components.createToggle(content, "Hitbox Expander", function(v)
+			State.Combat.HitboxExpander = v
+			saveStateToConfig()
+		end, State.Combat.HitboxExpander)
+		
+		Components.createSlider(content, "Hitbox Size", 1, 20, State.Combat.HitboxSize, function(v)
+			State.Combat.HitboxSize = v
+			saveStateToConfig()
+		end)
+	end
+	
+	-- MOVEMENT CATEGORY
+	do
+		local content = movementContent
+		Components.createSection(content, "FLIGHT")
+		Components.createToggle(content, "Fly", function(v)
+			State.Movement.Fly = v
+			saveStateToConfig()
+		end, State.Movement.Fly)
+		
+		Components.createSlider(content, "Fly Speed", 10, 300, State.Movement.FlySpeed, function(v)
+			State.Movement.FlySpeed = v
+			saveStateToConfig()
+		end)
+		
+		Components.createToggle(content, "Noclip", function(v)
+			State.Movement.Noclip = v
+			saveStateToConfig()
+		end, State.Movement.Noclip)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "SPEED & JUMP")
+		Components.createToggle(content, "Speed", function(v)
+			State.Movement.Speed = v
+			saveStateToConfig()
+		end, State.Movement.Speed)
+		
+		Components.createSlider(content, "Speed Value", 16, 500, State.Movement.SpeedValue, function(v)
+			State.Movement.SpeedValue = v
+			saveStateToConfig()
+		end)
+		
+		Components.createToggle(content, "Infinite Jump", function(v)
+			State.Movement.InfiniteJump = v
+			saveStateToConfig()
+		end, State.Movement.InfiniteJump)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "TELEPORT")
+		Components.createToggle(content, "Click TP", function(v)
+			State.Movement.ClickTP = v
+			saveStateToConfig()
+		end, State.Movement.ClickTP)
+		
+		Components.createToggle(content, "Anti Void", function(v)
+			State.Movement.AntiVoid = v
+			saveStateToConfig()
+		end, State.Movement.AntiVoid)
+	end
+	
+	-- ESP CATEGORY
+	do
+		local content = espContent
+		Components.createSection(content, "PLAYER ESP")
+		Components.createToggle(content, "Name ESP", function(v)
+			State.ESP.NameESP = v
+			saveStateToConfig()
+		end, State.ESP.NameESP)
+		
+		Components.createToggle(content, "Box ESP", function(v)
+			State.ESP.BoxESP = v
+			saveStateToConfig()
+		end, State.ESP.BoxESP)
+		
+		Components.createToggle(content, "Health ESP", function(v)
+			State.ESP.HealthESP = v
+			saveStateToConfig()
+		end, State.ESP.HealthESP)
+		
+		Components.createToggle(content, "Tracers", function(v)
+			State.ESP.Tracers = v
+			saveStateToConfig()
+		end, State.ESP.Tracers)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "HIGHLIGHTS")
+		Components.createToggle(content, "Chams", function(v)
+			State.ESP.Chams = v
+			updateChams()
+			saveStateToConfig()
+		end, State.ESP.Chams)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "SETTINGS")
+		Components.createSlider(content, "Max Distance", 100, 2000, State.ESP.MaxDistance, function(v)
+			State.ESP.MaxDistance = v
+			saveStateToConfig()
+		end)
+	end
+	
+	-- VISUALS CATEGORY
+	do
+		local content = visualsContent
+		Components.createSection(content, "LIGHTING")
+		Components.createToggle(content, "Fullbright", function(v)
+			State.Visuals.Fullbright = v
+			if v then
+				Lighting.Ambient = Color3.new(1, 1, 1)
+				Lighting.Brightness = 2
+				Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+			else
+				Lighting.Ambient = OriginalLighting.Ambient
+				Lighting.Brightness = OriginalLighting.Brightness
+				Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
+			end
+			saveStateToConfig()
+		end, State.Visuals.Fullbright)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "CROSSHAIR")
+		Components.createToggle(content, "Custom Crosshair", function(v)
+			State.Visuals.Crosshair = v
+			saveStateToConfig()
+		end, State.Visuals.Crosshair)
+		
+		Components.createSlider(content, "Crosshair Size", 5, 50, State.Visuals.CrosshairSize, function(v)
+			State.Visuals.CrosshairSize = v
+			saveStateToConfig()
+		end)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "CAMERA")
+		Components.createSlider(content, "Camera FOV", 30, 120, State.Visuals.CameraFOV, function(v)
+			State.Visuals.CameraFOV = v
+			camera.FieldOfView = v
+			saveStateToConfig()
+		end)
+	end
+	
+	-- WORLD CATEGORY
+	do
+		local content = worldContent
+		Components.createSection(content, "ENVIRONMENT")
+		Components.createSlider(content, "Time of Day", 0, 24, State.World.TimeOfDay, function(v)
+			State.World.TimeOfDay = v
+			Lighting.ClockTime = v
+			saveStateToConfig()
+		end)
+		
+		Components.createSlider(content, "Gravity", 0, 500, State.World.Gravity, function(v)
+			State.World.Gravity = v
+			workspace.Gravity = v
+			saveStateToConfig()
+		end)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "TOOLS")
+		Components.createToggle(content, "Delete Mode (Click)", function(v)
+			State.World.DeleteMode = v
+			saveStateToConfig()
+		end, State.World.DeleteMode)
+	end
+	
+	-- PLAYER CATEGORY
+	do
+		local content = playerContent
+		Components.createSection(content, "CHARACTER")
+		Components.createToggle(content, "God Mode", function(v)
+			State.Player.GodMode = v
+			saveStateToConfig()
+		end, State.Player.GodMode)
+		
+		Components.createToggle(content, "No Ragdoll", function(v)
+			State.Player.NoRagdoll = v
+			saveStateToConfig()
+		end, State.Player.NoRagdoll)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "INVISIBILITY")
+		Components.createToggle(content, "Invisibility", function(v)
+			State.Player.Invisibility = v
+			if v then
+				InvisSystem:Enable()
+			else
+				InvisSystem:Disable()
+			end
+			saveStateToConfig()
+		end, State.Player.Invisibility)
+	end
+	
+	-- TROLL CATEGORY
+	do
+		local content = trollContent
+		Components.createSection(content, "FOLLOW / ORBIT")
+		Components.createToggle(content, "Annoy Player", function(v)
+			State.Troll.AnnoyPlayer = v
+			saveStateToConfig()
+		end, State.Troll.AnnoyPlayer)
+		
+		Components.createToggle(content, "Orbit Player", function(v)
+			State.Troll.OrbitPlayer = v
+			saveStateToConfig()
+		end, State.Troll.OrbitPlayer)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "CHARACTER TROLL")
+		Components.createToggle(content, "Fling", function(v)
+			State.Troll.Fling = v
+			saveStateToConfig()
+		end, State.Troll.Fling)
+		
+		Components.createSlider(content, "Fling Power", 100, 1000, State.Troll.FlingPower, function(v)
+			State.Troll.FlingPower = v
+			saveStateToConfig()
+		end)
+	end
+	
+	-- MISC CATEGORY
+	do
+		local content = miscContent
+		Components.createSection(content, "HUD ELEMENTS")
+		Components.createToggle(content, "Watermark", function(v)
+			State.Misc.Watermark = v
+			saveStateToConfig()
+		end, State.Misc.Watermark)
+		
+		Components.createToggle(content, "FPS Counter", function(v)
+			State.Misc.FPSCounter = v
+			saveStateToConfig()
+		end, State.Misc.FPSCounter)
+		
+		Components.createToggle(content, "Ping Display", function(v)
+			State.Misc.PingDisplay = v
+			saveStateToConfig()
+		end, State.Misc.PingDisplay)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "UTILITY")
+		Components.createToggle(content, "Anti AFK", function(v)
+			State.Misc.AntiAFK = v
+			saveStateToConfig()
+		end, State.Misc.AntiAFK)
+		
+		Components.createToggle(content, "Chat Spam", function(v)
+			State.Misc.ChatSpam = v
+			saveStateToConfig()
+		end, State.Misc.ChatSpam)
+		
+		Components.createDivider(content)
+		Components.createSection(content, "CONFIGURATION")
+		Components.createLabel(content, "Menu Toggle Key: " .. tostring(State.Settings.MenuKey))
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- MENU TOGGLE SYSTEM WITH CONFIGURABLE KEYBIND
+	-- ---------------------------------------------------------------------------
+	local menuVisible = false
+	
+	local function toggleMenu()
+		menuVisible = not menuVisible
+		
+		if menuVisible then
+			-- Store mouse state
+			PrevMouseState.behavior = UIS.MouseBehavior
+			PrevMouseState.icon = UIS.MouseIconEnabled
+			
+			-- Show menu with animation
+			sidebar.Visible = true
+			tween(sidebar, {Position = UDim2.new(0, 20, 0.5, 0)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			
+			-- Unlock mouse
+			UIS.MouseBehavior = Enum.MouseBehavior.Default
+			UIS.MouseIconEnabled = true
+		else
+			-- Hide menu with animation
+			tween(sidebar, {Position = UDim2.new(0, -240, 0.5, 0)}, 0.3)
+			task.delay(0.3, function()
+				sidebar.Visible = false
+				contentArea.Visible = false
 			end)
+			
+			-- Restore mouse state
+			UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
+			UIS.MouseIconEnabled = PrevMouseState.icon ~= false
 		end
-	end)
-	Components.createToggle(miscC, "Rejoin", function(v)
-		if v then
-			TeleportService:Teleport(game.PlaceId)
-		end
-	end)
+	end
 	
-	-- Activate first tab
-	Tabs.activate(combatT, combatC)
-	
-	-- ---------------------------------------------------------------------------
-	-- MENU TOGGLE (M KEY) - WITH MOUSE UNLOCK
-	-- ---------------------------------------------------------------------------
+	-- Listen for menu key from config
 	UIS.InputBegan:Connect(function(input, gp)
 		if gp then return end
+		
 		if input.KeyCode == State.Settings.MenuKey then
-			local show = not main.Visible
-			main.Visible = show
-			
-			if show then
-				-- Store previous mouse state
-				PrevMouseState.behavior = UIS.MouseBehavior
-				PrevMouseState.icon = UIS.MouseIconEnabled
-				
-				-- UNLOCK MOUSE (Required per spec)
-				UIS.MouseBehavior = Enum.MouseBehavior.Default
-				UIS.MouseIconEnabled = true
-				
-				-- Animate open
-				main.Size = UDim2.new(0, 0, 0, 0)
-				tween(main, {Size = UDim2.new(0, 950, 0, 650)}, {Time = 0.4, Style = Enum.EasingStyle.Back, Direction = Enum.EasingDirection.Out})
-			else
-				-- Restore previous mouse state
-				UIS.MouseBehavior = PrevMouseState.behavior or Enum.MouseBehavior.Default
-				UIS.MouseIconEnabled = PrevMouseState.icon ~= false
-			end
+			toggleMenu()
+		end
+	end)
+	
+	-- Dragging for sidebar
+	local draggingSidebar = false
+	local dragStartSidebar, startPosSidebar
+	
+	header.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			draggingSidebar = true
+			dragStartSidebar = input.Position
+			startPosSidebar = sidebar.Position
+		end
+	end)
+	
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			draggingSidebar = false
+		end
+	end)
+	
+	UIS.InputChanged:Connect(function(input)
+		if draggingSidebar and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStartSidebar
+			sidebar.Position = UDim2.new(
+				startPosSidebar.X.Scale,
+				startPosSidebar.X.Offset + delta.X,
+				startPosSidebar.Y.Scale,
+				startPosSidebar.Y.Offset + delta.Y
+			)
+		end
+	end)
+	
+	-- Dragging for content area
+	local draggingContent = false
+	local dragStartContent, startPosContent
+	
+	contentHeader.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			draggingContent = true
+			dragStartContent = input.Position
+			startPosContent = contentArea.Position
+		end
+	end)
+	
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			draggingContent = false
+		end
+	end)
+	
+	UIS.InputChanged:Connect(function(input)
+		if draggingContent and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStartContent
+			contentArea.Position = UDim2.new(
+				startPosContent.X.Scale,
+				startPosContent.X.Offset + delta.X,
+				startPosContent.Y.Scale,
+				startPosContent.Y.Offset + delta.Y
+			)
 		end
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- DRAGGING
-	-- ---------------------------------------------------------------------------
-	local dragging, dragStart, startPos = false, nil, nil
-	hdr.InputBegan:Connect(function(inp)
-		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			dragStart = inp.Position
-			startPos = main.Position
-			inp.Changed:Connect(function()
-				if inp.UserInputState == Enum.UserInputState.End then dragging = false end
-			end)
-		end
-	end)
-	UIS.InputChanged:Connect(function(inp)
-		if dragging and inp.UserInputType == Enum.UserInputType.MouseMovement then
-			local d = inp.Position - dragStart
-			main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
-		end
-	end)
-	
-	-- ---------------------------------------------------------------------------
-	-- CHARACTER EVENTS (Reapply features on respawn)
+	-- CHARACTER EVENTS (UNCHANGED)
 	-- ---------------------------------------------------------------------------
 	player.CharacterAdded:Connect(function(c)
 		task.wait(0.5)
@@ -2200,8 +2708,22 @@ return function(arg1, arg2, arg3)
 	-- INITIALIZATION COMPLETE
 	-- ---------------------------------------------------------------------------
 	if DrawingEnabled then
-		print("[Vertex Hub] Loaded successfully! Drawing API available. Press M to toggle menu.")
+		print("[Vertex Hub Neon] Loaded successfully! Press " .. tostring(State.Settings.MenuKey) .. " to toggle menu.")
 	else
-		print("[Vertex Hub] Loaded successfully! WARNING: Drawing API not available - ESP features disabled. Press M to toggle menu.")
+		print("[Vertex Hub Neon] Loaded successfully! WARNING: Drawing API not available. Press " .. tostring(State.Settings.MenuKey) .. " to toggle menu.")
 	end
+	
+	-- Initialize Chams if enabled
+	if State.ESP.Chams then
+		task.wait(1)
+		updateChams()
+	end
+	
+	return {
+		ToggleMenu = toggleMenu,
+		GetState = function() return State end,
+		SaveConfig = saveStateToConfig,
+		LoadConfig = loadStateFromConfig,
+		GUI = gui
+	}
 end
