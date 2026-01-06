@@ -185,17 +185,26 @@ return function(arg1, arg2, arg3)
 	
 	-- Simple tween function
 	local function tween(obj, props, tweenInfo)
-		if not obj then return end
-		tweenInfo = tweenInfo or {}
-		local ti = TweenInfo.new(
-			tweenInfo.Time or 0.2,
-			tweenInfo.Style or Enum.EasingStyle.Quad,
-			tweenInfo.Direction or Enum.EasingDirection.Out
-		)
-		local t = TweenService:Create(obj, ti, props)
-		t:Play()
-		return t
+	if not obj then return end
+
+	-- ALLOW BOTH number and table as tweenInfo
+	if type(tweenInfo) == "number" then
+		tweenInfo = { Time = tweenInfo }
 	end
+
+	tweenInfo = tweenInfo or {}
+
+	local ti = TweenInfo.new(
+		tweenInfo.Time or 0.2,
+		tweenInfo.Style or Enum.EasingStyle.Quad,
+		tweenInfo.Direction or Enum.EasingDirection.Out
+	)
+
+	local t = TweenService:Create(obj, ti, props)
+	t:Play()
+	return t
+end
+
 	
 	-- Use provided Animations or fallback
 	if not Animations then
