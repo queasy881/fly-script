@@ -71,8 +71,8 @@ return function(Components)
 				getAll = function()
 					return Config
 				end,
-				save = function() return true end,
-			loadStateFromConfig = function() return true end,
+			save = function() return true end
+
 
 				toMenuFormat = function()
 					return {
