@@ -195,7 +195,7 @@ function Components.createGroup(parent, text, callback)
     subPadding.Parent = subFrame
 
     local state = false
-    local expanded = false
+    local expanded = Expanded[text] or false
 
     local updateToggle = function()
         button.Text = state and "On" or "Off"
@@ -215,8 +215,11 @@ function Components.createGroup(parent, text, callback)
 
     expandBtn.MouseButton1Click:Connect(function()
         expanded = not expanded
+        Expanded[text] = expanded
         updateExpand()
     end)
+
+    updateExpand()  -- Set initial state
 
     return {
         Set = function(value)
@@ -235,6 +238,7 @@ function Components.createGroup(parent, text, callback)
         end,
         Expand = function(val)
             expanded = val
+            Expanded[text] = val
             updateExpand()
         end,
         SubContainer = subFrame
