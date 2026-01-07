@@ -126,21 +126,33 @@ function Components.createToggle(parent, text, callback)
     }
 end
 
--- Create Expandable Toggle (Dropdown-like)
-function Components.createExpandableToggle(parent, text, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
+-- Create Group with Expandable Dropdown
+function Components.createGroup(parent, text, callback)
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(1, 0, 0, 30)
+    mainFrame.BackgroundTransparency = 1
+    mainFrame.Parent = parent
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.5, 0, 1, 0)
+    label.Size = UDim2.new(0.4, 0, 1, 0)
     label.Text = text
     label.TextColor3 = Colors.Text
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.Gotham
     label.TextSize = 13
-    label.Parent = frame
+    label.Parent = mainFrame
+
+    local expandBtn = Instance.new("TextButton")
+    expandBtn.Size = UDim2.new(0.1, 0, 1, 0)
+    expandBtn.Position = UDim2.new(0.45, 0, 0, 0)
+    expandBtn.Text = "+"
+    expandBtn.BackgroundColor3 = Colors.Bar
+    expandBtn.TextColor3 = Colors.Text
+    expandBtn.Font = Enum.Font.Gotham
+    expandBtn.TextSize = 12
+    expandBtn.Parent = mainFrame
+    corner(expandBtn)
+    border(expandBtn)
 
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0.2, 0, 1, 0)
@@ -150,7 +162,7 @@ function Components.createExpandableToggle(parent, text, callback)
     button.TextColor3 = Colors.Text
     button.Font = Enum.Font.Gotham
     button.TextSize = 12
-    button.Parent = frame
+    button.Parent = mainFrame
     corner(button)
     border(button)
 
@@ -162,7 +174,7 @@ function Components.createExpandableToggle(parent, text, callback)
     keybindBtn.TextColor3 = Colors.TextSoft
     keybindBtn.Font = Enum.Font.Gotham
     keybindBtn.TextSize = 12
-    keybindBtn.Parent = frame
+    keybindBtn.Parent = mainFrame
     corner(keybindBtn)
     border(keybindBtn)
 
@@ -176,41 +188,54 @@ function Components.createExpandableToggle(parent, text, callback)
     subLayout.Padding = UDim.new(0, 5)
     subLayout.Parent = subFrame
     subLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        subFrame.Size = UDim2.new(1, 0, 0, subLayout.AbsoluteContentSize.Y)
+        tween(subFrame, {Size = UDim2.new(1, 0, 0, expanded and subLayout.AbsoluteContentSize.Y or 0)}, 0.2)
     end)
     local subPadding = Instance.new("UIPadding")
     subPadding.PaddingLeft = UDim.new(0, 20)  -- Indent sub options
     subPadding.Parent = subFrame
 
     local state = false
-    local update = function()
+    local expanded = false
+
+    local updateToggle = function()
         button.Text = state and "On" or "Off"
         tween(button, {BackgroundColor3 = state and Colors.Accent or Colors.Bar}, 0.15)
-        subFrame.Visible = state
         callback(state)
+    end
+
+    local updateExpand = function()
+        expandBtn.Text = expanded and "x" or "+"
+        tween(subFrame, {Size = UDim2.new(1, 0, 0, expanded and subLayout.AbsoluteContentSize.Y or 0)}, 0.2)
     end
 
     button.MouseButton1Click:Connect(function()
         state = not state
-        update()
+        updateToggle()
     end)
 
-    subFrame.Visible = false
+    expandBtn.MouseButton1Click:Connect(function()
+        expanded = not expanded
+        updateExpand()
+    end)
 
     return {
         Set = function(value)
             state = value
-            update()
+            updateToggle()
         end,
         Toggle = function()
             state = not state
-            update()
+            updateToggle()
         end,
         SetKeybindText = function(txt)
             keybindBtn.Text = txt
         end,
         GetKeybindButton = function()
             return keybindBtn
+        end,
+        Expand = function(val)
+            expanded = val
+            updateExpand()
         end,
         SubContainer = subFrame
     }
