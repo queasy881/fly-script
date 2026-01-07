@@ -390,54 +390,7 @@ end
 
 -- End inline components
 
--- State Management
-local State = {
-    Movement = {
-        WalkSpeed = false,
-        WalkSpeedValue = 16,
-        WalkMethod = "Humanoid",
-        SlideBoost = false,
-        Fly = false,
-        FlySpeed = 50,
-        FlyMethod = "Velocity",
-        Noclip = false,
-        InfiniteJump = false
-    },
-    Combat = {
-        AimAssist = false,
-        AimSmoothness = 0.15,
-        AimFOV = 150,
-        AimPrediction = false,
-        PredictionAmount = 0.1,
-        SilentAim = false,
-        SilentFOV = 150,
-        SilentHitChance = 100,
-        SilentPrediction = false,
-        SilentPredictionAmount = 0.1
-    },
-    ESP = {
-        Enabled = false,
-        Box = false,
-        Name = false,
-        Health = false,
-        Distance = false,
-        MaxDistance = 1000,
-        TeamCheck = false,
-        Tracers = false,
-        Chams = false,
-        HeadDot = false
-    },
-    Visuals = {
-        ChangeTime = false,
-        TimeOfDay = 12,
-        ChangeAmbient = false,
-        AmbientR = 0.5,
-        AmbientG = 0.5,
-        AmbientB = 0.5,
-        ChangeFOV = false,
-        FOV = 70
-    }
-}
+
 
 -- Keybinds and Toggles
 local Keybinds = {}
