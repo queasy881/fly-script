@@ -262,7 +262,7 @@ createToggle("Team Check", function(v) State.ESP.TeamCheck = v end)
 -- Toggle Menu (Insert Key)
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.Insert then
+    if input.KeyCode == Enum.KeyCode.M then
         gui.Enabled = not gui.Enabled
     end
 end)
