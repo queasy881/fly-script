@@ -10,6 +10,7 @@ local Components = {}
 -- ═══════════════════════════════════════════════════════════════════════════════
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- MODERN GLASSMORPHISM COLOR PALETTE
@@ -1449,6 +1450,329 @@ function Components.createColorPicker(parent, text, defaultColor, callback)
         GetColor = function(self)
             return currentColor
         end
+    }
+end
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- SEARCH BAR COMPONENT
+-- ═══════════════════════════════════════════════════════════════════════════════
+function Components.createSearchBar(parent, placeholder, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 40)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    local searchBox = Instance.new("TextBox")
+    searchBox.Size = UDim2.new(1, 0, 1, 0)
+    searchBox.BackgroundColor3 = Colors.Glass
+    searchBox.BackgroundTransparency = 0.3
+    searchBox.BorderSizePixel = 0
+    searchBox.Text = ""
+    searchBox.PlaceholderText = placeholder or "Search features..."
+    searchBox.PlaceholderColor3 = Colors.TextMuted
+    searchBox.TextColor3 = Colors.Text
+    searchBox.Font = Enum.Font.GothamMedium
+    searchBox.TextSize = 13
+    searchBox.ClearTextOnFocus = false
+    searchBox.TextXAlignment = Enum.TextXAlignment.Left
+    searchBox.Parent = container
+    
+    corner(searchBox, 8)
+    glassBorder(searchBox, Colors.Border, 1)
+    
+    -- Search icon
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 36, 1, 0)
+    icon.Position = UDim2.new(1, -36, 0, 0)
+    icon.BackgroundTransparency = 1
+    icon.Text = "🔍"
+    icon.TextColor3 = Colors.TextMuted
+    icon.Font = Enum.Font.GothamBold
+    icon.TextSize = 14
+    icon.Parent = container
+    
+    -- Clear button
+    local clearBtn = Instance.new("TextButton")
+    clearBtn.Size = UDim2.new(0, 20, 0, 20)
+    clearBtn.Position = UDim2.new(1, -42, 0.5, 0)
+    clearBtn.AnchorPoint = Vector2.new(0, 0.5)
+    clearBtn.BackgroundTransparency = 1
+    clearBtn.Text = "×"
+    clearBtn.TextColor3 = Colors.TextMuted
+    clearBtn.Font = Enum.Font.GothamBold
+    clearBtn.TextSize = 16
+    clearBtn.Visible = false
+    clearBtn.Parent = container
+    
+    searchBox.Focused:Connect(function()
+        tween(searchBox, {BackgroundTransparency = 0.1}, 0.15)
+    end)
+    
+    searchBox.FocusLost:Connect(function()
+        tween(searchBox, {BackgroundTransparency = 0.3}, 0.15)
+    end)
+    
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        clearBtn.Visible = #searchBox.Text > 0
+        if callback then callback(searchBox.Text) end
+    end)
+    
+    clearBtn.MouseButton1Click:Connect(function()
+        searchBox.Text = ""
+        if callback then callback("") end
+    end)
+    
+    return {
+        Container = container,
+        SearchBox = searchBox,
+        Clear = function(self)
+            searchBox.Text = ""
+        end
+    }
+end
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- STATISTICS DISPLAY
+-- ═══════════════════════════════════════════════════════════════════════════════
+function Components.createStatisticsDisplay(parent, title)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 120)
+    container.BackgroundColor3 = Colors.Glass
+    container.BackgroundTransparency = 0.2
+    container.BorderSizePixel = 0
+    container.Parent = parent
+    
+    corner(container, 10)
+    glassBorder(container, Colors.Border, 1)
+    glassGradient(container)
+    
+    -- Title
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, 0, 0, 28)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title or "STATISTICS"
+    titleLabel.TextColor3 = Colors.Accent
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextSize = 12
+    titleLabel.Parent = container
+    
+    -- Stats grid
+    local grid = Instance.new("UIGridLayout")
+    grid.CellSize = UDim2.new(0.5, -8, 0, 28)
+    grid.CellPadding = UDim2.new(0, 8, 0, 8)
+    grid.Parent = container
+    
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 30)
+    padding.PaddingBottom = UDim.new(0, 10)
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.PaddingRight = UDim.new(0, 10)
+    padding.Parent = container
+    
+    local stats = {
+        Kills = {label = "Kills:", value = "0"},
+        Deaths = {label = "Deaths:", value = "0"},
+        KDR = {label = "K/D:", value = "0.00"},
+        Damage = {label = "Damage:", value = "0"},
+        Headshots = {label = "Headshots:", value = "0"}
+    }
+    
+    local statLabels = {}
+    
+    for name, data in pairs(stats) do
+        local statFrame = Instance.new("Frame")
+        statFrame.Size = UDim2.new(1, 0, 0, 28)
+        statFrame.BackgroundTransparency = 1
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.5, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = data.label
+        label.TextColor3 = Colors.TextSoft
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Font = Enum.Font.GothamMedium
+        label.TextSize = 11
+        label.Parent = statFrame
+        
+        local value = Instance.new("TextLabel")
+        value.Size = UDim2.new(0.5, 0, 1, 0)
+        value.Position = UDim2.new(0.5, 0, 0, 0)
+        value.BackgroundTransparency = 1
+        value.Text = data.value
+        value.TextColor3 = Colors.Text
+        value.TextXAlignment = Enum.TextXAlignment.Right
+        value.Font = Enum.Font.GothamBold
+        value.TextSize = 12
+        value.Name = name
+        value.Parent = statFrame
+        
+        statLabels[name] = value
+        statFrame.Parent = container
+    end
+    
+    return {
+        Container = container,
+        UpdateStat = function(self, statName, newValue)
+            if statLabels[statName] then
+                statLabels[statName].Text = tostring(newValue)
+            end
+        end,
+        GetStat = function(self, statName)
+            return statLabels[statName] and statLabels[statName].Text or "0"
+        end
+    }
+end
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- CONFIG SAVE/LOAD BUTTONS
+-- ═══════════════════════════════════════════════════════════════════════════════
+function Components.createConfigButtons(parent, onSave, onLoad, onExport, onImport)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 120)
+    container.BackgroundTransparency = 1
+    container.Parent = parent
+    
+    local grid = Instance.new("UIGridLayout")
+    grid.CellSize = UDim2.new(0.5, -6, 0, 36)
+    grid.CellPadding = UDim2.new(0, 4, 0, 8)
+    grid.Parent = container
+    
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0, 2)
+    padding.PaddingRight = UDim.new(0, 2)
+    padding.Parent = container
+    
+    local buttons = {}
+    
+    -- Save Button
+    buttons.Save = Components.createButton(container, "💾 Save", function()
+        if onSave then onSave() end
+    end)
+    buttons.Save.Size = UDim2.new(1, 0, 0, 36)
+    
+    -- Load Button
+    buttons.Load = Components.createButton(container, "📂 Load", function()
+        if onLoad then onLoad() end
+    end)
+    buttons.Load.Size = UDim2.new(1, 0, 0, 36)
+    buttons.Load.Position = UDim2.new(0, 0, 0, 44)
+    
+    -- Export Button
+    if onExport then
+        buttons.Export = Components.createButton(container, "📤 Export", function()
+            onExport()
+        end)
+        buttons.Export.Size = UDim2.new(1, 0, 0, 36)
+    end
+    
+    -- Import Button
+    if onImport then
+        buttons.Import = Components.createButton(container, "📥 Import", function()
+            onImport()
+        end)
+        buttons.Import.Size = UDim2.new(1, 0, 0, 36)
+    end
+    
+    return {
+        Container = container,
+        Buttons = buttons
+    }
+end
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- CHAT LOGGER DISPLAY
+-- ═══════════════════════════════════════════════════════════════════════════════
+function Components.createChatLogger(parent, maxMessages)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, 200)
+    container.BackgroundColor3 = Colors.Glass
+    container.BackgroundTransparency = 0.2
+    container.BorderSizePixel = 0
+    container.ClipsDescendants = true
+    container.Parent = parent
+    
+    corner(container, 10)
+    glassBorder(container, Colors.Border, 1)
+    glassGradient(container)
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 30)
+    title.BackgroundTransparency = 1
+    title.Text = "CHAT LOG"
+    title.TextColor3 = Colors.Accent
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 12
+    title.Parent = container
+    
+    -- Scroll frame
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -8, 1, -40)
+    scroll.Position = UDim2.new(0, 4, 0, 34)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 4
+    scroll.ScrollBarImageColor3 = Colors.Accent
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scroll.Parent = container
+    
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 2)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = scroll
+    
+    local messages = {}
+    local maxMsg = maxMessages or 50
+    
+    local function addMessage(sender, message, color)
+        local msgFrame = Instance.new("Frame")
+        msgFrame.Size = UDim2.new(1, 0, 0, 24)
+        msgFrame.BackgroundTransparency = 1
+        
+        local senderLabel = Instance.new("TextLabel")
+        senderLabel.Size = UDim2.new(0, 80, 1, 0)
+        senderLabel.BackgroundTransparency = 1
+        senderLabel.Text = "[" .. sender .. "]:"
+        senderLabel.TextColor3 = color or Colors.Accent
+        senderLabel.TextXAlignment = Enum.TextXAlignment.Left
+        senderLabel.Font = Enum.Font.GothamBold
+        senderLabel.TextSize = 10
+        senderLabel.Parent = msgFrame
+        
+        local msgLabel = Instance.new("TextLabel")
+        msgLabel.Size = UDim2.new(1, -85, 1, 0)
+        msgLabel.Position = UDim2.new(0, 85, 0, 0)
+        msgLabel.BackgroundTransparency = 1
+        msgLabel.Text = message
+        msgLabel.TextColor3 = Colors.TextSoft
+        msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+        msgLabel.Font = Enum.Font.Gotham
+        msgLabel.TextSize = 10
+        msgLabel.TextWrapped = true
+        msgLabel.Parent = msgFrame
+        
+        table.insert(messages, msgFrame)
+        msgFrame.Parent = scroll
+        
+        -- Remove oldest if over limit
+        if #messages > maxMsg then
+            local oldest = table.remove(messages, 1)
+            if oldest then oldest:Destroy() end
+        end
+    end
+    
+    local function clearLog()
+        for _, msg in ipairs(messages) do
+            msg:Destroy()
+        end
+        messages = {}
+    end
+    
+    return {
+        Container = container,
+        AddMessage = addMessage,
+        Clear = clearLog,
+        GetMessageCount = function() return #messages end
     }
 end
 
