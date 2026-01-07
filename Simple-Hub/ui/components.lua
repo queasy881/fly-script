@@ -1,5 +1,5 @@
 -- components.lua
--- Vertical Hub Components - Fresh Implementation
+-- Vertical Hub Components - Fresh Implementation with Keybinds
 -- Simplified components for vertical menu UX
 
 local TweenService = game:GetService("TweenService")
@@ -56,7 +56,7 @@ function Components.createSectionLabel(parent, text)
     return label
 end
 
--- Create Toggle
+-- Create Toggle with Keybind
 function Components.createToggle(parent, text, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 30)
@@ -64,7 +64,7 @@ function Components.createToggle(parent, text, callback)
     frame.Parent = parent
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Size = UDim2.new(0.5, 0, 1, 0)
     label.Text = text
     label.TextColor3 = Colors.Text
     label.BackgroundTransparency = 1
@@ -73,8 +73,8 @@ function Components.createToggle(parent, text, callback)
     label.Parent = frame
 
     local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0.3, 0, 1, 0)
-    button.Position = UDim2.new(0.7, 0, 0, 0)
+    button.Size = UDim2.new(0.2, 0, 1, 0)
+    button.Position = UDim2.new(0.55, 0, 0, 0)
     button.Text = "Off"
     button.BackgroundColor3 = Colors.Bar
     button.TextColor3 = Colors.Text
@@ -84,19 +84,44 @@ function Components.createToggle(parent, text, callback)
     corner(button)
     border(button)
 
+    local keybindBtn = Instance.new("TextButton")
+    keybindBtn.Size = UDim2.new(0.2, 0, 1, 0)
+    keybindBtn.Position = UDim2.new(0.8, 0, 0, 0)
+    keybindBtn.Text = "None"
+    keybindBtn.BackgroundColor3 = Colors.Bar
+    keybindBtn.TextColor3 = Colors.TextSoft
+    keybindBtn.Font = Enum.Font.Gotham
+    keybindBtn.TextSize = 12
+    keybindBtn.Parent = frame
+    corner(keybindBtn)
+    border(keybindBtn)
+
     local state = false
-    button.MouseButton1Click:Connect(function()
-        state = not state
+    local update = function()
         button.Text = state and "On" or "Off"
         tween(button, {BackgroundColor3 = state and Colors.Accent or Colors.Bar}, 0.15)
         callback(state)
+    end
+
+    button.MouseButton1Click:Connect(function()
+        state = not state
+        update()
     end)
 
     return {
         Set = function(value)
             state = value
-            button.Text = state and "On" or "Off"
-            tween(button, {BackgroundColor3 = state and Colors.Accent or Colors.Bar}, 0.15)
+            update()
+        end,
+        Toggle = function()
+            state = not state
+            update()
+        end,
+        SetKeybindText = function(txt)
+            keybindBtn.Text = txt
+        end,
+        GetKeybindButton = function()
+            return keybindBtn
         end
     }
 end
