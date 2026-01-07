@@ -1136,22 +1136,3 @@ RunService.RenderStepped:Connect(function()
 
     Silent.Target = Silent:getClosest(State.Combat.SilentFOV)
 end)
-
--- Intercept ALL Weapon Rays WITHOUT Metamethods
-local function fireRay(origin, direction, params)
-    return Workspace:Raycast(origin, direction, params)
-end
-
-    if State and State.Combat and State.Combat.SilentAim then
-        local data = Silent.Target
-        local aimPos = resolveAimData(data)
-
-        if aimPos and passesChance() then
-            local newDir = (aimPos - origin).Unit * direction.Magnitude
-            return oldFire(self, origin, newDir, params)
-        end
-    end
-
-    return oldFire(self, origin, direction, params)
-end
-
