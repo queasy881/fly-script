@@ -12,6 +12,8 @@ local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 local mouse = player:GetMouse()
+local Expanded = {}
+
 
 -- Inline components to avoid require and script.Parent issues for loadstring
 
@@ -388,17 +390,58 @@ function Components.createSlider(parent, text, min, max, default, callback)
     }
 end
 
--- End inline components
+
+local State = {
+    Movement = {
+        WalkSpeed = false,
+        WalkSpeedValue = 16,
+        WalkMethod = "Humanoid",
+        Fly = false,
+        FlyMethod = "Velocity",
+        FlySpeed = 50,
+        FlySpeedValue = 50,
+        Noclip = false,
+        InfiniteJump = false,
+        SlideBoost = false
+    },
+    Combat = {
+        AimAssist = false,
+        AimSmoothness = 0.15,
+        AimFOV = 150,
+        AimPrediction = false,
+        PredictionAmount = 0.10,
+        SilentAim = false,
+        SilentFOV = 150,
+        SilentHitChance = 100,
+        SilentPrediction = false,
+        SilentPredictionAmount = 0.10
+    },
+    ESP = {
+        Enabled = false,
+        Box = false,
+        Name = false,
+        Health = false,
+        Distance = false,
+        MaxDistance = 1000,
+        TeamCheck = false,
+        Tracers = false,
+        Chams = false,
+        HeadDot = false
+    },
+    Visuals = {
+        ChangeTime = false,
+        TimeOfDay = 12,
+        ChangeAmbient = false,
+        AmbientR = 0.5,
+        AmbientG = 0.5,
+        AmbientB = 0.5,
+        ChangeFOV = false,
+        FOV = 70
+    }
+}
 
 
 
--- Keybinds and Toggles
-local Keybinds = {}
-local Toggles = {}
-local waitingForBind = nil
-local Expanded = {}
-
--- GUI Creation
 local gui = Instance.new("ScreenGui")
 gui.Name = "VerticalHub"
 gui.Parent = player:WaitForChild("PlayerGui")
@@ -467,7 +510,8 @@ local function rebuildScroll()
         end
     end
 
-    Toggles = {}
+local Toggles = {}
+local Keybinds = {}
 
     if currentTab == "Movement" then
         Components.createSectionLabel(scroll, "Movement")
@@ -1093,6 +1137,8 @@ end)
 
 -- Intercept ALL Weapon Rays WITHOUT Metamethods
 local oldFire = Workspace.Raycast
+Workspace.Raycast = function(self, origin, direction, ...)
+
 Workspace.Raycast = function(self, origin, direction, ...)
     if not State.Combat.SilentAim then
         return oldFire(self, origin, direction, ...)
