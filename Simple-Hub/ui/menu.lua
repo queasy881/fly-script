@@ -822,16 +822,16 @@ RunService.RenderStepped:Connect(function()
         if dist > State.ESP.MaxDistance then continue end
 
         local corners = {}
-        local size = Vector3.new(2, 5, 1) -- Approximate character bounding box
+        local size = Vector3.new(4, 6, 2) -- Adjusted larger bounding box
         for x = -1, 1, 2 do for y = -1, 1, 2 do for z = -1, 1, 2 do
-            local pos = root.CFrame * CFrame.new(x*size.X/2, y*size.Y/2, z*size.Z/2).Position
+            local pos = root.CFrame * Vector3.new(x*size.X/2, y*size.Y/2, z*size.Z/2)
             local screen, onScreen = camera:WorldToViewportPoint(pos)
             if onScreen then
                 table.insert(corners, Vector2.new(screen.X, screen.Y))
             end
         end end end
 
-        if #corners < 8 then continue end  -- Partially offscreen check
+        if #corners == 0 then continue end  -- Changed from <8 to ==0
 
         local minX, minY = math.huge, math.huge
         local maxX, maxY = -math.huge, -math.huge
@@ -995,7 +995,13 @@ end)
 -- Silent Aim (Raycast Hook) with weapon check
 local oldNamecall = nil
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    if not State.Combat.SilentAim or getnamecallmethod() ~= "Raycast" or self ~= Workspace then
+    local method = getnamecallmethod()
+    if method ~= "Raycast" or self ~= Workspace then
+        return oldNamecall(self, ...)
+    end
+
+    local args = {...}
+    if not State.Combat.SilentAim or typeof(args[1]) ~= "Vector3" or typeof(args[2]) ~= "Vector3" then
         return oldNamecall(self, ...)
     end
 
@@ -1008,7 +1014,6 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         return oldNamecall(self, ...)
     end
 
-    local args = {...}
     local origin = args[1]
     local direction = args[2]
 
