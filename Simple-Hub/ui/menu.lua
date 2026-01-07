@@ -997,76 +997,170 @@ RunService.RenderStepped:Connect(function()
     camera.CFrame = CFrame.lookAt(camera.CFrame.Position, camera.CFrame.Position + newLook)
 end)
 
--- Silent Aim (Raycast Hook) with weapon check
-local oldNamecall = nil
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
-    if self ~= Workspace then
-        return oldNamecall(self, ...)
+--========================--
+-- ADVANCED SILENT AIM V2 --
+--========================--
+
+local Silent = {}
+Silent.Target = nil
+Silent.LastTick = 0
+
+-- Raycast Parameters Cache
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+rayParams.IgnoreWater = true
+
+-- Update blacklist dynamically
+local function updateFilter()
+    local char = player.Character
+    if not char then return end
+
+    local ignore = {char, camera}
+
+    -- ignore all accessories and your tool
+    for _, obj in ipairs(char:GetDescendants()) do
+        if obj:IsA("Accessory") or obj:IsA("Tool") then
+            table.insert(ignore, obj)
+        end
     end
 
-    if method == "Raycast" then
-        local args = {...}
-        if not State.Combat.SilentAim or typeof(args[1]) ~= "Vector3" or typeof(args[2]) ~= "Vector3" then
-            return oldNamecall(self, ...)
-        end
+    rayParams.FilterDescendantsInstances = ignore
+end
 
-        local char = player.Character
-        if not char then return oldNamecall(self, ...) end
-        local tool = char:FindFirstChildOfClass("Tool")
-        if not tool then return oldNamecall(self, ...) end
+Players.PlayerAdded:Connect(updateFilter)
+if player.Character then updateFilter() end
 
-        if math.random(1, 100) > State.Combat.SilentHitChance then
-            return oldNamecall(self, ...)
-        end
+player.CharacterAdded:Connect(updateFilter)
 
-        local origin = args[1]
-        local direction = args[2]
+-- 3D Distance Check
+local function getMagnitude(pos)
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    return root and (root.Position - pos).Magnitude or math.huge
+end
 
-        local target = getClosestTarget(State.Combat.SilentFOV)
-        if not target then return oldNamecall(self, ...) end
+-- Visibility System
+local function isPartVisible(part)
+    updateFilter()
 
-        local aimPos = target.Part.Position
-        if State.Combat.SilentPrediction then
-            local myVel = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") or {}).AssemblyLinearVelocity or Vector3.zero
-            local relVel = target.Root.AssemblyLinearVelocity - myVel
-            aimPos += relVel * State.Combat.SilentPredictionAmount
-        end
+    local origin = camera.CFrame.Position
+    local dir = part.Position - origin
 
-        args[2] = (aimPos - origin).Unit * direction.Magnitude
-        return oldNamecall(self, unpack(args))
-    elseif method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" or method == "findPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
-        local args = {...}
-        if not State.Combat.SilentAim or typeof(args[1]) ~= "Ray" then
-            return oldNamecall(self, ...)
-        end
+    local result = Workspace:Raycast(origin, dir, rayParams)
 
-        local char = player.Character
-        if not char then return oldNamecall(self, ...) end
-        local tool = char:FindFirstChildOfClass("Tool")
-        if not tool then return oldNamecall(self, ...) end
-
-        if math.random(1, 100) > State.Combat.SilentHitChance then
-            return oldNamecall(self, ...)
-        end
-
-        local ray = args[1]
-        local origin = ray.Origin
-        local direction = ray.Direction
-
-        local target = getClosestTarget(State.Combat.SilentFOV)
-        if not target then return oldNamecall(self, ...) end
-
-        local aimPos = target.Part.Position
-        if State.Combat.SilentPrediction then
-            local myVel = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") or {}).AssemblyLinearVelocity or Vector3.zero
-            local relVel = target.Root.AssemblyLinearVelocity - myVel
-            aimPos += relVel * State.Combat.SilentPredictionAmount
-        end
-
-        args[1] = Ray.new(origin, (aimPos - origin).Unit * direction.Magnitude)
-        return oldNamecall(self, unpack(args))
+    if result then
+        return result.Instance:IsDescendantOf(part.Parent)
     end
 
-    return oldNamecall(self, ...)
+    return false
+end
+
+-- Prediction Physics
+local function predictPosition(root, amount)
+    if not root then return Vector3.zero end
+
+    return root.Position + (root.AssemblyLinearVelocity * amount)
+end
+
+-- Get Best Aim Part (Always Head Priority)
+local function getBestPart(char)
+    local head = char:FindFirstChild("Head")
+    if head then
+        return head
+    end
+
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
+-- Accurate Target Finder
+function Silent:getClosest(fov)
+    local closest = nil
+    local shortest3D = math.huge
+
+    local origin = camera.CFrame.Position
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr == player then continue end
+
+        local char = plr.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+
+        if not hum or not root or hum.Health <= 0 then
+            continue
+        end
+
+        -- Team Check
+        if State.ESP.TeamCheck and plr.Team == player.Team then
+            continue
+        end
+
+        local part = getBestPart(char)
+
+        local mag = (part.Position - origin).Magnitude
+
+        -- Real 3D priority
+        if mag < shortest3D and isPartVisible(part) then
+            closest = {
+                Player = plr,
+                Character = char,
+                Part = part,
+                Root = root
+            }
+            shortest3D = mag
+        end
+    end
+
+    return closest
+end
+
+-- Resolver for Movement Types
+local function resolveAimData(data)
+    if not data then return nil end
+
+    local aimPos = data.Part.Position
+
+    if State.Combat.SilentPrediction then
+        aimPos = predictPosition(data.Root, State.Combat.SilentPredictionAmount)
+    end
+
+    return aimPos
+end
+
+-- Hit Chance Randomizer
+local function passesChance()
+    return math.random(1,100) <= State.Combat.SilentHitChance
+end
+
+-- Continuous Update Loop
+RunService.RenderStepped:Connect(function()
+    if not State.Combat.SilentAim then return end
+
+    Silent.Target = Silent:getClosest(State.Combat.SilentFOV)
 end)
+
+-- Intercept ALL Weapon Rays WITHOUT Metamethods
+local oldFire = Workspace.Raycast
+Workspace.Raycast = function(self, origin, direction, ...)
+    if not State.Combat.SilentAim then
+        return oldFire(self, origin, direction, ...)
+    end
+
+    local char = player.Character
+    local tool = char and char:FindFirstChildOfClass("Tool")
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+
+    if not tool or not root then
+        return oldFire(self, origin, direction, ...)
+    end
+
+    local data = Silent.Target
+    local aimPos = resolveAimData(data)
+
+    if aimPos and passesChance() then
+        -- FORCE HEAD HIT DIRECTION
+        local newDir = (aimPos - origin).Unit * direction.Magnitude
+        return oldFire(self, origin, newDir, ...)
+    end
+
+    return oldFire(self, origin, direction, ...)
+end
