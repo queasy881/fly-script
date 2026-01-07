@@ -1137,7 +1137,6 @@ end)
 
 -- Intercept ALL Weapon Rays WITHOUT Metamethods
 local oldFire = Workspace.Raycast
-Workspace.Raycast = function(self, origin, direction, ...)
 
 Workspace.Raycast = function(self, origin, direction, ...)
     if not State.Combat.SilentAim then
