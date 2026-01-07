@@ -13,7 +13,6 @@ return function(Components)
 	local Lighting = game:GetService("Lighting")
 	local TeleportService = game:GetService("TeleportService")
 	local Debris = game:GetService("Debris")
-	local Stats = game:GetService("Stats")
 	local HttpService = game:GetService("HttpService")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -46,117 +45,6 @@ return function(Components)
 	contentArea.Parent = gui
 
 	-- ---------------------------------------------------------------------------
-	-- CONFIGURATION SYSTEM INTEGRATION
-	-- ---------------------------------------------------------------------------
-	local Config = {}
-	local ConfigLoaded = false
-
-	local function loadConfig()
-		local success, configModule = pcall(function()
-			if _G.VertexConfig then
-				return _G.VertexConfig
-			end
-
-			for _, obj in pairs(game:GetDescendants()) do
-				if obj.Name == "config" and obj:IsA("ModuleScript") then
-					return require(obj)
-				end
-			end
-
-			return nil
-		end)
-
-		if success and configModule then
-			Config = configModule
-			ConfigLoaded = true
-			print("[CONFIG] Configuration loaded successfully")
-			return true
-		else
-			print("[CONFIG] Using default configuration")
-
-			Config = {
-				get = function(key, default)
-					local val = Config[key]
-					if val ~= nil then
-						return val
-					end
-					return default
-				end,
-
-				set = function(key, value)
-					Config[key] = value
-					return true
-				end,
-
-				setMultiple = function(values)
-					for k, v in pairs(values) do
-						Config[k] = v
-					end
-					return true
-				end,
-
-				reset = function()
-					return true
-				end,
-
-				getAll = function()
-					return {}
-				end,
-
-				save = function()
-					return true
-				end,
-
-				load = function()
-					return true
-				end,
-
-				toMenuFormat = function()
-					return {
-						MenuKey = Enum.KeyCode.M,
-						AccentColor = Color3.fromRGB(60, 120, 255),
-						DefaultTab = "Combat",
-						Settings = {}
-					}
-				end,
-
-				DEFAULTS = {},
-				VERSION = "1.0.0"
-			}
-
-			ConfigLoaded = false
-			return false
-		end
-	end
-
-	loadConfig()
-
-	-- ---------------------------------------------------------------------------
-	-- MENU TOGGLE (defined AFTER UI + Config)
-	-- ---------------------------------------------------------------------------
-	local function toggleMenu()
-		sidebar.Visible = not sidebar.Visible
-		contentArea.Visible = sidebar.Visible
-	end
-
-	UIS.InputBegan:Connect(function(input, gp)
-		if gp then return end
-
-		if input.KeyCode == Enum.KeyCode.M then
-			toggleMenu()
-		end
-	end)
-
-	-- return gui reference
-	return gui
-end
-
-
-
-
-
-	
-	-- ---------------------------------------------------------------------------
 	-- VIBRANT NEON COLOR PALETTE
 	-- ---------------------------------------------------------------------------
 	local NeonColors = {
@@ -176,8 +64,53 @@ end
 		TextMuted = Color3.fromRGB(150, 150, 180),
 		Glow = Color3.fromRGB(100, 200, 255),
 		Outline = Color3.fromRGB(0, 200, 255),
-		Shadow = Color3.fromRGB(0, 0, 0, 0.8)
+		Shadow = Color3.fromRGB(0, 0, 0)
 	}
+
+	-- ---------------------------------------------------------------------------
+	-- CONFIGURATION SYSTEM
+	-- ---------------------------------------------------------------------------
+	local Config = {}
+	local ConfigLoaded = false
+
+	local function loadConfig()
+		local success, module = pcall(function()
+			return _G.VertexConfig
+		end)
+
+		if success and module then
+			Config = module
+			ConfigLoaded = true
+			print("[CONFIG] Loaded global VertexConfig")
+			return true
+		end
+
+		Config = {}
+		print("[CONFIG] No config found, using defaults")
+		return false
+	end
+
+	loadConfig()
+
+	-- ---------------------------------------------------------------------------
+	-- MENU TOGGLE FUNCTION (AFTER UI EXISTS)
+	-- ---------------------------------------------------------------------------
+	local function toggleMenu()
+		sidebar.Visible = not sidebar.Visible
+		contentArea.Visible = sidebar.Visible
+	end
+
+	UIS.InputBegan:Connect(function(input, gp)
+		if gp then return end
+
+		if input.KeyCode == Enum.KeyCode.M then
+			toggleMenu()
+		end
+	end)
+
+	return gui
+end
+
 	
 	-- ---------------------------------------------------------------------------
 	-- UTILITY FUNCTIONS
