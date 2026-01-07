@@ -95,9 +95,9 @@ return function(Components)
 
 	local function tween(obj, props, time)
 		if not obj then return end
-		local ti = TweenService:Create(obj, TweenInfo.new(time or 0.2), props)
-		ti:Play()
-		return ti
+		local tw = TweenService:Create(obj, TweenInfo.new(time or 0.2), props)
+		tw:Play()
+		return tw
 	end
 
 	-- ---------------------------------------------------------------------------
@@ -150,7 +150,7 @@ return function(Components)
 		EntityCache.npcs = {}
 		for _, obj in ipairs(workspace:GetDescendants()) do
 			if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-				local hum = obj:FindFirstChildOfClass("Humanoid")
+				local hum = obj:FindFirstFirstChildOfClass("Humanoid")
 				local root = obj:FindFirstChild("HumanoidRootPart")
 				if hum and hum.Health > 0 and root then
 					table.insert(EntityCache.npcs, {
@@ -180,6 +180,99 @@ return function(Components)
 		end
 	end)
 
+	-- ---------------------------------------------------------------------------
+	-- DRAWING SYSTEM INITIALIZATION
+	-- ---------------------------------------------------------------------------
+	local DrawingEnabled = false
+
+	pcall(function()
+		local test = Drawing.new("Line")
+		if test then
+			test:Remove()
+			DrawingEnabled = true
+		end
+	end)
+
+	local DrawingPool = {
+		text = {},
+		square = {},
+		line = {},
+		triangle = {},
+		circle = {}
+	}
+
+	local ActiveDrawings = {}
+
+	local function getDrawing(drawType)
+		if not DrawingEnabled then return nil end
+		local pool = DrawingPool[drawType]
+		if not pool then return nil end
+
+		for _, obj in ipairs(pool) do
+			if not obj._inUse then
+				obj._inUse = true
+				obj.Visible = true
+				table.insert(ActiveDrawings, obj)
+				return obj
+			end
+		end
+
+		local newDraw
+		pcall(function()
+			newDraw = Drawing.new(drawType)
+		end)
+
+		if newDraw then
+			newDraw._inUse = true
+			newDraw.Visible = true
+			table.insert(pool, newDraw)
+			table.insert(ActiveDrawings, newDraw)
+			return newDraw
+		end
+
+		return nil
+	end
+
+	local function releaseAllDrawings()
+		for _, obj in ipairs(ActiveDrawings) do
+			if obj then
+				obj.Visible = false
+				obj._inUse = false
+			end
+		end
+		ActiveDrawings = {}
+	end
+
+	-- ---------------------------------------------------------------------------
+	-- STATIC HUD DRAWINGS
+	-- ---------------------------------------------------------------------------
+	local HUD = {}
+
+	if DrawingEnabled then
+		pcall(function()
+			HUD.FOVCircle = Drawing.new("Circle")
+			HUD.CrosshairL = Drawing.new("Line")
+			HUD.CrosshairR = Drawing.new("Line")
+			HUD.CrosshairT = Drawing.new("Line")
+			HUD.CrosshairB = Drawing.new("Line")
+			HUD.Watermark = Drawing.new("Text")
+			HUD.FPS = Drawing.new("Text")
+			HUD.Ping = Drawing.new("Text")
+			HUD.PlrCount = Drawing.new("Text")
+			HUD.Velocity = Drawing.new("Text")
+			HUD.TargetInfo = Drawing.new("Text")
+			HUD.Keybinds = Drawing.new("Text")
+		end)
+	end
+
+	-- start cache updates
+	task.spawn(function()
+		while gui.Parent do
+			updateEntityCache()
+			task.wait(1)
+		end
+	end)
+
 	-- start cache updates
 	task.spawn(function()
 		while gui.Parent do
@@ -191,145 +284,6 @@ return function(Components)
 	return gui
 end
 
-	
-	-- ---------------------------------------------------------------------------
-	-- DRAWING OBJECT POOL (FIXED VERSION)
-	-- ---------------------------------------------------------------------------
-	local DrawingPool = { text = {}, square = {}, line = {}, triangle = {}, circle = {} }
-	local ActiveDrawings = {}
-	
-	local function getDrawing(drawType)
-		if not DrawingEnabled then return nil end
-		local pool = DrawingPool[drawType]
-		if not pool then return nil end
-		
-		for i, obj in ipairs(pool) do
-			if not obj._inUse then
-				obj._inUse = true
-				obj.Visible = true
-				table.insert(ActiveDrawings, obj)
-				return obj
-			end
-		end
-		
-		local newDraw
-		local ok = pcall(function()
-			if drawType == "text" then
-				newDraw = Drawing.new("Text")
-				newDraw.Size = 14
-				newDraw.Center = true
-				newDraw.Outline = true
-				newDraw._inUse = false
-			elseif drawType == "square" then
-				newDraw = Drawing.new("Square")
-				newDraw.Thickness = 1
-				newDraw.Filled = false
-				newDraw._inUse = false
-			elseif drawType == "line" then
-				newDraw = Drawing.new("Line")
-				newDraw.Thickness = 1
-				newDraw._inUse = false
-			elseif drawType == "triangle" then
-				newDraw = Drawing.new("Triangle")
-				newDraw.Filled = true
-				newDraw._inUse = false
-			elseif drawType == "circle" then
-				newDraw = Drawing.new("Circle")
-				newDraw.Thickness = 2
-				newDraw.NumSides = 64
-				newDraw.Filled = false
-				newDraw._inUse = false
-			end
-		end)
-		
-		if ok and newDraw then
-			newDraw._inUse = true
-			newDraw.Visible = true
-			table.insert(pool, newDraw)
-			table.insert(ActiveDrawings, newDraw)
-			return newDraw
-		end
-		return nil
-	end
-	
-	local function releaseAllDrawings()
-		for _, obj in ipairs(ActiveDrawings) do
-			if obj then 
-				obj.Visible = false 
-				obj._inUse = false 
-			end
-		end
-		ActiveDrawings = {}
-	end
-	
-	-- ---------------------------------------------------------------------------
-	-- STATIC HUD DRAWINGS
-	-- ---------------------------------------------------------------------------
-	local HUD = {}
-	if DrawingEnabled then
-		pcall(function()
-			HUD.FOVCircle = Drawing.new("Circle")
-			HUD.FOVCircle.Thickness = 2
-			HUD.FOVCircle.NumSides = 64
-			HUD.FOVCircle.Filled = false
-			HUD.FOVCircle.Visible = false
-			HUD.FOVCircle.Transparency = 0.7
-			
-			HUD.CrosshairL = Drawing.new("Line")
-			HUD.CrosshairL.Thickness = 2
-			HUD.CrosshairL.Visible = false
-			HUD.CrosshairR = Drawing.new("Line")
-			HUD.CrosshairR.Thickness = 2
-			HUD.CrosshairR.Visible = false
-			HUD.CrosshairT = Drawing.new("Line")
-			HUD.CrosshairT.Thickness = 2
-			HUD.CrosshairT.Visible = false
-			HUD.CrosshairB = Drawing.new("Line")
-			HUD.CrosshairB.Thickness = 2
-			HUD.CrosshairB.Visible = false
-			
-			HUD.Watermark = Drawing.new("Text")
-			HUD.Watermark.Size = 20
-			HUD.Watermark.Outline = true
-			HUD.Watermark.Position = Vector2.new(10, 10)
-			HUD.Watermark.Visible = false
-			
-			HUD.FPS = Drawing.new("Text")
-			HUD.FPS.Size = 16
-			HUD.FPS.Outline = true
-			HUD.FPS.Position = Vector2.new(10, 35)
-			HUD.FPS.Visible = false
-			
-			HUD.Ping = Drawing.new("Text")
-			HUD.Ping.Size = 16
-			HUD.Ping.Outline = true
-			HUD.Ping.Position = Vector2.new(10, 55)
-			HUD.Ping.Visible = false
-			
-			HUD.PlrCount = Drawing.new("Text")
-			HUD.PlrCount.Size = 16
-			HUD.PlrCount.Outline = true
-			HUD.PlrCount.Position = Vector2.new(10, 75)
-			HUD.PlrCount.Visible = false
-			
-			HUD.Velocity = Drawing.new("Text")
-			HUD.Velocity.Size = 16
-			HUD.Velocity.Outline = true
-			HUD.Velocity.Position = Vector2.new(10, 95)
-			HUD.Velocity.Visible = false
-			
-			HUD.TargetInfo = Drawing.new("Text")
-			HUD.TargetInfo.Size = 16
-			HUD.TargetInfo.Outline = true
-			HUD.TargetInfo.Position = Vector2.new(10, 115)
-			HUD.TargetInfo.Visible = false
-			
-			HUD.Keybinds = Drawing.new("Text")
-			HUD.Keybinds.Size = 14
-			HUD.Keybinds.Outline = true
-			HUD.Keybinds.Visible = false
-		end)
-	end
 	
 	-- ---------------------------------------------------------------------------
 	-- ALL STATE VARIABLES
