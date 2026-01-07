@@ -1,9 +1,5 @@
--- ---------------------------------------------------------------------------
--- VERTEX HUB - NEON SIDEBAR REDESIGN
--- Fully integrated with config file
--- ---------------------------------------------------------------------------
-
 return function(Components)
+
 	-- use provided components or fallback
 	Components = Components or _G.VertexComponents
 
@@ -49,105 +45,112 @@ return function(Components)
 	contentArea.Visible = false
 	contentArea.Parent = gui
 
-	-- NOW it is safe to define toggleMenu
+	-- ---------------------------------------------------------------------------
+	-- CONFIGURATION SYSTEM INTEGRATION
+	-- ---------------------------------------------------------------------------
+	local Config = {}
+	local ConfigLoaded = false
+
+	local function loadConfig()
+		local success, configModule = pcall(function()
+			if _G.VertexConfig then
+				return _G.VertexConfig
+			end
+
+			for _, obj in pairs(game:GetDescendants()) do
+				if obj.Name == "config" and obj:IsA("ModuleScript") then
+					return require(obj)
+				end
+			end
+
+			return nil
+		end)
+
+		if success and configModule then
+			Config = configModule
+			ConfigLoaded = true
+			print("[CONFIG] Configuration loaded successfully")
+			return true
+		else
+			print("[CONFIG] Using default configuration")
+
+			Config = {
+				get = function(key, default)
+					local val = Config[key]
+					if val ~= nil then
+						return val
+					end
+					return default
+				end,
+
+				set = function(key, value)
+					Config[key] = value
+					return true
+				end,
+
+				setMultiple = function(values)
+					for k, v in pairs(values) do
+						Config[k] = v
+					end
+					return true
+				end,
+
+				reset = function()
+					return true
+				end,
+
+				getAll = function()
+					return {}
+				end,
+
+				save = function()
+					return true
+				end,
+
+				load = function()
+					return true
+				end,
+
+				toMenuFormat = function()
+					return {
+						MenuKey = Enum.KeyCode.M,
+						AccentColor = Color3.fromRGB(60, 120, 255),
+						DefaultTab = "Combat",
+						Settings = {}
+					}
+				end,
+
+				DEFAULTS = {},
+				VERSION = "1.0.0"
+			}
+
+			ConfigLoaded = false
+			return false
+		end
+	end
+
+	loadConfig()
+
+	-- ---------------------------------------------------------------------------
+	-- MENU TOGGLE (defined AFTER UI + Config)
+	-- ---------------------------------------------------------------------------
 	local function toggleMenu()
 		sidebar.Visible = not sidebar.Visible
 		contentArea.Visible = sidebar.Visible
 	end
 
-	-- listen for menu key
 	UIS.InputBegan:Connect(function(input, gp)
 		if gp then return end
+
 		if input.KeyCode == Enum.KeyCode.M then
 			toggleMenu()
 		end
 	end)
 
-	-- return main state if needed
+	-- return gui reference
 	return gui
 end
 
-	
-	-- ---------------------------------------------------------------------------
-	-- CONFIGURATION SYSTEM INTEGRATION
-	-- ---------------------------------------------------------------------------
-	local Config = {}
-local ConfigLoaded = false
-
-local function loadConfig()
-	local success, configModule = pcall(function()
-		if _G.VertexConfig then
-			return _G.VertexConfig
-		end
-
-		for _, obj in pairs(game:GetDescendants()) do
-			if obj.Name == "config" and obj:IsA("ModuleScript") then
-				return require(obj)
-			end
-		end
-
-		return nil
-	end)
-
-	if success and configModule then
-		Config = configModule
-		ConfigLoaded = true
-		print("[CONFIG] Configuration loaded successfully")
-		return true
-	else
-		print("[CONFIG] Using default configuration")
-
-		Config = {
-			get = function(key, default)
-				return Config[key] or default
-			end,
-
-			set = function(key, value)
-				Config[key] = value
-				return true
-			end,
-
-			setMultiple = function(values)
-				for k, v in pairs(values) do
-					Config[k] = v
-				end
-				return true
-			end,
-
-			reset = function()
-				return true
-			end,
-
-			getAll = function()
-				return {}
-			end,
-
-			save = function()
-	return true
-end,
-
-load = function()
-	return true
-end,
-
-toMenuFormat = function()
-
-				return {
-					MenuKey = Enum.KeyCode.M,
-					AccentColor = Color3.fromRGB(60, 120, 255),
-					DefaultTab = "Combat",
-					Settings = {}
-				}
-			end,
-
-			DEFAULTS = {},
-			VERSION = "1.0.0"
-		}
-
-		ConfigLoaded = false
-		return false
-	end
-end
 
 
 
