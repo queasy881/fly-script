@@ -136,7 +136,142 @@ function Components.createToggle(parent, text, callback)
     }
 end
 
--- Create Slider
+-- Create Expandable Toggle (Dropdown-like)
+function Components.createExpandableToggle(parent, text, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.5, 0, 1, 0)
+    label.Text = text
+    label.TextColor3 = Colors.Text
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.Parent = frame
+
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.2, 0, 1, 0)
+    button.Position = UDim2.new(0.55, 0, 0, 0)
+    button.Text = "Off"
+    button.BackgroundColor3 = Colors.Bar
+    button.TextColor3 = Colors.Text
+    button.Font = Enum.Font.Gotham
+    button.TextSize = 12
+    button.Parent = frame
+    corner(button)
+    border(button)
+
+    local keybindBtn = Instance.new("TextButton")
+    keybindBtn.Size = UDim2.new(0.2, 0, 1, 0)
+    keybindBtn.Position = UDim2.new(0.8, 0, 0, 0)
+    keybindBtn.Text = "None"
+    keybindBtn.BackgroundColor3 = Colors.Bar
+    keybindBtn.TextColor3 = Colors.TextSoft
+    keybindBtn.Font = Enum.Font.Gotham
+    keybindBtn.TextSize = 12
+    keybindBtn.Parent = frame
+    corner(keybindBtn)
+    border(keybindBtn)
+
+    local subFrame = Instance.new("Frame")
+    subFrame.Size = UDim2.new(1, 0, 0, 0)
+    subFrame.BackgroundTransparency = 1
+    subFrame.ClipsDescendants = true
+    subFrame.Parent = parent
+    local subLayout = Instance.new("UIListLayout")
+    subLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    subLayout.Padding = UDim.new(0, 5)
+    subLayout.Parent = subFrame
+    subLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        subFrame.Size = UDim2.new(1, 0, 0, subLayout.AbsoluteContentSize.Y)
+    end)
+    local subPadding = Instance.new("UIPadding")
+    subPadding.PaddingLeft = UDim.new(0, 20)  -- Indent sub options
+    subPadding.Parent = subFrame
+
+    local state = false
+    local update = function()
+        button.Text = state and "On" or "Off"
+        tween(button, {BackgroundColor3 = state and Colors.Accent or Colors.Bar}, 0.15)
+        subFrame.Visible = state
+        callback(state)
+    end
+
+    button.MouseButton1Click:Connect(function()
+        state = not state
+        update()
+    end)
+
+    subFrame.Visible = false
+
+    return {
+        Set = function(value)
+            state = value
+            update()
+        end,
+        Toggle = function()
+            state = not state
+            update()
+        end,
+        SetKeybindText = function(txt)
+            keybindBtn.Text = txt
+        end,
+        GetKeybindButton = function()
+            return keybindBtn
+        end,
+        SubContainer = subFrame
+    }
+end
+
+-- Create Selector (Cycle through options)
+function Components.createSelector(parent, text, options, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.6, 0, 1, 0)
+    label.Text = text
+    label.TextColor3 = Colors.Text
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.Parent = frame
+
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.4, 0, 1, 0)
+    button.Position = UDim2.new(0.6, 0, 0, 0)
+    button.BackgroundColor3 = Colors.Bar
+    button.TextColor3 = Colors.Text
+    button.Font = Enum.Font.Gotham
+    button.TextSize = 12
+    button.Parent = frame
+    corner(button)
+    border(button)
+
+    local index = table.find(options, default) or 1
+    button.Text = options[index]
+
+    button.MouseButton1Click:Connect(function()
+        index = (index % #options) + 1
+        button.Text = options[index]
+        callback(options[index])
+    end)
+
+    return {
+        Set = function(value)
+            local newIndex = table.find(options, value) or 1
+            index = newIndex
+            button.Text = options[index]
+        end
+    }
+end
+
+-- Create Slider (More appealing with gradient)
 function Components.createSlider(parent, text, min, max, default, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 50)
@@ -158,12 +293,20 @@ function Components.createSlider(parent, text, min, max, default, callback)
     barFrame.BackgroundColor3 = Colors.Bar
     barFrame.Parent = frame
     corner(barFrame)
+    border(barFrame)
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0, 0, 1, 0)
     fill.BackgroundColor3 = Colors.Accent
     fill.Parent = barFrame
     corner(fill)
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 60, 200)),
+        ColorSequenceKeypoint.new(1, Colors.Accent)
+    })
+    gradient.Parent = fill
 
     local valueLabel = Instance.new("TextLabel")
     valueLabel.Size = UDim2.new(0.2, 0, 1, 0)
@@ -223,9 +366,11 @@ local State = {
     Movement = {
         WalkSpeed = false,
         WalkSpeedValue = 16,
+        WalkMethod = "Humanoid",
         SlideBoost = false,
         Fly = false,
         FlySpeed = 50,
+        FlyMethod = "Velocity",
         Noclip = false,
         InfiniteJump = false
     },
@@ -332,7 +477,6 @@ padding.Parent = scroll
 
 local currentTab = "Movement"
 
--- Move rebuildScroll definition here
 local function rebuildScroll()
     for _, child in ipairs(scroll:GetChildren()) do
         if child:IsA("GuiObject") and child ~= layout and child ~= padding then
@@ -344,47 +488,75 @@ local function rebuildScroll()
 
     if currentTab == "Movement" then
         Components.createSectionLabel(scroll, "Movement")
-        Toggles.WalkSpeed = Components.createToggle(scroll, "WalkSpeed", function(v) State.Movement.WalkSpeed = v end)
-        Components.createSlider(scroll, "WalkSpeed Value", 16, 100, 16, function(v) State.Movement.WalkSpeedValue = v end)
+
+        local walkGroup = Components.createExpandableToggle(scroll, "WalkSpeed", function(v) State.Movement.WalkSpeed = v end)
+        Toggles.WalkSpeed = walkGroup
+        local walkSub = walkGroup.SubContainer
+        Components.createSelector(walkSub, "Method", {"Humanoid", "CFrame", "Velocity", "Impulse"}, State.Movement.WalkMethod, function(m) State.Movement.WalkMethod = m end)
+        Components.createSlider(walkSub, "WalkSpeed Value", 16, 100, 16, function(v) State.Movement.WalkSpeedValue = v end)
+
         Toggles.SlideBoost = Components.createToggle(scroll, "Slide Boost", function(v) State.Movement.SlideBoost = v end)
-        Toggles.Fly = Components.createToggle(scroll, "Fly", function(v) State.Movement.Fly = v end)
-        Components.createSlider(scroll, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
+
+        local flyGroup = Components.createExpandableToggle(scroll, "Fly", function(v) State.Movement.Fly = v end)
+        Toggles.Fly = flyGroup
+        local flySub = flyGroup.SubContainer
+        Components.createSelector(flySub, "Method", {"Velocity", "CFrame", "Impulse"}, State.Movement.FlyMethod, function(m) State.Movement.FlyMethod = m end)
+        Components.createSlider(flySub, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
+
         Toggles.Noclip = Components.createToggle(scroll, "Noclip", function(v) State.Movement.Noclip = v end)
         Toggles.InfiniteJump = Components.createToggle(scroll, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
     elseif currentTab == "Combat" then
         Components.createSectionLabel(scroll, "Combat")
-        Toggles.AimAssist = Components.createToggle(scroll, "Aim Assist", function(v) State.Combat.AimAssist = v end)
-        Components.createSlider(scroll, "Aim Smoothness", 1, 50, 15, function(v) State.Combat.AimSmoothness = v / 100 end)
-        Components.createSlider(scroll, "Aim FOV", 50, 500, 150, function(v) State.Combat.AimFOV = v end)
-        Toggles.AimPrediction = Components.createToggle(scroll, "Aim Prediction", function(v) State.Combat.AimPrediction = v end)
-        Components.createSlider(scroll, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
-        Toggles.SilentAim = Components.createToggle(scroll, "Silent Aim", function(v) State.Combat.SilentAim = v end)
-        Components.createSlider(scroll, "Silent FOV", 50, 500, 150, function(v) State.Combat.SilentFOV = v end)
-        Components.createSlider(scroll, "Silent Hit Chance", 0, 100, 100, function(v) State.Combat.SilentHitChance = v end)
-        Toggles.SilentPrediction = Components.createToggle(scroll, "Silent Prediction", function(v) State.Combat.SilentPrediction = v end)
-        Components.createSlider(scroll, "Silent Prediction Amount", 1, 50, 10, function(v) State.Combat.SilentPredictionAmount = v / 100 end)
+
+        local aimGroup = Components.createExpandableToggle(scroll, "Aim Assist", function(v) State.Combat.AimAssist = v end)
+        Toggles.AimAssist = aimGroup
+        local aimSub = aimGroup.SubContainer
+        Components.createSlider(aimSub, "Aim Smoothness", 1, 50, 15, function(v) State.Combat.AimSmoothness = v / 100 end)
+        Components.createSlider(aimSub, "Aim FOV", 50, 500, 150, function(v) State.Combat.AimFOV = v end)
+        Toggles.AimPrediction = Components.createToggle(aimSub, "Aim Prediction", function(v) State.Combat.AimPrediction = v end)
+        Components.createSlider(aimSub, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
+
+        local silentGroup = Components.createExpandableToggle(scroll, "Silent Aim", function(v) State.Combat.SilentAim = v end)
+        Toggles.SilentAim = silentGroup
+        local silentSub = silentGroup.SubContainer
+        Components.createSlider(silentSub, "Silent FOV", 50, 500, 150, function(v) State.Combat.SilentFOV = v end)
+        Components.createSlider(silentSub, "Silent Hit Chance", 0, 100, 100, function(v) State.Combat.SilentHitChance = v end)
+        Toggles.SilentPrediction = Components.createToggle(silentSub, "Silent Prediction", function(v) State.Combat.SilentPrediction = v end)
+        Components.createSlider(silentSub, "Silent Prediction Amount", 1, 50, 10, function(v) State.Combat.SilentPredictionAmount = v / 100 end)
     elseif currentTab == "ESP" then
         Components.createSectionLabel(scroll, "ESP")
-        Toggles.Enabled = Components.createToggle(scroll, "Enabled", function(v) State.ESP.Enabled = v end)
-        Toggles.Box = Components.createToggle(scroll, "Box", function(v) State.ESP.Box = v end)
-        Toggles.Name = Components.createToggle(scroll, "Name", function(v) State.ESP.Name = v end)
-        Toggles.Health = Components.createToggle(scroll, "Health", function(v) State.ESP.Health = v end)
-        Toggles.Distance = Components.createToggle(scroll, "Distance", function(v) State.ESP.Distance = v end)
-        Components.createSlider(scroll, "Max Distance", 100, 5000, 1000, function(v) State.ESP.MaxDistance = v end)
-        Toggles.TeamCheck = Components.createToggle(scroll, "Team Check", function(v) State.ESP.TeamCheck = v end)
-        Toggles.Tracers = Components.createToggle(scroll, "Tracers", function(v) State.ESP.Tracers = v end)
-        Toggles.Chams = Components.createToggle(scroll, "Chams", function(v) State.ESP.Chams = v end)
-        Toggles.HeadDot = Components.createToggle(scroll, "Head Dot", function(v) State.ESP.HeadDot = v end)
+
+        local espGroup = Components.createExpandableToggle(scroll, "Enabled", function(v) State.ESP.Enabled = v end)
+        Toggles.Enabled = espGroup
+        local espSub = espGroup.SubContainer
+        Toggles.Box = Components.createToggle(espSub, "Box", function(v) State.ESP.Box = v end)
+        Toggles.Name = Components.createToggle(espSub, "Name", function(v) State.ESP.Name = v end)
+        Toggles.Health = Components.createToggle(espSub, "Health", function(v) State.ESP.Health = v end)
+        Toggles.Distance = Components.createToggle(espSub, "Distance", function(v) State.ESP.Distance = v end)
+        Components.createSlider(espSub, "Max Distance", 100, 5000, 1000, function(v) State.ESP.MaxDistance = v end)
+        Toggles.TeamCheck = Components.createToggle(espSub, "Team Check", function(v) State.ESP.TeamCheck = v end)
+        Toggles.Tracers = Components.createToggle(espSub, "Tracers", function(v) State.ESP.Tracers = v end)
+        Toggles.Chams = Components.createToggle(espSub, "Chams", function(v) State.ESP.Chams = v end)
+        Toggles.HeadDot = Components.createToggle(espSub, "Head Dot", function(v) State.ESP.HeadDot = v end)
     elseif currentTab == "Visuals" then
         Components.createSectionLabel(scroll, "Visuals")
-        Toggles.ChangeTime = Components.createToggle(scroll, "Change Time of Day", function(v) State.Visuals.ChangeTime = v end)
-        Components.createSlider(scroll, "Time of Day", 0, 24, 12, function(v) State.Visuals.TimeOfDay = v end)
-        Toggles.ChangeAmbient = Components.createToggle(scroll, "Change Ambience", function(v) State.Visuals.ChangeAmbient = v end)
-        Components.createSlider(scroll, "Ambient Red", 0, 255, 128, function(v) State.Visuals.AmbientR = v / 255 end)
-        Components.createSlider(scroll, "Ambient Green", 0, 255, 128, function(v) State.Visuals.AmbientG = v / 255 end)
-        Components.createSlider(scroll, "Ambient Blue", 0, 255, 128, function(v) State.Visuals.AmbientB = v / 255 end)
-        Toggles.ChangeFOV = Components.createToggle(scroll, "Change FOV", function(v) State.Visuals.ChangeFOV = v end)
-        Components.createSlider(scroll, "FOV Value", 10, 120, 70, function(v) State.Visuals.FOV = v end)
+
+        local timeGroup = Components.createExpandableToggle(scroll, "Change Time of Day", function(v) State.Visuals.ChangeTime = v end)
+        Toggles.ChangeTime = timeGroup
+        local timeSub = timeGroup.SubContainer
+        Components.createSlider(timeSub, "Time of Day", 0, 24, 12, function(v) State.Visuals.TimeOfDay = v end)
+
+        local ambientGroup = Components.createExpandableToggle(scroll, "Change Ambience", function(v) State.Visuals.ChangeAmbient = v end)
+        Toggles.ChangeAmbient = ambientGroup
+        local ambientSub = ambientGroup.SubContainer
+        Components.createSlider(ambientSub, "Ambient Red", 0, 255, 128, function(v) State.Visuals.AmbientR = v / 255 end)
+        Components.createSlider(ambientSub, "Ambient Green", 0, 255, 128, function(v) State.Visuals.AmbientG = v / 255 end)
+        Components.createSlider(ambientSub, "Ambient Blue", 0, 255, 128, function(v) State.Visuals.AmbientB = v / 255 end)
+
+        local fovGroup = Components.createExpandableToggle(scroll, "Change FOV", function(v) State.Visuals.ChangeFOV = v end)
+        Toggles.ChangeFOV = fovGroup
+        local fovSub = fovGroup.SubContainer
+        Components.createSlider(fovSub, "FOV Value", 10, 120, 70, function(v) State.Visuals.FOV = v end)
     end
 
     -- Setup keybinds for the current tab's toggles
@@ -408,7 +580,6 @@ local function rebuildScroll()
     end
 end
 
--- Now define the createTabButton
 local function createTabButton(name)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.25, -5, 1, 0)
@@ -470,7 +641,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
 end)
 
 -- Feature Implementations
-local flyBodyVelocity, flyBodyGyro
+local flyBodyVelocity, flyBodyGyro, walkBodyVelocity
 RunService.RenderStepped:Connect(function(delta)
     local char = player.Character
     if not char then return end
@@ -478,51 +649,92 @@ RunService.RenderStepped:Connect(function(delta)
     local hum = char:FindFirstChildOfClass("Humanoid")
     local root = char:FindFirstChild("HumanoidRootPart")
 
-    if hum then
+    if hum and root then
+        -- WalkSpeed
         if State.Movement.WalkSpeed then
-            hum.WalkSpeed = State.Movement.WalkSpeedValue
+            local speed = State.Movement.WalkSpeedValue
+            local moveDir = hum.MoveDirection * speed
+            local method = State.Movement.WalkMethod
+
+            if method == "Humanoid" then
+                hum.WalkSpeed = speed
+                if walkBodyVelocity then walkBodyVelocity:Destroy() walkBodyVelocity = nil end
+            elseif method == "Velocity" then
+                hum.WalkSpeed = 0  -- Prevent default movement
+                if not walkBodyVelocity then
+                    walkBodyVelocity = Instance.new("BodyVelocity")
+                    walkBodyVelocity.MaxForce = Vector3.new(1e5, 0, 1e5)
+                    walkBodyVelocity.Parent = root
+                end
+                walkBodyVelocity.Velocity = moveDir
+            elseif method == "CFrame" then
+                hum.WalkSpeed = 0
+                root.CFrame = root.CFrame + moveDir * delta
+                if walkBodyVelocity then walkBodyVelocity:Destroy() walkBodyVelocity = nil end
+            elseif method == "Impulse" then
+                hum.WalkSpeed = 0
+                local mass = root.AssemblyMass
+                root:ApplyImpulse(moveDir * mass * delta)
+                if walkBodyVelocity then walkBodyVelocity:Destroy() walkBodyVelocity = nil end
+            end
+        else
+            hum.WalkSpeed = 16
+            if walkBodyVelocity then walkBodyVelocity:Destroy() walkBodyVelocity = nil end
         end
 
+        -- SlideBoost
         if State.Movement.SlideBoost and hum:GetState() == Enum.HumanoidStateType.Freefall and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) and hum.MoveDirection.Magnitude > 0 then
             root.Velocity = root.Velocity + hum.MoveDirection * 30 * delta
         end
-    end
 
-    if root then
+        -- Fly
         if State.Movement.Fly then
-            if not flyBodyVelocity then
-                flyBodyVelocity = Instance.new("BodyVelocity")
-                flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-                flyBodyVelocity.Parent = root
+            hum:ChangeState(Enum.HumanoidStateType.Physics)
+            hum.UseJumpPower = false
+            hum.PlatformStand = true
 
-                flyBodyGyro = Instance.new("BodyGyro")
-                flyBodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-                flyBodyGyro.P = 1e4
-                flyBodyGyro.Parent = root
-            end
-
-            flyBodyGyro.CFrame = camera.CFrame
+            local speed = State.Movement.FlySpeed
+            local method = State.Movement.FlyMethod
 
             local vel = Vector3.new()
             local dir = hum.MoveDirection
             if dir.Magnitude > 0 then
                 vel = camera.CFrame:VectorToWorldSpace(dir)
             end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel = vel + camera.CFrame.UpVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then vel = vel - camera.CFrame.UpVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel = vel + Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then vel = vel - Vector3.new(0,1,0) end
+            if vel.Magnitude > 0 then vel = vel.Unit * speed end
 
-            if vel.Magnitude > 0 then
-                flyBodyVelocity.Velocity = vel.Unit * State.Movement.FlySpeed
-            else
-                flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            if method == "Velocity" then
+                if not flyBodyVelocity then
+                    flyBodyVelocity = Instance.new("BodyVelocity")
+                    flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                    flyBodyVelocity.Parent = root
+                    flyBodyGyro = Instance.new("BodyGyro")
+                    flyBodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+                    flyBodyGyro.P = 1e4
+                    flyBodyGyro.Parent = root
+                end
+                flyBodyGyro.CFrame = camera.CFrame
+                flyBodyVelocity.Velocity = vel
+            elseif method == "CFrame" then
+                if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
+                if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
+                root.CFrame = CFrame.lookAt(root.Position, root.Position + camera.CFrame.LookVector) + vel * delta
+            elseif method == "Impulse" then
+                if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
+                if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
+                local mass = root.AssemblyMass
+                root:ApplyImpulse(vel * mass * delta)
+                root.CFrame = CFrame.lookAt(root.Position, root.Position + camera.CFrame.LookVector)
             end
-        elseif flyBodyVelocity then
-            flyBodyVelocity:Destroy()
-            flyBodyVelocity = nil
-            flyBodyGyro:Destroy()
-            flyBodyGyro = nil
+        else
+            hum.PlatformStand = false
+            if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
+            if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
         end
 
+        -- Noclip
         if State.Movement.Noclip then
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") and part.CanCollide then
@@ -532,7 +744,7 @@ RunService.RenderStepped:Connect(function(delta)
         end
     end
 
-    -- Visuals implementations
+    -- Visuals
     if State.Visuals.ChangeTime then
         Lighting.TimeOfDay = string.format("%02d:00:00", State.Visuals.TimeOfDay)
     end
