@@ -1154,23 +1154,3 @@ Workspace.Raycast = function(self, origin, direction, params)
     return oldFire(self, origin, direction, params)
 end
 
-
-    local char = player.Character
-    local tool = char and char:FindFirstChildOfClass("Tool")
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-
-    if not tool or not root then
-        return oldFire(self, origin, direction, ...)
-    end
-
-    local data = Silent.Target
-    local aimPos = resolveAimData(data)
-
-    if aimPos and passesChance() then
-        -- FORCE HEAD HIT DIRECTION
-        local newDir = (aimPos - origin).Unit * direction.Magnitude
-        return oldFire(self, origin, newDir, ...)
-    end
-
-    return oldFire(self, origin, direction, ...)
-end
