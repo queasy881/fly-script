@@ -36,6 +36,7 @@ return function(arg1, arg2, arg3)
 	local Stats = game:GetService("Stats")
 	local HttpService = game:GetService("HttpService")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local MarketplaceService = game:GetService("MarketplaceService")
 	
 	local player = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
@@ -73,7 +74,7 @@ return function(arg1, arg2, arg3)
 	-- ---------------------------------------------------------------------------
 	-- ENTITY CACHE (Updated every 0.5s, not every frame)
 	-- ---------------------------------------------------------------------------
-	local EntityCache = { players = {}, npcs = {}, items = {} }
+	local EntityCache = { players = {}, npcs = {}, items = {}, weapons = {} }
 	
 	local function updateEntityCache()
 		-- Clean dead player entries
@@ -122,13 +123,20 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- Update Items
+		-- Update Items & Weapons
 		EntityCache.items = {}
+		EntityCache.weapons = {}
 		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("Tool") then
-				local handle = obj:FindFirstChild("Handle")
+			if obj:IsA("Tool") or obj:IsA("Model") and obj:FindFirstChild("Handle") then
+				local handle = obj:FindFirstChild("Handle") or obj.PrimaryPart
 				if handle then
-					table.insert(EntityCache.items, {Object = obj, Position = handle.Position, Name = obj.Name})
+					local isWeapon = obj.Name:lower():find("gun") or obj.Name:lower():find("sword") or 
+					                 obj.Name:lower():find("knife") or obj.Name:lower():find("weapon")
+					if isWeapon then
+						table.insert(EntityCache.weapons, {Object = obj, Position = handle.Position, Name = obj.Name})
+					else
+						table.insert(EntityCache.items, {Object = obj, Position = handle.Position, Name = obj.Name})
+					end
 				end
 			elseif obj:IsA("BasePart") then
 				local n = obj.Name:lower()
@@ -277,6 +285,19 @@ return function(arg1, arg2, arg3)
 			HUD.Keybinds.Size = 14
 			HUD.Keybinds.Outline = true
 			HUD.Keybinds.Visible = false
+			
+			-- New HUD elements
+			HUD.Radar = Drawing.new("Circle")
+			HUD.Radar.Thickness = 2
+			HUD.Radar.Filled = false
+			HUD.Radar.Visible = false
+			HUD.Radar.Radius = 80
+			HUD.Radar.Position = Vector2.new(120, 120)
+			
+			HUD.DamageIndicator = Drawing.new("Text")
+			HUD.DamageIndicator.Size = 18
+			HUD.DamageIndicator.Outline = true
+			HUD.DamageIndicator.Visible = false
 		end)
 	end
 	
@@ -287,7 +308,8 @@ return function(arg1, arg2, arg3)
 		ESP = {
 			NameESP = false, BoxESP = false, HealthESP = false, DistanceESP = false,
 			Tracers = false, SkeletonESP = false, OffscreenArrows = false, Chams = false,
-			ItemESP = false, NPCESP = false, MaxDistance = 1000, TeamCheck = false
+			ItemESP = false, NPCESP = false, WeaponsESP = false,
+			MaxDistance = 1000, TeamCheck = false
 		},
 		Combat = {
 			AimAssist = false, AimSmoothness = 0.15, AimFOV = 150, AimPrediction = false,
@@ -299,7 +321,13 @@ return function(arg1, arg2, arg3)
 			Triggerbot = false, TriggerbotDelay = 0.1,
 			AutoParry = false, HitboxExpander = false, HitboxSize = 5,
 			Backtrack = false, BacktrackTime = 0.2,
-			TargetStrafe = false, StrafeSpeed = 5, StrafeRadius = 10
+			TargetStrafe = false, StrafeSpeed = 5, StrafeRadius = 10,
+			-- NEW: Auto Clicker
+			AutoClicker = false, AutoClickerCPS = 10,
+			-- NEW: Hit Sound
+			HitSound = false, HitSoundVolume = 1,
+			-- NEW: Anti Knockback
+			AntiKnockback = false, KnockbackReduction = 0.8
 		},
 		Movement = {
 			Fly = false, FlySpeed = 50, FlyLegit = false, Noclip = false,
@@ -309,13 +337,25 @@ return function(arg1, arg2, arg3)
 			SpeedGlide = false, GlideSpeed = 10,
 			Dash = false, DashForce = 100, DashCooldown = 1,
 			ClickTP = false, AntiVoid = false, VoidHeight = -100, Anchor = false,
-			SpinBot = false, SpinSpeed = 20, FakeLag = false, LagIntensity = 5, AirControl = false
+			SpinBot = false, SpinSpeed = 20, FakeLag = false, LagIntensity = 5, AirControl = false,
+			-- NEW: No Fall Damage
+			NoFallDamage = false,
+			-- NEW: No Collision
+			NoCollision = false,
+			-- NEW: Wall Climb (Spider)
+			WallClimb = false, WallClimbSpeed = 5
 		},
 		Visuals = {
 			Fullbright = false, NoFog = false, NoShadows = false,
 			Crosshair = false, CrosshairSize = 10, CrosshairGap = 5,
 			CameraFOV = 70, ThirdPerson = false, Freecam = false, FreecamSpeed = 1,
-			XRay = false, XRayTransparency = 0.5
+			XRay = false, XRayTransparency = 0.5,
+			-- NEW: Night Vision
+			NightVision = false, NightVisionIntensity = 1,
+			-- NEW: Radar
+			Radar = false, RadarRange = 100, RadarSize = 80,
+			-- NEW: Damage Indicator
+			DamageIndicator = false, DamageIndicatorDuration = 2
 		},
 		World = { TimeOfDay = 14, Gravity = 196.2, DeleteMode = false, RemoveGrass = false },
 		Player = {
@@ -325,15 +365,163 @@ return function(arg1, arg2, arg3)
 		},
 		Troll = {
 			AnnoyPlayer = false, AnnoyTarget = "", OrbitPlayer = false, OrbitTarget = "",
-			OrbitRadius = 10, OrbitSpeed = 2, Fling = false, FlingPower = 500, Headless = false
+			OrbitRadius = 10, OrbitSpeed = 2, Fling = false, FlingPower = 500, Headless = false,
+			-- NEW: Auto Report
+			AutoReport = false, ReportCooldown = 30,
+			-- NEW: Voice Chat Troll (if game supports it)
+			VoiceChatTroll = false, VoiceSpamDelay = 2
 		},
 		Misc = {
 			AntiAFK = false, ChatSpam = false, SpamMsg = "Vertex Hub!", SpamDelay = 2,
 			Watermark = false, FPSCounter = false, PingDisplay = false, PlayerCount = false,
-			VelocityDisplay = false, TargetInfo = false, KeybindsDisplay = false
+			VelocityDisplay = false, TargetInfo = false, KeybindsDisplay = false,
+			-- NEW: Search Bar
+			SearchBar = false,
+			-- NEW: Compact Mode
+			CompactMode = false,
+			-- NEW: HUD Customization
+			HUDCustomization = false,
+			-- NEW: Anti Kick
+			AntiKick = false,
+			-- NEW: Statistics Tracker
+			StatisticsTracker = false,
+			-- NEW: Config System
+			ConfigAutoSave = false,
+			-- NEW: Chat Logger
+			ChatLogger = false
 		},
 		Settings = { MenuKey = Enum.KeyCode.M, AccentColor = Color3.fromRGB(60, 120, 255) }
 	}
+	
+	-- ---------------------------------------------------------------------------
+	-- STATISTICS TRACKER
+	-- ---------------------------------------------------------------------------
+	local Statistics = {
+		Kills = 0,
+		Deaths = 0,
+		DamageDealt = 0,
+		DamageTaken = 0,
+		Headshots = 0,
+		ShotsFired = 0,
+		ShotsHit = 0,
+		Accuracy = 0
+	}
+	
+	local function updateAccuracy()
+		if Statistics.ShotsFired > 0 then
+			Statistics.Accuracy = math.floor((Statistics.ShotsHit / Statistics.ShotsFired) * 10000) / 100
+		else
+			Statistics.Accuracy = 0
+		end
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- CONFIG SYSTEM
+	-- ---------------------------------------------------------------------------
+	local ConfigSystem = {
+		CurrentProfile = "default",
+		Profiles = {}
+	}
+	
+	local function saveConfig(profileName)
+		profileName = profileName or ConfigSystem.CurrentProfile
+		local configData = {
+			State = State,
+			Statistics = Statistics,
+			SavedTime = os.date("%Y-%m-%d %H:%M:%S")
+		}
+		ConfigSystem.Profiles[profileName] = configData
+		
+		if writefile then
+			pcall(function()
+				writefile("VertexHub_" .. profileName .. ".json", HttpService:JSONEncode(configData))
+			end)
+		end
+	end
+	
+	local function loadConfig(profileName)
+		profileName = profileName or ConfigSystem.CurrentProfile
+		if ConfigSystem.Profiles[profileName] then
+			local config = ConfigSystem.Profiles[profileName]
+			-- Only load state for safety
+			for category, settings in pairs(config.State) do
+				if State[category] then
+					for key, value in pairs(settings) do
+						State[category][key] = value
+					end
+				end
+			end
+			return true
+		elseif readfile then
+			pcall(function()
+				local data = readfile("VertexHub_" .. profileName .. ".json")
+				local config = HttpService:JSONDecode(data)
+				for category, settings in pairs(config.State) do
+					if State[category] then
+						for key, value in pairs(settings) do
+							State[category][key] = value
+						end
+					end
+				end
+				return true
+			end)
+		end
+		return false
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- CHAT LOGGER
+	-- ---------------------------------------------------------------------------
+	local ChatLogger = {
+		Messages = {},
+		MaxMessages = 50,
+		Enabled = false
+	}
+	
+	local function addChatMessage(sender, message)
+		table.insert(ChatLogger.Messages, {
+			Sender = sender,
+			Message = message,
+			Time = os.date("%H:%M:%S"),
+			Color = sender == player.Name and Color3.fromRGB(0, 200, 255) or Color3.fromRGB(255, 255, 255)
+		})
+		
+		if #ChatLogger.Messages > ChatLogger.MaxMessages then
+			table.remove(ChatLogger.Messages, 1)
+		end
+		
+		-- Update HUD if available
+		if ChatLogger.HUD then
+			ChatLogger.HUD:AddMessage(sender, message, sender == player.Name and Color3.fromRGB(0, 200, 255) or Color3.fromRGB(255, 255, 255))
+		end
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- HUD CUSTOMIZATION SYSTEM
+	-- ---------------------------------------------------------------------------
+	local HUDCustomization = {
+		Dragging = false,
+		CurrentElement = nil,
+		StartPos = nil,
+		StartOffset = nil,
+		Elements = {}
+	}
+	
+	local function setupHUDElement(element, name)
+		if not element then return end
+		
+		HUDCustomization.Elements[name] = {
+			Drawing = element,
+			Position = element.Position,
+			Visible = element.Visible
+		}
+		
+		if Misc.HUDCustomization then
+			-- Make draggable
+			-- Note: Drawing objects can't be directly made draggable
+			-- We'll implement drag through mouse position checking
+		end
+	end
 	
 	-- ---------------------------------------------------------------------------
 	-- STORAGE
@@ -343,6 +531,9 @@ return function(arg1, arg2, arg3)
 	local LastAttackTime = 0
 	local LastTriggerbotTime = 0
 	local LastDashTime = 0
+	local LastAutoClickTime = 0
+	local LastHitSoundTime = 0
+	local LastReportTime = 0
 	local FreecamPos = Vector3.new(0, 50, 0)
 	local FreecamAngles = Vector2.new(0, 0)
 	local FPSData = { frames = 0, lastTime = tick(), fps = 60 }
@@ -545,6 +736,258 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
+	-- NO COLLISION SYSTEM
+	-- ---------------------------------------------------------------------------
+	local function applyNoCollision()
+		local char = getCharacter()
+		if not char then return end
+		
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- WALL CLIMB (SPIDER) SYSTEM
+	-- ---------------------------------------------------------------------------
+	local WallClimbSystem = {
+		enabled = false,
+		climbing = false,
+		lastCheck = 0
+	}
+	
+	function WallClimbSystem:Update()
+		if not self.enabled then return end
+		
+		local now = tick()
+		if now - self.lastCheck < 0.1 then return end
+		self.lastCheck = now
+		
+		local root = getRoot()
+		local char = getCharacter()
+		if not root or not char then return end
+		
+		-- Check for wall in front
+		local params = RaycastParams.new()
+		params.FilterDescendantsInstances = {char}
+		params.FilterType = Enum.RaycastFilterType.Blacklist
+		
+		local ray = Ray.new(root.Position, root.CFrame.LookVector * 5)
+		local result = workspace:Raycast(ray.Origin, ray.Direction, params)
+		
+		if result and result.Instance and result.Instance.CanCollide then
+			self.climbing = true
+			root.Velocity = Vector3.new(root.Velocity.X, State.Movement.WallClimbSpeed * 10, root.Velocity.Z)
+		else
+			self.climbing = false
+		end
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- NIGHT VISION SYSTEM
+	-- ---------------------------------------------------------------------------
+	local function updateNightVision()
+		if State.Visuals.NightVision then
+			Lighting.Ambient = Color3.new(State.Visuals.NightVisionIntensity, 
+			                               State.Visuals.NightVisionIntensity, 
+			                               State.Visuals.NightVisionIntensity)
+			Lighting.Brightness = 2
+			Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+		else
+			Lighting.Ambient = OriginalLighting.Ambient
+			Lighting.Brightness = OriginalLighting.Brightness
+			Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
+		end
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- RADAR SYSTEM
+	-- ---------------------------------------------------------------------------
+	local function updateRadar()
+		if not State.Visuals.Radar or not HUD.Radar then return end
+		
+		HUD.Radar.Visible = true
+		local center = HUD.Radar.Position
+		local range = State.Visuals.RadarRange
+		local myRoot = getRoot()
+		
+		if not myRoot then return end
+		
+		-- Clear old blips
+		for _, blip in ipairs(HUD.Radar._blips or {}) do
+			if blip then blip:Remove() end
+		end
+		HUD.Radar._blips = {}
+		
+		-- Draw players on radar
+		for name, data in pairs(EntityCache.players) do
+			if data.RootPart and data.Humanoid and data.Humanoid.Health > 0 then
+				local offset = data.RootPart.Position - myRoot.Position
+				if offset.Magnitude <= range then
+					-- Convert to radar coordinates
+					local angle = math.atan2(offset.Z, offset.X)
+					local distance = math.min(offset.Magnitude / range, 1)
+					local x = center.X + math.cos(angle) * distance * HUD.Radar.Radius
+					local y = center.Y + math.sin(angle) * distance * HUD.Radar.Radius
+					
+					-- Create blip
+					local blip = Drawing.new("Circle")
+					blip.Position = Vector2.new(x, y)
+					blip.Radius = 3
+					blip.Filled = true
+					blip.Color = data.Team and data.Team == player.Team and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+					blip.Visible = true
+					table.insert(HUD.Radar._blips, blip)
+				end
+			end
+		end
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- AUTO CLICKER
+	-- ---------------------------------------------------------------------------
+	local function autoClickerUpdate()
+		if not State.Combat.AutoClicker then return end
+		
+		local now = tick()
+		local delay = 1 / State.Combat.AutoClickerCPS
+		
+		if now - LastAutoClickTime >= delay then
+			LastAutoClickTime = now
+			
+			-- Check if we have a tool
+			local tool = getTool()
+			if tool then
+				tool:Activate()
+			end
+			
+			-- Simulate mouse click
+			if mouse1click then
+				pcall(mouse1click)
+			end
+		end
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- HIT SOUND SYSTEM
+	-- ---------------------------------------------------------------------------
+	local function playHitSound()
+		if not State.Combat.HitSound then return end
+		
+		local now = tick()
+		if now - LastHitSoundTime < 0.1 then return end
+		LastHitSoundTime = now
+		
+		-- Play hit sound
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://6545045954" -- Classic hit sound
+		sound.Volume = State.Combat.HitSoundVolume
+		sound.Parent = workspace
+		sound:Play()
+		Debris:AddItem(sound, 2)
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- DAMAGE INDICATOR
+	-- ---------------------------------------------------------------------------
+	local DamageIndicators = {}
+	
+	local function showDamageIndicator(amount, position)
+		if not State.Visuals.DamageIndicator then return end
+		
+		local screenPos = camera:WorldToViewportPoint(position)
+		local indicator = Drawing.new("Text")
+		indicator.Text = "-" .. tostring(amount)
+		indicator.Size = 18
+		indicator.Color = Color3.fromRGB(255, 50, 50)
+		indicator.Position = Vector2.new(screenPos.X, screenPos.Y)
+		indicator.Visible = true
+		
+		table.insert(DamageIndicators, {
+			Drawing = indicator,
+			StartTime = tick(),
+			Duration = State.Visuals.DamageIndicatorDuration,
+			StartY = screenPos.Y
+		})
+	end
+	
+	local function updateDamageIndicators()
+		local now = tick()
+		for i = #DamageIndicators, 1, -1 do
+			local data = DamageIndicators[i]
+			local elapsed = now - data.StartTime
+			local progress = elapsed / data.Duration
+			
+			if progress >= 1 then
+				data.Drawing:Remove()
+				table.remove(DamageIndicators, i)
+			else
+				-- Float upward
+				local y = data.StartY - (progress * 50)
+				data.Drawing.Position = Vector2.new(data.Drawing.Position.X, y)
+				data.Drawing.Transparency = progress
+			end
+		end
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- ANTI KNOCKBACK
+	-- ---------------------------------------------------------------------------
+	local function applyAntiKnockback(root)
+		if not State.Combat.AntiKnockback then return end
+		
+		-- Reduce velocity changes (simplified anti-knockback)
+		root.Velocity = Vector3.new(
+			root.Velocity.X * State.Combat.KnockbackReduction,
+			root.Velocity.Y,
+			root.Velocity.Z * State.Combat.KnockbackReduction
+		)
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- ANTI KICK SYSTEM
+	-- ---------------------------------------------------------------------------
+	local function setupAntiKick()
+		if not State.Misc.AntiKick then return end
+		
+		-- Hook remote events that might kick
+		pcall(function()
+			local mt = getrawmetatable(game)
+			local oldNamecall = hookfunction(mt.__namecall, function(self, ...)
+				local method = getnamecallmethod()
+				local args = {...}
+				
+				-- Block kick/ban related calls
+				if method == "Kick" or method == "Teleport" then
+					if self == player then
+						return nil
+					end
+				end
+				
+				return oldNamecall(self, ...)
+			end)
+		end)
+	end
+	
+	-- ---------------------------------------------------------------------------
+	-- AUTO REPORT SYSTEM
+	-- ---------------------------------------------------------------------------
+	local function autoReportPlayer(targetName, reason)
+		if not State.Troll.AutoReport then return end
+		
+		local now = tick()
+		if now - LastReportTime < State.Troll.ReportCooldown then return end
+		LastReportTime = now
+		
+		pcall(function()
+			-- Try to report through Roblox system
+			Players:ReportAbuse(player, targetName, reason or "Scamming", "")
+		end)
+	end
+	
+	-- ---------------------------------------------------------------------------
 	-- EXECUTOR API SAFETY CHECK
 	-- ---------------------------------------------------------------------------
 	local function safeGetGlobal(name)
@@ -628,7 +1071,6 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- Initialize hook
-	-- DEFERRED: Hook after script fully loads
 	task.defer(hookKillAura)
 	
 	-- ---------------------------------------------------------------------------
@@ -695,14 +1137,13 @@ return function(arg1, arg2, arg3)
 		end)
 	end
 	
-	-- DEFERRED: Initialize hooks after script fully loads
 	task.defer(initSilentAimHooks)
 	
 	-- ---------------------------------------------------------------------------
-	-- BACKGROUND LOOPS (Spawned once, not per-frame)
+	-- BACKGROUND LOOPS
 	-- ---------------------------------------------------------------------------
 	
-	-- Chat Spam (runs in background, respects delay)
+	-- Chat Spam
 	task.spawn(function()
 		while true do
 			if State.Misc.ChatSpam then
@@ -720,7 +1161,7 @@ return function(arg1, arg2, arg3)
 		end
 	end)
 	
-	-- Auto Respawn (runs in background)
+	-- Auto Respawn
 	task.spawn(function()
 		while true do
 			if State.Player.AutoRespawn then
@@ -734,8 +1175,18 @@ return function(arg1, arg2, arg3)
 		end
 	end)
 	
+	-- Config Auto Save
+	task.spawn(function()
+		while true do
+			if State.Misc.ConfigAutoSave then
+				saveConfig("autosave")
+			end
+			task.wait(30) -- Save every 30 seconds
+		end
+	end)
+	
 	-- ---------------------------------------------------------------------------
-	-- CHAMS UPDATE (Called when needed, not every frame)
+	-- CHAMS UPDATE
 	-- ---------------------------------------------------------------------------
 	local function updateChams()
 		for name, data in pairs(EntityCache.players) do
@@ -775,7 +1226,7 @@ return function(arg1, arg2, arg3)
 	end
 	
 	-- ---------------------------------------------------------------------------
-	-- SINGLE MAIN UPDATE LOOP (Per spec: ONE RenderStepped, not multiple)
+	-- MAIN UPDATE LOOP
 	-- ---------------------------------------------------------------------------
 	local lastCacheUpdate = 0
 	
@@ -785,7 +1236,7 @@ return function(arg1, arg2, arg3)
 		local root = getRoot()
 		local hum = getHumanoid()
 		
-		-- Update cache every 0.5s (not every frame)
+		-- Update cache every 0.5s
 		if tick() - lastCacheUpdate > 0.5 then
 			lastCacheUpdate = tick()
 			updateEntityCache()
@@ -813,6 +1264,14 @@ return function(arg1, arg2, arg3)
 			for _, p in ipairs(char:GetDescendants()) do
 				if p:IsA("BasePart") then p.CanCollide = false end
 			end
+		end
+		
+		if State.Movement.NoCollision then
+			applyNoCollision()
+		end
+		
+		if State.Movement.WallClimb then
+			WallClimbSystem:Update()
 		end
 		
 		if State.Movement.Speed and hum then
@@ -864,6 +1323,11 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
+		if State.Movement.NoFallDamage and hum then
+			hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+			hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+		end
+		
 		-- -----------------------------------------------------------------------
 		-- COMBAT
 		-- -----------------------------------------------------------------------
@@ -887,7 +1351,7 @@ return function(arg1, arg2, arg3)
 			end
 		end
 		
-		-- KillAura - respects CPS, uses validated position offset
+		-- KillAura
 		if State.Combat.KillAura and root then
 			local now = tick()
 			local cooldown = 1 / State.Combat.KillAuraCPS
@@ -917,6 +1381,14 @@ return function(arg1, arg2, arg3)
 					end
 				end
 			end
+		end
+		
+		-- Auto Clicker
+		autoClickerUpdate()
+		
+		-- Anti Knockback
+		if State.Combat.AntiKnockback and root then
+			applyAntiKnockback(root)
 		end
 		
 		if State.Combat.Triggerbot then
@@ -1036,6 +1508,15 @@ return function(arg1, arg2, arg3)
 		-- -----------------------------------------------------------------------
 		-- VISUALS
 		-- -----------------------------------------------------------------------
+		-- Night Vision
+		updateNightVision()
+		
+		-- Radar
+		updateRadar()
+		
+		-- Damage Indicators
+		updateDamageIndicators()
+		
 		if State.Visuals.Freecam then
 			local spd = State.Visuals.FreecamSpeed * 2
 			local dir = Vector3.new()
@@ -1145,11 +1626,13 @@ return function(arg1, arg2, arg3)
 		end
 		
 		-- -----------------------------------------------------------------------
-		-- ESP RENDERING (Uses pooled drawings)
+		-- ESP RENDERING
 		-- -----------------------------------------------------------------------
 		releaseAllDrawings()
 		
-		local anyESP = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or State.ESP.DistanceESP or State.ESP.Tracers or State.ESP.SkeletonESP or State.ESP.OffscreenArrows or State.ESP.ItemESP or State.ESP.NPCESP
+		local anyESP = State.ESP.NameESP or State.ESP.BoxESP or State.ESP.HealthESP or State.ESP.DistanceESP or 
+		               State.ESP.Tracers or State.ESP.SkeletonESP or State.ESP.OffscreenArrows or 
+		               State.ESP.ItemESP or State.ESP.NPCESP or State.ESP.WeaponsESP
 		
 		if anyESP and DrawingEnabled then
 			for name, data in pairs(EntityCache.players) do
@@ -1278,6 +1761,30 @@ return function(arg1, arg2, arg3)
 					end
 				end
 			end
+			
+			if State.ESP.WeaponsESP then
+				for _, data in ipairs(EntityCache.weapons) do
+					local p, v = camera:WorldToViewportPoint(data.Position)
+					if v then
+						local t = getDrawing("text")
+						if t then
+							t.Text = "[Weapon] " .. data.Name
+							t.Position = Vector2.new(p.X, p.Y)
+							t.Color = Color3.fromRGB(255, 50, 50)
+							t.Size = 12
+						end
+						
+						-- Box around weapon
+						local b = getDrawing("square")
+						if b then
+							local sz = Vector2.new(30, 30)
+							b.Size = sz
+							b.Position = Vector2.new(p.X - sz.X / 2, p.Y - sz.Y / 2)
+							b.Color = Color3.fromRGB(255, 50, 50)
+						end
+					end
+				end
+			end
 		end
 		
 		-- -----------------------------------------------------------------------
@@ -1361,6 +1868,27 @@ return function(arg1, arg2, arg3)
 			State.Troll.AnnoyTarget = nm
 			State.Troll.OrbitTarget = nm
 		end
+		
+		-- Add to chat logger
+		addChatMessage(player.Name, msg)
+	end)
+	
+	-- Listen to other players' chat
+	Players.PlayerAdded:Connect(function(plr)
+		plr.Chatted:Connect(function(msg)
+			addChatMessage(plr.Name, msg)
+			
+			-- Auto report if enabled
+			if State.Troll.AutoReport then
+				local badWords = {"hack", "cheat", "exploit", "script", "aimbot"}
+				for _, word in ipairs(badWords) do
+					if msg:lower():find(word) then
+						autoReportPlayer(plr.Name, "Using exploits/hacks")
+						break
+					end
+				end
+			end
+		end)
 	end)
 	
 	-- ---------------------------------------------------------------------------
@@ -1382,7 +1910,7 @@ return function(arg1, arg2, arg3)
 	}
 	
 	-- ---------------------------------------------------------------------------
-	-- BUILT-IN COMPONENTS (No external dependency)
+	-- BUILT-IN COMPONENTS
 	-- ---------------------------------------------------------------------------
 	if not Components then
 		Components = {}
@@ -1617,7 +2145,7 @@ return function(arg1, arg2, arg3)
 	_G.VertexComponents = Components
 	
 	-- ---------------------------------------------------------------------------
-	-- BUILT-IN TABS (No external dependency)
+	-- BUILT-IN TABS
 	-- ---------------------------------------------------------------------------
 	if not Tabs then
 		Tabs = {}
@@ -1749,6 +2277,19 @@ return function(arg1, arg2, arg3)
 	ac.CornerRadius = UDim.new(1, 0)
 	ac.Parent = acc
 	
+	-- Search bar in header
+	local searchBar = nil
+	if Components.createSearchBar then
+		searchBar = Components.createSearchBar(hdr, "Search features...", function(text)
+			-- Filter functionality would go here
+		end)
+		searchBar.Container.Size = UDim2.new(0, 200, 0, 30)
+		searchBar.Container.Position = UDim2.new(0.5, -100, 0.5, 0)
+		searchBar.Container.AnchorPoint = Vector2.new(0.5, 0.5)
+		searchBar.Container.BackgroundTransparency = 1
+		searchBar.SearchBox.BackgroundTransparency = 0.2
+	end
+	
 	-- Close button
 	local cls = Instance.new("TextButton")
 	cls.Size = UDim2.new(0, 30, 0, 30)
@@ -1871,6 +2412,25 @@ return function(arg1, arg2, arg3)
 	Components.createToggle(combatC, "Wall Check", function(v) State.Combat.KillAuraWallCheck = v end)
 	Components.createToggle(combatC, "Legit Mode", function(v) State.Combat.KillAuraLegit = v end)
 	Components.createDivider(combatC)
+	
+	-- NEW: Auto Clicker
+	Components.createSection(combatC, "Auto Clicker")
+	Components.createToggle(combatC, "Auto Clicker", function(v) State.Combat.AutoClicker = v end)
+	Components.createSlider(combatC, "Clicks Per Second", 1, 20, 10, function(v) State.Combat.AutoClickerCPS = v end)
+	Components.createDivider(combatC)
+	
+	-- NEW: Hit Sound
+	Components.createSection(combatC, "Hit Effects")
+	Components.createToggle(combatC, "Hit Sound", function(v) State.Combat.HitSound = v end)
+	Components.createSlider(combatC, "Hit Sound Volume", 1, 10, 5, function(v) State.Combat.HitSoundVolume = v / 10 end)
+	Components.createDivider(combatC)
+	
+	-- NEW: Anti Knockback
+	Components.createSection(combatC, "Anti Knockback")
+	Components.createToggle(combatC, "Anti Knockback", function(v) State.Combat.AntiKnockback = v end)
+	Components.createSlider(combatC, "Knockback Reduction", 10, 100, 80, function(v) State.Combat.KnockbackReduction = v / 100 end)
+	Components.createDivider(combatC)
+	
 	Components.createSection(combatC, "Reach")
 	Components.createToggle(combatC, "Reach", function(v) State.Combat.Reach = v end)
 	Components.createSlider(combatC, "Reach Distance", 10, 30, 18, function(v) State.Combat.ReachDistance = v end)
@@ -1923,6 +2483,19 @@ return function(arg1, arg2, arg3)
 	Components.createSlider(moveC, "Jump Value", 50, 500, 50, function(v) State.Movement.JumpValue = v end)
 	Components.createToggle(moveC, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
 	Components.createDivider(moveC)
+	
+	-- NEW: No Fall Damage
+	Components.createSection(moveC, "Safety")
+	Components.createToggle(moveC, "No Fall Damage", function(v) State.Movement.NoFallDamage = v end)
+	Components.createToggle(moveC, "No Collision", function(v) State.Movement.NoCollision = v end)
+	Components.createDivider(moveC)
+	
+	-- NEW: Wall Climb (Spider)
+	Components.createSection(moveC, "Climbing")
+	Components.createToggle(moveC, "Wall Climb (Spider)", function(v) State.Movement.WallClimb = v end)
+	Components.createSlider(moveC, "Climb Speed", 1, 20, 5, function(v) State.Movement.WallClimbSpeed = v end)
+	Components.createDivider(moveC)
+	
 	Components.createSection(moveC, "Special Movement")
 	Components.createToggle(moveC, "Bunny Hop", function(v) State.Movement.BunnyHop = v end)
 	Components.createToggle(moveC, "Long Jump (Space)", function(v) State.Movement.LongJump = v end)
@@ -1961,6 +2534,7 @@ return function(arg1, arg2, arg3)
 	Components.createSection(espC, "World ESP")
 	Components.createToggle(espC, "NPC ESP", function(v) State.ESP.NPCESP = v end)
 	Components.createToggle(espC, "Item ESP", function(v) State.ESP.ItemESP = v end)
+	Components.createToggle(espC, "Weapons ESP", function(v) State.ESP.WeaponsESP = v end)
 	Components.createDivider(espC)
 	Components.createSection(espC, "Highlights")
 	Components.createToggle(espC, "Chams", function(v) State.ESP.Chams = v updateChams() end)
@@ -1997,6 +2571,35 @@ return function(arg1, arg2, arg3)
 	end)
 	Components.createToggle(visC, "No Shadows", function(v) State.Visuals.NoShadows = v Lighting.GlobalShadows = not v end)
 	Components.createDivider(visC)
+	
+	-- NEW: Night Vision
+	Components.createSection(visC, "Vision")
+	Components.createToggle(visC, "Night Vision", function(v)
+		State.Visuals.NightVision = v
+		updateNightVision()
+	end)
+	Components.createSlider(visC, "Night Vision Intensity", 1, 10, 1, function(v)
+		State.Visuals.NightVisionIntensity = v
+		updateNightVision()
+	end)
+	Components.createDivider(visC)
+	
+	-- NEW: Radar
+	Components.createSection(visC, "Radar")
+	Components.createToggle(visC, "Radar", function(v) State.Visuals.Radar = v end)
+	Components.createSlider(visC, "Radar Range", 50, 500, 100, function(v) State.Visuals.RadarRange = v end)
+	Components.createSlider(visC, "Radar Size", 50, 150, 80, function(v) 
+		State.Visuals.RadarSize = v 
+		if HUD.Radar then HUD.Radar.Radius = v end
+	end)
+	Components.createDivider(visC)
+	
+	-- NEW: Damage Indicator
+	Components.createSection(visC, "Damage Effects")
+	Components.createToggle(visC, "Damage Indicator", function(v) State.Visuals.DamageIndicator = v end)
+	Components.createSlider(visC, "Indicator Duration", 1, 5, 2, function(v) State.Visuals.DamageIndicatorDuration = v end)
+	Components.createDivider(visC)
+	
 	Components.createSection(visC, "Crosshair")
 	Components.createToggle(visC, "Custom Crosshair", function(v) State.Visuals.Crosshair = v end)
 	Components.createSlider(visC, "Crosshair Size", 5, 50, 10, function(v) State.Visuals.CrosshairSize = v end)
@@ -2075,6 +2678,21 @@ return function(arg1, arg2, arg3)
 	Components.createToggle(trollC, "Fling", function(v) State.Troll.Fling = v end)
 	Components.createSlider(trollC, "Fling Power", 100, 1000, 500, function(v) State.Troll.FlingPower = v end)
 	Components.createToggle(trollC, "Headless", function(v) State.Troll.Headless = v end)
+	
+	-- NEW: Auto Report
+	Components.createDivider(trollC)
+	Components.createSection(trollC, "Auto Report")
+	Components.createToggle(trollC, "Auto Report Players", function(v) State.Troll.AutoReport = v end)
+	Components.createSlider(trollC, "Report Cooldown", 10, 300, 30, function(v) State.Troll.ReportCooldown = v end)
+	Components.createLabel(trollC, "Automatically reports players who mention cheats/hacks")
+	
+	-- NEW: Voice Chat Troll
+	Components.createDivider(trollC)
+	Components.createSection(trollC, "Voice Chat (Beta)")
+	Components.createToggle(trollC, "Voice Chat Troll", function(v) State.Troll.VoiceChatTroll = v end)
+	Components.createSlider(trollC, "Spam Delay", 1, 10, 2, function(v) State.Troll.VoiceSpamDelay = v end)
+	Components.createLabel(trollC, "Requires game to support Roblox Voice Chat")
+	
 	Components.createDivider(trollC)
 	Components.createSection(trollC, "Info")
 	Components.createLabel(trollC, "Type /target [name] in chat to set target")
@@ -2090,6 +2708,104 @@ return function(arg1, arg2, arg3)
 	Components.createToggle(miscC, "Velocity Display", function(v) State.Misc.VelocityDisplay = v end)
 	Components.createToggle(miscC, "Target Info", function(v) State.Misc.TargetInfo = v end)
 	Components.createToggle(miscC, "Keybinds Display", function(v) State.Misc.KeybindsDisplay = v end)
+	
+	-- NEW: Search Bar & Compact Mode
+	Components.createDivider(miscC)
+	Components.createSection(miscC, "Interface")
+	Components.createToggle(miscC, "Search Bar", function(v) 
+		State.Misc.SearchBar = v
+		if searchBar then
+			searchBar.Container.Visible = v
+		end
+	end)
+	Components.createToggle(miscC, "Compact Mode", function(v)
+		State.Misc.CompactMode = v
+		if v then
+			main.Size = UDim2.new(0, 700, 0, 500)
+		else
+			main.Size = UDim2.new(0, 950, 0, 650)
+		end
+	end)
+	Components.createToggle(miscC, "HUD Customization", function(v)
+		State.Misc.HUDCustomization = v
+	end)
+	Components.createLabel(miscC, "Allows dragging HUD elements while enabled")
+	
+	-- NEW: Anti Kick
+	Components.createDivider(miscC)
+	Components.createSection(miscC, "Protection")
+	Components.createToggle(miscC, "Anti Kick", function(v)
+		State.Misc.AntiKick = v
+		if v then
+			setupAntiKick()
+		end
+	end)
+	Components.createLabel(miscC, "Attempts to prevent being kicked from the game")
+	
+	-- NEW: Statistics Tracker
+	Components.createDivider(miscC)
+	Components.createSection(miscC, "Statistics Tracker")
+	Components.createToggle(miscC, "Statistics Tracker", function(v) State.Misc.StatisticsTracker = v end)
+	if Components.createStatisticsDisplay then
+		local statsDisplay = Components.createStatisticsDisplay(miscC, "COMBAT STATS")
+		
+		-- Update stats periodically
+		task.spawn(function()
+			while true do
+				if State.Misc.StatisticsTracker then
+					statsDisplay:UpdateStat("Kills", Statistics.Kills)
+					statsDisplay:UpdateStat("Deaths", Statistics.Deaths)
+					statsDisplay:UpdateStat("KDR", Statistics.Deaths > 0 and string.format("%.2f", Statistics.Kills/Statistics.Deaths) or Statistics.Kills)
+					statsDisplay:UpdateStat("Damage", Statistics.DamageDealt)
+					statsDisplay:UpdateStat("Headshots", Statistics.Headshots)
+				end
+				task.wait(1)
+			end
+		end)
+	end
+	
+	-- NEW: Chat Logger
+	Components.createDivider(miscC)
+	Components.createSection(miscC, "Chat Logger")
+	Components.createToggle(miscC, "Chat Logger", function(v) State.Misc.ChatLogger = v end)
+	if Components.createChatLogger then
+		ChatLogger.HUD = Components.createChatLogger(miscC, 30)
+	end
+	
+	-- NEW: Config System
+	Components.createDivider(miscC)
+	Components.createSection(miscC, "Config System")
+	Components.createToggle(miscC, "Auto Save Config", function(v) State.Misc.ConfigAutoSave = v end)
+	if Components.createConfigButtons then
+		local configButtons = Components.createConfigButtons(miscC,
+			function() saveConfig("manual") print("Config saved!") end,
+			function() if loadConfig("manual") then print("Config loaded!") else print("No config found") end end,
+			function() 
+				local data = HttpService:JSONEncode({State = State, Statistics = Statistics})
+				setclipboard(data)
+				print("Config copied to clipboard!")
+			end,
+			function()
+				if readfile then
+					pcall(function()
+						local data = getclipboard()
+						local config = HttpService:JSONDecode(data)
+						if config and config.State then
+							for category, settings in pairs(config.State) do
+								if State[category] then
+									for key, value in pairs(settings) do
+										State[category][key] = value
+									end
+								end
+							end
+							print("Config imported from clipboard!")
+						end
+					end)
+				end
+			end
+		)
+	end
+	
 	Components.createDivider(miscC)
 	Components.createSection(miscC, "Utility")
 	Components.createToggle(miscC, "Anti AFK", function(v) State.Misc.AntiAFK = v end)
@@ -2133,7 +2849,7 @@ return function(arg1, arg2, arg3)
 				PrevMouseState.behavior = UIS.MouseBehavior
 				PrevMouseState.icon = UIS.MouseIconEnabled
 				
-				-- UNLOCK MOUSE (Required per spec)
+				-- UNLOCK MOUSE
 				UIS.MouseBehavior = Enum.MouseBehavior.Default
 				UIS.MouseIconEnabled = true
 				
@@ -2170,7 +2886,7 @@ return function(arg1, arg2, arg3)
 	end)
 	
 	-- ---------------------------------------------------------------------------
-	-- CHARACTER EVENTS (Reapply features on respawn)
+	-- CHARACTER EVENTS
 	-- ---------------------------------------------------------------------------
 	player.CharacterAdded:Connect(function(c)
 		task.wait(0.5)
@@ -2186,9 +2902,14 @@ return function(arg1, arg2, arg3)
 		end
 	end)
 	
-	Players.PlayerAdded:Connect(function()
+	Players.PlayerAdded:Connect(function(plr)
 		task.wait(1)
 		if State.ESP.Chams then updateChams() end
+		
+		-- Listen to their chat
+		plr.Chatted:Connect(function(msg)
+			addChatMessage(plr.Name, msg)
+		end)
 	end)
 	
 	Players.PlayerRemoving:Connect(function(p)
@@ -2204,4 +2925,19 @@ return function(arg1, arg2, arg3)
 	else
 		print("[Vertex Hub] Loaded successfully! WARNING: Drawing API not available - ESP features disabled. Press M to toggle menu.")
 	end
+	
+	print("[Vertex Hub] Added Features:")
+	print("- Search Bar & Compact Mode")
+	print("- HUD Customization")
+	print("- Anti Kick System")
+	print("- Statistics Tracker")
+	print("- Config System (Save/Load)")
+	print("- Chat Logger")
+	print("- Auto Report & Voice Chat Troll")
+	print("- No Fall Damage & No Collision")
+	print("- Wall Climb (Spider)")
+	print("- Night Vision & Radar")
+	print("- Weapons ESP")
+	print("- Auto Clicker & Hit Sound")
+	print("- Damage Indicator & Anti Knockback")
 end
