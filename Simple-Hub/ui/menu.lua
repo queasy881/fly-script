@@ -363,7 +363,7 @@ local function rebuildScroll()
         Components.createSlider(scroll, "Silent Hit Chance", 0, 100, 100, function(v) State.Combat.SilentHitChance = v end)
         Toggles.SilentPrediction = Components.createToggle(scroll, "Silent Prediction", function(v) State.Combat.SilentPrediction = v end)
         Components.createSlider(scroll, "Silent Prediction Amount", 1, 50, 10, function(v) State.Combat.SilentPredictionAmount = v / 100 end)
-    elseif currentTab = "ESP" then
+    elseif currentTab == "ESP" then
         Components.createSectionLabel(scroll, "ESP")
         Toggles.Enabled = Components.createToggle(scroll, "Enabled", function(v) State.ESP.Enabled = v end)
         Toggles.Box = Components.createToggle(scroll, "Box", function(v) State.ESP.Box = v end)
