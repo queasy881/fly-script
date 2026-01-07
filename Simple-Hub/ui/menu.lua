@@ -205,7 +205,7 @@ function Components.createGroup(parent, text, callback)
     subPadding.Parent = subFrame
 
     local state = false
-    local expanded = false
+    local expanded = Expanded[text] or false
 
     local updateToggle = function()
         button.Text = state and "On" or "Off"
@@ -225,8 +225,11 @@ function Components.createGroup(parent, text, callback)
 
     expandBtn.MouseButton1Click:Connect(function()
         expanded = not expanded
+        Expanded[text] = expanded
         updateExpand()
     end)
+
+    updateExpand()  -- Set initial state
 
     return {
         Set = function(value)
@@ -245,6 +248,7 @@ function Components.createGroup(parent, text, callback)
         end,
         Expand = function(val)
             expanded = val
+            Expanded[text] = val
             updateExpand()
         end,
         SubContainer = subFrame
@@ -439,6 +443,7 @@ local State = {
 local Keybinds = {}
 local Toggles = {}
 local waitingForBind = nil
+local Expanded = {}
 
 -- GUI Creation
 local gui = Instance.new("ScreenGui")
@@ -996,37 +1001,72 @@ end)
 local oldNamecall = nil
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
-    if method ~= "Raycast" or self ~= Workspace then
+    if self ~= Workspace then
         return oldNamecall(self, ...)
     end
 
-    local args = {...}
-    if not State.Combat.SilentAim or typeof(args[1]) ~= "Vector3" or typeof(args[2]) ~= "Vector3" then
-        return oldNamecall(self, ...)
+    if method == "Raycast" then
+        local args = {...}
+        if not State.Combat.SilentAim or typeof(args[1]) ~= "Vector3" or typeof(args[2]) ~= "Vector3" then
+            return oldNamecall(self, ...)
+        end
+
+        local char = player.Character
+        if not char then return oldNamecall(self, ...) end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if not tool then return oldNamecall(self, ...) end
+
+        if math.random(1, 100) > State.Combat.SilentHitChance then
+            return oldNamecall(self, ...)
+        end
+
+        local origin = args[1]
+        local direction = args[2]
+
+        local target = getClosestTarget(State.Combat.SilentFOV)
+        if not target then return oldNamecall(self, ...) end
+
+        local aimPos = target.Part.Position
+        if State.Combat.SilentPrediction then
+            local myVel = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") or {}).AssemblyLinearVelocity or Vector3.zero
+            local relVel = target.Root.AssemblyLinearVelocity - myVel
+            aimPos += relVel * State.Combat.SilentPredictionAmount
+        end
+
+        args[2] = (aimPos - origin).Unit * direction.Magnitude
+        return oldNamecall(self, unpack(args))
+    elseif method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" or method == "findPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
+        local args = {...}
+        if not State.Combat.SilentAim or typeof(args[1]) ~= "Ray" then
+            return oldNamecall(self, ...)
+        end
+
+        local char = player.Character
+        if not char then return oldNamecall(self, ...) end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if not tool then return oldNamecall(self, ...) end
+
+        if math.random(1, 100) > State.Combat.SilentHitChance then
+            return oldNamecall(self, ...)
+        end
+
+        local ray = args[1]
+        local origin = ray.Origin
+        local direction = ray.Direction
+
+        local target = getClosestTarget(State.Combat.SilentFOV)
+        if not target then return oldNamecall(self, ...) end
+
+        local aimPos = target.Part.Position
+        if State.Combat.SilentPrediction then
+            local myVel = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") or {}).AssemblyLinearVelocity or Vector3.zero
+            local relVel = target.Root.AssemblyLinearVelocity - myVel
+            aimPos += relVel * State.Combat.SilentPredictionAmount
+        end
+
+        args[1] = Ray.new(origin, (aimPos - origin).Unit * direction.Magnitude)
+        return oldNamecall(self, unpack(args))
     end
 
-    local char = player.Character
-    if not char then return oldNamecall(self, ...) end
-    local tool = char:FindFirstChildOfClass("Tool")
-    if not tool then return oldNamecall(self, ...) end  -- Only if holding a weapon/tool
-
-    if math.random(1, 100) > State.Combat.SilentHitChance then
-        return oldNamecall(self, ...)
-    end
-
-    local origin = args[1]
-    local direction = args[2]
-
-    local target = getClosestTarget(State.Combat.SilentFOV)
-    if not target then return oldNamecall(self, ...) end
-
-    local aimPos = target.Part.Position
-    if State.Combat.SilentPrediction then
-        local myVel = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") or {}).AssemblyLinearVelocity or Vector3.zero
-        local relVel = target.Root.AssemblyLinearVelocity - myVel
-        aimPos += relVel * State.Combat.SilentPredictionAmount
-    end
-
-    args[2] = (aimPos - origin).Unit * direction.Magnitude
-    return oldNamecall(self, unpack(args))
+    return oldNamecall(self, ...)
 end)
