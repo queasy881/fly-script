@@ -10,6 +10,12 @@ return function(Components)
 	-- SERVICES
 	-- ---------------------------------------------------------------------------
 	local Players = game:GetService("Players")
+	local function toggleMenu()
+	-- basic open/close logic
+	sidebar.Visible = not sidebar.Visible
+	contentArea.Visible = sidebar.Visible
+end
+
 	local UIS = game:GetService("UserInputService")
 	local RunService = game:GetService("RunService")
 	local TweenService = game:GetService("TweenService")
