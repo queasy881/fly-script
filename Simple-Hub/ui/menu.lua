@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
@@ -68,7 +69,7 @@ function Components.createSectionLabel(parent, text)
     return label
 end
 
--- Create Toggle
+-- Create Toggle with Keybind
 function Components.createToggle(parent, text, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 30)
@@ -250,7 +251,20 @@ local State = {
         Health = false,
         Distance = false,
         MaxDistance = 1000,
-        TeamCheck = false
+        TeamCheck = false,
+        Tracers = false,
+        Chams = false,
+        HeadDot = false
+    },
+    Visuals = {
+        ChangeTime = false,
+        TimeOfDay = 12,
+        ChangeAmbient = false,
+        AmbientR = 0.5,
+        AmbientG = 0.5,
+        AmbientB = 0.5,
+        ChangeFOV = false,
+        FOV = 70
     }
 }
 
@@ -323,7 +337,7 @@ local currentTab = "Movement"
 
 local function createTabButton(name)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.33, -10, 1, 0)
+    btn.Size = UDim2.new(0.25, -5, 1, 0)  -- Adjusted for 4 tabs
     btn.Text = name
     btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -346,9 +360,14 @@ local function createTabButton(name)
     return btn
 end
 
-createTabButton("Movement")
-createTabButton("Combat")
-createTabButton("ESP")
+local movementBtn = createTabButton("Movement")
+local combatBtn = createTabButton("Combat")
+local espBtn = createTabButton("ESP")
+local visualsBtn = createTabButton("Visuals")
+
+-- Set initial tab highlight
+movementBtn.BackgroundColor3 = Color3.fromRGB(100, 120, 255)
+movementBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 local function rebuildScroll()
     for _, child in ipairs(scroll:GetChildren()) do
@@ -389,9 +408,22 @@ local function rebuildScroll()
         Toggles.Distance = Components.createToggle(scroll, "Distance", function(v) State.ESP.Distance = v end)
         Components.createSlider(scroll, "Max Distance", 100, 5000, 1000, function(v) State.ESP.MaxDistance = v end)
         Toggles.TeamCheck = Components.createToggle(scroll, "Team Check", function(v) State.ESP.TeamCheck = v end)
+        Toggles.Tracers = Components.createToggle(scroll, "Tracers", function(v) State.ESP.Tracers = v end)
+        Toggles.Chams = Components.createToggle(scroll, "Chams", function(v) State.ESP.Chams = v end)
+        Toggles.HeadDot = Components.createToggle(scroll, "Head Dot", function(v) State.ESP.HeadDot = v end)
+    elseif currentTab == "Visuals" then
+        Components.createSectionLabel(scroll, "Visuals")
+        Toggles.ChangeTime = Components.createToggle(scroll, "Change Time of Day", function(v) State.Visuals.ChangeTime = v end)
+        Components.createSlider(scroll, "Time of Day", 0, 24, 12, function(v) State.Visuals.TimeOfDay = v end)
+        Toggles.ChangeAmbient = Components.createToggle(scroll, "Change Ambience", function(v) State.Visuals.ChangeAmbient = v end)
+        Components.createSlider(scroll, "Ambient Red", 0, 255, 128, function(v) State.Visuals.AmbientR = v / 255 end)
+        Components.createSlider(scroll, "Ambient Green", 0, 255, 128, function(v) State.Visuals.AmbientG = v / 255 end)
+        Components.createSlider(scroll, "Ambient Blue", 0, 255, 128, function(v) State.Visuals.AmbientB = v / 255 end)
+        Toggles.ChangeFOV = Components.createToggle(scroll, "Change FOV", function(v) State.Visuals.ChangeFOV = v end)
+        Components.createSlider(scroll, "FOV Value", 10, 120, 70, function(v) State.Visuals.FOV = v end)
     end
 
-    -- Setup keybind for the current tab's toggles
+    -- Setup keybinds for the current tab's toggles
     for feature, toggle in pairs(Toggles) do
         local btn = toggle.GetKeybindButton()
         if btn then
@@ -479,7 +511,12 @@ RunService.RenderStepped:Connect(function(delta)
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel = vel + camera.CFrame.UpVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then vel = vel - camera.CFrame.UpVector end
-            flyBodyVelocity.Velocity = vel.Unit * State.Movement.FlySpeed
+
+            if vel.Magnitude > 0 then
+                flyBodyVelocity.Velocity = vel.Unit * State.Movement.FlySpeed
+            else
+                flyBodyVelocity.Velocity = Vector3.new()
+            end
         elseif flyBodyVelocity then
             flyBodyVelocity:Destroy()
             flyBodyVelocity = nil
@@ -494,6 +531,17 @@ RunService.RenderStepped:Connect(function(delta)
                 end
             end
         end
+    end
+
+    -- Visuals implementations
+    if State.Visuals.ChangeTime then
+        Lighting.TimeOfDay = string.format("%02d:00:00", State.Visuals.TimeOfDay)
+    end
+    if State.Visuals.ChangeAmbient then
+        Lighting.Ambient = Color3.new(State.Visuals.AmbientR, State.Visuals.AmbientG, State.Visuals.AmbientB)
+    end
+    if State.Visuals.ChangeFOV then
+        camera.FieldOfView = State.Visuals.FOV
     end
 end)
 
@@ -510,7 +558,13 @@ end)
 local espCache = {}
 RunService.RenderStepped:Connect(function()
     for _, drawings in pairs(espCache) do
-        for _, d in pairs(drawings) do d.Visible = false end
+        for _, d in pairs(drawings) do
+            if typeof(d) == "Instance" then
+                d.Enabled = false
+            else
+                d.Visible = false
+            end
+        end
     end
 
     if not State.ESP.Enabled then return end
@@ -534,9 +588,14 @@ RunService.RenderStepped:Connect(function()
         local corners = {}
         local size = Vector3.new(2, 5, 1) -- Approximate character bounding box
         for x = -1, 1, 2 do for y = -1, 1, 2 do for z = -1, 1, 2 do
-            local corner = camera:WorldToViewportPoint(root.CFrame * CFrame.new(x*size.X/2, y*size.Y/2, z*size.Z/2).Position)
-            table.insert(corners, Vector2.new(corner.X, corner.Y))
+            local pos = root.CFrame * CFrame.new(x*size.X/2, y*size.Y/2, z*size.Z/2).Position
+            local screen, onScreen = camera:WorldToViewportPoint(pos)
+            if onScreen then
+                table.insert(corners, Vector2.new(screen.X, screen.Y))
+            end
         end end end
+
+        if #corners < 8 then continue end  -- Partially offscreen check
 
         local minX, minY = math.huge, math.huge
         local maxX, maxY = -math.huge, -math.huge
@@ -549,7 +608,7 @@ RunService.RenderStepped:Connect(function()
 
         local width = maxX - minX
         local height = maxY - minY
-        if width < 5 or height < 5 then continue end -- Offscreen or too small
+        if width < 5 or height < 5 then continue end
 
         local key = tostring(plr)
         if not espCache[key] then
@@ -557,7 +616,10 @@ RunService.RenderStepped:Connect(function()
                 box = Drawing.new("Quad"),
                 name = Drawing.new("Text"),
                 health = Drawing.new("Line"),
-                distance = Drawing.new("Text")
+                distance = Drawing.new("Text"),
+                tracer = Drawing.new("Line"),
+                headDot = Drawing.new("Circle"),
+                chams = Instance.new("Highlight")
             }
             espCache[key].box.Thickness = 1
             espCache[key].box.Color = Color3.fromRGB(255, 255, 255)
@@ -571,11 +633,24 @@ RunService.RenderStepped:Connect(function()
             espCache[key].distance.Color = Color3.fromRGB(255, 255, 255)
             espCache[key].distance.Center = true
             espCache[key].distance.Outline = true
+            espCache[key].tracer.Thickness = 1
+            espCache[key].tracer.Color = Color3.fromRGB(255, 255, 255)
+            espCache[key].headDot.Radius = 3
+            espCache[key].headDot.NumSides = 100
+            espCache[key].headDot.Color = Color3.fromRGB(255, 0, 0)
+            espCache[key].headDot.Filled = true
+            espCache[key].chams.FillTransparency = 0.5
+            espCache[key].chams.FillColor = Color3.fromRGB(255, 0, 0)
+            espCache[key].chams.OutlineColor = Color3.fromRGB(255, 255, 255)
+            espCache[key].chams.OutlineTransparency = 0
+            espCache[key].chams.Adornee = plr.Character
+            espCache[key].chams.Parent = plr.Character
         end
 
         local drawings = espCache[key]
-        local screenHead = camera:WorldToViewportPoint(head.Position)
-        local screenRoot = camera:WorldToViewportPoint(root.Position)
+        local screenHead, onScreenHead = camera:WorldToViewportPoint(head.Position)
+        local screenRoot, onScreenRoot = camera:WorldToViewportPoint(root.Position)
+        if not onScreenHead or not onScreenRoot then continue end
 
         if State.ESP.Box then
             drawings.box.PointA = Vector2.new(minX, minY)
@@ -603,13 +678,34 @@ RunService.RenderStepped:Connect(function()
             drawings.distance.Position = Vector2.new((minX + maxX)/2, maxY + 2)
             drawings.distance.Visible = true
         end
+
+        if State.ESP.Tracers then
+            drawings.tracer.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+            drawings.tracer.To = Vector2.new(screenRoot.X, screenRoot.Y)
+            drawings.tracer.Visible = true
+        end
+
+        if State.ESP.HeadDot then
+            drawings.headDot.Position = Vector2.new(screenHead.X, screenHead.Y)
+            drawings.headDot.Visible = true
+        end
+
+        if State.ESP.Chams then
+            drawings.chams.Enabled = true
+        end
     end
 end)
 
 Players.PlayerRemoving:Connect(function(plr)
     local key = tostring(plr)
     if espCache[key] then
-        for _, d in pairs(espCache[key]) do d:Remove() end
+        for _, d in pairs(espCache[key]) do
+            if typeof(d) == "Instance" then
+                d:Destroy()
+            else
+                d:Remove()
+            end
+        end
         espCache[key] = nil
     end
 end)
