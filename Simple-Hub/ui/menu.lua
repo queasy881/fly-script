@@ -66,7 +66,7 @@ function Components.createSectionLabel(parent, text)
     return label
 end
 
--- Create Toggle
+-- Create Toggle with Keybind
 function Components.createToggle(parent, text, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 30)
@@ -136,21 +136,33 @@ function Components.createToggle(parent, text, callback)
     }
 end
 
--- Create Expandable Toggle (Dropdown-like)
-function Components.createExpandableToggle(parent, text, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
+-- Create Group with Expandable Dropdown
+function Components.createGroup(parent, text, callback)
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(1, 0, 0, 30)
+    mainFrame.BackgroundTransparency = 1
+    mainFrame.Parent = parent
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.5, 0, 1, 0)
+    label.Size = UDim2.new(0.4, 0, 1, 0)
     label.Text = text
     label.TextColor3 = Colors.Text
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.Gotham
     label.TextSize = 13
-    label.Parent = frame
+    label.Parent = mainFrame
+
+    local expandBtn = Instance.new("TextButton")
+    expandBtn.Size = UDim2.new(0.1, 0, 1, 0)
+    expandBtn.Position = UDim2.new(0.45, 0, 0, 0)
+    expandBtn.Text = "+"
+    expandBtn.BackgroundColor3 = Colors.Bar
+    expandBtn.TextColor3 = Colors.Text
+    expandBtn.Font = Enum.Font.Gotham
+    expandBtn.TextSize = 12
+    expandBtn.Parent = mainFrame
+    corner(expandBtn)
+    border(expandBtn)
 
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0.2, 0, 1, 0)
@@ -160,7 +172,7 @@ function Components.createExpandableToggle(parent, text, callback)
     button.TextColor3 = Colors.Text
     button.Font = Enum.Font.Gotham
     button.TextSize = 12
-    button.Parent = frame
+    button.Parent = mainFrame
     corner(button)
     border(button)
 
@@ -172,7 +184,7 @@ function Components.createExpandableToggle(parent, text, callback)
     keybindBtn.TextColor3 = Colors.TextSoft
     keybindBtn.Font = Enum.Font.Gotham
     keybindBtn.TextSize = 12
-    keybindBtn.Parent = frame
+    keybindBtn.Parent = mainFrame
     corner(keybindBtn)
     border(keybindBtn)
 
@@ -186,41 +198,54 @@ function Components.createExpandableToggle(parent, text, callback)
     subLayout.Padding = UDim.new(0, 5)
     subLayout.Parent = subFrame
     subLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        subFrame.Size = UDim2.new(1, 0, 0, subLayout.AbsoluteContentSize.Y)
+        tween(subFrame, {Size = UDim2.new(1, 0, 0, expanded and subLayout.AbsoluteContentSize.Y or 0)}, 0.2)
     end)
     local subPadding = Instance.new("UIPadding")
     subPadding.PaddingLeft = UDim.new(0, 20)  -- Indent sub options
     subPadding.Parent = subFrame
 
     local state = false
-    local update = function()
+    local expanded = false
+
+    local updateToggle = function()
         button.Text = state and "On" or "Off"
         tween(button, {BackgroundColor3 = state and Colors.Accent or Colors.Bar}, 0.15)
-        subFrame.Visible = state
         callback(state)
+    end
+
+    local updateExpand = function()
+        expandBtn.Text = expanded and "x" or "+"
+        tween(subFrame, {Size = UDim2.new(1, 0, 0, expanded and subLayout.AbsoluteContentSize.Y or 0)}, 0.2)
     end
 
     button.MouseButton1Click:Connect(function()
         state = not state
-        update()
+        updateToggle()
     end)
 
-    subFrame.Visible = false
+    expandBtn.MouseButton1Click:Connect(function()
+        expanded = not expanded
+        updateExpand()
+    end)
 
     return {
         Set = function(value)
             state = value
-            update()
+            updateToggle()
         end,
         Toggle = function()
             state = not state
-            update()
+            updateToggle()
         end,
         SetKeybindText = function(txt)
             keybindBtn.Text = txt
         end,
         GetKeybindButton = function()
             return keybindBtn
+        end,
+        Expand = function(val)
+            expanded = val
+            updateExpand()
         end,
         SubContainer = subFrame
     }
@@ -489,7 +514,7 @@ local function rebuildScroll()
     if currentTab == "Movement" then
         Components.createSectionLabel(scroll, "Movement")
 
-        local walkGroup = Components.createExpandableToggle(scroll, "WalkSpeed", function(v) State.Movement.WalkSpeed = v end)
+        local walkGroup = Components.createGroup(scroll, "WalkSpeed", function(v) State.Movement.WalkSpeed = v end)
         Toggles.WalkSpeed = walkGroup
         local walkSub = walkGroup.SubContainer
         Components.createSelector(walkSub, "Method", {"Humanoid", "CFrame", "Velocity", "Impulse"}, State.Movement.WalkMethod, function(m) State.Movement.WalkMethod = m end)
@@ -497,7 +522,7 @@ local function rebuildScroll()
 
         Toggles.SlideBoost = Components.createToggle(scroll, "Slide Boost", function(v) State.Movement.SlideBoost = v end)
 
-        local flyGroup = Components.createExpandableToggle(scroll, "Fly", function(v) State.Movement.Fly = v end)
+        local flyGroup = Components.createGroup(scroll, "Fly", function(v) State.Movement.Fly = v end)
         Toggles.Fly = flyGroup
         local flySub = flyGroup.SubContainer
         Components.createSelector(flySub, "Method", {"Velocity", "CFrame", "Impulse"}, State.Movement.FlyMethod, function(m) State.Movement.FlyMethod = m end)
@@ -508,7 +533,7 @@ local function rebuildScroll()
     elseif currentTab == "Combat" then
         Components.createSectionLabel(scroll, "Combat")
 
-        local aimGroup = Components.createExpandableToggle(scroll, "Aim Assist", function(v) State.Combat.AimAssist = v end)
+        local aimGroup = Components.createGroup(scroll, "Aim Assist", function(v) State.Combat.AimAssist = v end)
         Toggles.AimAssist = aimGroup
         local aimSub = aimGroup.SubContainer
         Components.createSlider(aimSub, "Aim Smoothness", 1, 50, 15, function(v) State.Combat.AimSmoothness = v / 100 end)
@@ -516,7 +541,7 @@ local function rebuildScroll()
         Toggles.AimPrediction = Components.createToggle(aimSub, "Aim Prediction", function(v) State.Combat.AimPrediction = v end)
         Components.createSlider(aimSub, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
 
-        local silentGroup = Components.createExpandableToggle(scroll, "Silent Aim", function(v) State.Combat.SilentAim = v end)
+        local silentGroup = Components.createGroup(scroll, "Silent Aim", function(v) State.Combat.SilentAim = v end)
         Toggles.SilentAim = silentGroup
         local silentSub = silentGroup.SubContainer
         Components.createSlider(silentSub, "Silent FOV", 50, 500, 150, function(v) State.Combat.SilentFOV = v end)
@@ -526,7 +551,7 @@ local function rebuildScroll()
     elseif currentTab == "ESP" then
         Components.createSectionLabel(scroll, "ESP")
 
-        local espGroup = Components.createExpandableToggle(scroll, "Enabled", function(v) State.ESP.Enabled = v end)
+        local espGroup = Components.createGroup(scroll, "Enabled", function(v) State.ESP.Enabled = v end)
         Toggles.Enabled = espGroup
         local espSub = espGroup.SubContainer
         Toggles.Box = Components.createToggle(espSub, "Box", function(v) State.ESP.Box = v end)
@@ -541,19 +566,19 @@ local function rebuildScroll()
     elseif currentTab == "Visuals" then
         Components.createSectionLabel(scroll, "Visuals")
 
-        local timeGroup = Components.createExpandableToggle(scroll, "Change Time of Day", function(v) State.Visuals.ChangeTime = v end)
+        local timeGroup = Components.createGroup(scroll, "Change Time of Day", function(v) State.Visuals.ChangeTime = v end)
         Toggles.ChangeTime = timeGroup
         local timeSub = timeGroup.SubContainer
         Components.createSlider(timeSub, "Time of Day", 0, 24, 12, function(v) State.Visuals.TimeOfDay = v end)
 
-        local ambientGroup = Components.createExpandableToggle(scroll, "Change Ambience", function(v) State.Visuals.ChangeAmbient = v end)
+        local ambientGroup = Components.createGroup(scroll, "Change Ambience", function(v) State.Visuals.ChangeAmbient = v end)
         Toggles.ChangeAmbient = ambientGroup
         local ambientSub = ambientGroup.SubContainer
         Components.createSlider(ambientSub, "Ambient Red", 0, 255, 128, function(v) State.Visuals.AmbientR = v / 255 end)
         Components.createSlider(ambientSub, "Ambient Green", 0, 255, 128, function(v) State.Visuals.AmbientG = v / 255 end)
         Components.createSlider(ambientSub, "Ambient Blue", 0, 255, 128, function(v) State.Visuals.AmbientB = v / 255 end)
 
-        local fovGroup = Components.createExpandableToggle(scroll, "Change FOV", function(v) State.Visuals.ChangeFOV = v end)
+        local fovGroup = Components.createGroup(scroll, "Change FOV", function(v) State.Visuals.ChangeFOV = v end)
         Toggles.ChangeFOV = fovGroup
         local fovSub = fovGroup.SubContainer
         Components.createSlider(fovSub, "FOV Value", 10, 120, 70, function(v) State.Visuals.FOV = v end)
