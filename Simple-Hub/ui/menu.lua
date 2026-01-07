@@ -13,6 +13,8 @@ local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 local mouse = player:GetMouse()
 local Expanded = {}
+local espCache = {}
+
 
 
 -- Inline components to avoid require and script.Parent issues for loadstring
@@ -793,7 +795,7 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 -- ESP Implementation
-local espCache = {}
+
 RunService.RenderStepped:Connect(function()
     for _, drawings in pairs(espCache) do
         for _, d in pairs(drawings) do
@@ -1138,10 +1140,20 @@ end)
 -- Intercept ALL Weapon Rays WITHOUT Metamethods
 local oldFire = Workspace.Raycast
 
-Workspace.Raycast = function(self, origin, direction, ...)
-    if not State.Combat.SilentAim then
-        return oldFire(self, origin, direction, ...)
+Workspace.Raycast = function(self, origin, direction, params)
+    if State and State.Combat and State.Combat.SilentAim then
+        local data = Silent.Target
+        local aimPos = resolveAimData(data)
+
+        if aimPos and passesChance() then
+            local newDir = (aimPos - origin).Unit * direction.Magnitude
+            return oldFire(self, origin, newDir, params)
+        end
     end
+
+    return oldFire(self, origin, direction, params)
+end
+
 
     local char = player.Character
     local tool = char and char:FindFirstChildOfClass("Tool")
