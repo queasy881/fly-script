@@ -1138,9 +1138,10 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- Intercept ALL Weapon Rays WITHOUT Metamethods
-local oldFire = Workspace.Raycast
+local function fireRay(origin, direction, params)
+    return Workspace:Raycast(origin, direction, params)
+end
 
-Workspace.Raycast = function(self, origin, direction, params)
     if State and State.Combat and State.Combat.SilentAim then
         local data = Silent.Target
         local aimPos = resolveAimData(data)
