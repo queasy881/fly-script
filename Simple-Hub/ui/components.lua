@@ -1,3 +1,4 @@
+-- components.lua
 -- Vertical Hub Components - Fresh Implementation
 -- Simplified components for vertical menu UX
 
@@ -87,7 +88,7 @@ function Components.createToggle(parent, text, callback)
     button.MouseButton1Click:Connect(function()
         state = not state
         button.Text = state and "On" or "Off"
-        button.BackgroundColor3 = state and Colors.Accent or Colors.Bar
+        tween(button, {BackgroundColor3 = state and Colors.Accent or Colors.Bar}, 0.15)
         callback(state)
     end)
 
@@ -95,7 +96,7 @@ function Components.createToggle(parent, text, callback)
         Set = function(value)
             state = value
             button.Text = state and "On" or "Off"
-            button.BackgroundColor3 = state and Colors.Accent or Colors.Bar
+            tween(button, {BackgroundColor3 = state and Colors.Accent or Colors.Bar}, 0.15)
         end
     }
 end
@@ -158,7 +159,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local rel = math.clamp((input.Position.X - barFrame.AbsolutePosition.X) / barFrame.AbsoluteSize.X, 0, 1)
             value = math.floor(min + (max - min) * rel + 0.5)
-            fill.Size = UDim2.new(rel, 0, 1, 0)
+            tween(fill, {Size = UDim2.new(rel, 0, 1, 0)}, 0.1)
             valueLabel.Text = tostring(value)
             callback(value)
         end
@@ -174,7 +175,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
             v = math.clamp(v, min, max)
             value = v
             local rel = (v - min) / (max - min)
-            fill.Size = UDim2.new(rel, 0, 1, 0)
+            tween(fill, {Size = UDim2.new(rel, 0, 1, 0)}, 0.15)
             valueLabel.Text = tostring(v)
         end
     }
