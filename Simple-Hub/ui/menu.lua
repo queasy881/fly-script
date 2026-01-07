@@ -15,9 +15,6 @@ local mouse = player:GetMouse()
 
 -- Inline components to avoid require and script.Parent issues for loadstring
 
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-
 local Components = {}
 
 -- Colors (simplified palette)
@@ -69,7 +66,7 @@ function Components.createSectionLabel(parent, text)
     return label
 end
 
--- Create Toggle with Keybind
+-- Create Toggle
 function Components.createToggle(parent, text, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 30)
@@ -285,8 +282,8 @@ main.Position = UDim2.new(1, 300, 0.5, -300)  -- Start offscreen to the right
 main.AnchorPoint = Vector2.new(1, 0.5)
 main.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 main.Parent = gui
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", main).Color = Color3.fromRGB(50, 50, 70)
+corner(main, 8)
+border(main, Color3.fromRGB(50, 50, 70))
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -296,7 +293,7 @@ title.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
 title.Parent = main
-Instance.new("UICorner", title).CornerRadius = UDim.new(0, 8)
+corner(title, 8)
 
 local tabBar = Instance.new("Frame")
 tabBar.Size = UDim2.new(1, 0, 0, 30)
@@ -335,40 +332,7 @@ padding.Parent = scroll
 
 local currentTab = "Movement"
 
-local function createTabButton(name)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.25, -5, 1, 0)  -- Adjusted for 4 tabs
-    btn.Text = name
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 14
-    btn.Parent = tabBar
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
-    btn.MouseButton1Click:Connect(function()
-        currentTab = name
-        rebuildScroll()
-        for _, b in tabBar:GetChildren() do
-            if b:IsA("TextButton") then
-                b.BackgroundColor3 = (b.Text == name) and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)
-                b.TextColor3 = (b.Text == name) and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
-            end
-        end
-    end)
-
-    return btn
-end
-
-local movementBtn = createTabButton("Movement")
-local combatBtn = createTabButton("Combat")
-local espBtn = createTabButton("ESP")
-local visualsBtn = createTabButton("Visuals")
-
--- Set initial tab highlight
-movementBtn.BackgroundColor3 = Color3.fromRGB(100, 120, 255)
-movementBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-
+-- Move rebuildScroll definition here
 local function rebuildScroll()
     for _, child in ipairs(scroll:GetChildren()) do
         if child:IsA("GuiObject") and child ~= layout and child ~= padding then
@@ -399,7 +363,7 @@ local function rebuildScroll()
         Components.createSlider(scroll, "Silent Hit Chance", 0, 100, 100, function(v) State.Combat.SilentHitChance = v end)
         Toggles.SilentPrediction = Components.createToggle(scroll, "Silent Prediction", function(v) State.Combat.SilentPrediction = v end)
         Components.createSlider(scroll, "Silent Prediction Amount", 1, 50, 10, function(v) State.Combat.SilentPredictionAmount = v / 100 end)
-    elseif currentTab == "ESP" then
+    elseif currentTab = "ESP" then
         Components.createSectionLabel(scroll, "ESP")
         Toggles.Enabled = Components.createToggle(scroll, "Enabled", function(v) State.ESP.Enabled = v end)
         Toggles.Box = Components.createToggle(scroll, "Box", function(v) State.ESP.Box = v end)
@@ -443,6 +407,41 @@ local function rebuildScroll()
         end
     end
 end
+
+-- Now define the createTabButton
+local function createTabButton(name)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.25, -5, 1, 0)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Parent = tabBar
+    corner(btn, 6)
+
+    btn.MouseButton1Click:Connect(function()
+        currentTab = name
+        rebuildScroll()
+        for _, b in tabBar:GetChildren() do
+            if b:IsA("TextButton") then
+                b.BackgroundColor3 = (b.Text == name) and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)
+                b.TextColor3 = (b.Text == name) and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
+            end
+        end
+    end)
+
+    return btn
+end
+
+local movementBtn = createTabButton("Movement")
+local combatBtn = createTabButton("Combat")
+local espBtn = createTabButton("ESP")
+local visualsBtn = createTabButton("Visuals")
+
+-- Set initial tab highlight
+movementBtn.BackgroundColor3 = Color3.fromRGB(100, 120, 255)
+movementBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 rebuildScroll()
 
@@ -515,7 +514,7 @@ RunService.RenderStepped:Connect(function(delta)
             if vel.Magnitude > 0 then
                 flyBodyVelocity.Velocity = vel.Unit * State.Movement.FlySpeed
             else
-                flyBodyVelocity.Velocity = Vector3.new()
+                flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
             end
         elseif flyBodyVelocity then
             flyBodyVelocity:Destroy()
