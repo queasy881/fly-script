@@ -126,7 +126,142 @@ function Components.createToggle(parent, text, callback)
     }
 end
 
--- Create Slider
+-- Create Expandable Toggle (Dropdown-like)
+function Components.createExpandableToggle(parent, text, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.5, 0, 1, 0)
+    label.Text = text
+    label.TextColor3 = Colors.Text
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.Parent = frame
+
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.2, 0, 1, 0)
+    button.Position = UDim2.new(0.55, 0, 0, 0)
+    button.Text = "Off"
+    button.BackgroundColor3 = Colors.Bar
+    button.TextColor3 = Colors.Text
+    button.Font = Enum.Font.Gotham
+    button.TextSize = 12
+    button.Parent = frame
+    corner(button)
+    border(button)
+
+    local keybindBtn = Instance.new("TextButton")
+    keybindBtn.Size = UDim2.new(0.2, 0, 1, 0)
+    keybindBtn.Position = UDim2.new(0.8, 0, 0, 0)
+    keybindBtn.Text = "None"
+    keybindBtn.BackgroundColor3 = Colors.Bar
+    keybindBtn.TextColor3 = Colors.TextSoft
+    keybindBtn.Font = Enum.Font.Gotham
+    keybindBtn.TextSize = 12
+    keybindBtn.Parent = frame
+    corner(keybindBtn)
+    border(keybindBtn)
+
+    local subFrame = Instance.new("Frame")
+    subFrame.Size = UDim2.new(1, 0, 0, 0)
+    subFrame.BackgroundTransparency = 1
+    subFrame.ClipsDescendants = true
+    subFrame.Parent = parent
+    local subLayout = Instance.new("UIListLayout")
+    subLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    subLayout.Padding = UDim.new(0, 5)
+    subLayout.Parent = subFrame
+    subLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        subFrame.Size = UDim2.new(1, 0, 0, subLayout.AbsoluteContentSize.Y)
+    end)
+    local subPadding = Instance.new("UIPadding")
+    subPadding.PaddingLeft = UDim.new(0, 20)  -- Indent sub options
+    subPadding.Parent = subFrame
+
+    local state = false
+    local update = function()
+        button.Text = state and "On" or "Off"
+        tween(button, {BackgroundColor3 = state and Colors.Accent or Colors.Bar}, 0.15)
+        subFrame.Visible = state
+        callback(state)
+    end
+
+    button.MouseButton1Click:Connect(function()
+        state = not state
+        update()
+    end)
+
+    subFrame.Visible = false
+
+    return {
+        Set = function(value)
+            state = value
+            update()
+        end,
+        Toggle = function()
+            state = not state
+            update()
+        end,
+        SetKeybindText = function(txt)
+            keybindBtn.Text = txt
+        end,
+        GetKeybindButton = function()
+            return keybindBtn
+        end,
+        SubContainer = subFrame
+    }
+end
+
+-- Create Selector (Cycle through options)
+function Components.createSelector(parent, text, options, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 30)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.6, 0, 1, 0)
+    label.Text = text
+    label.TextColor3 = Colors.Text
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.Parent = frame
+
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.4, 0, 1, 0)
+    button.Position = UDim2.new(0.6, 0, 0, 0)
+    button.BackgroundColor3 = Colors.Bar
+    button.TextColor3 = Colors.Text
+    button.Font = Enum.Font.Gotham
+    button.TextSize = 12
+    button.Parent = frame
+    corner(button)
+    border(button)
+
+    local index = table.find(options, default) or 1
+    button.Text = options[index]
+
+    button.MouseButton1Click:Connect(function()
+        index = (index % #options) + 1
+        button.Text = options[index]
+        callback(options[index])
+    end)
+
+    return {
+        Set = function(value)
+            local newIndex = table.find(options, value) or 1
+            index = newIndex
+            button.Text = options[index]
+        end
+    }
+end
+
+-- Create Slider (More appealing with gradient)
 function Components.createSlider(parent, text, min, max, default, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 50)
@@ -148,12 +283,20 @@ function Components.createSlider(parent, text, min, max, default, callback)
     barFrame.BackgroundColor3 = Colors.Bar
     barFrame.Parent = frame
     corner(barFrame)
+    border(barFrame)
 
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0, 0, 1, 0)
     fill.BackgroundColor3 = Colors.Accent
     fill.Parent = barFrame
     corner(fill)
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 60, 200)),
+        ColorSequenceKeypoint.new(1, Colors.Accent)
+    })
+    gradient.Parent = fill
 
     local valueLabel = Instance.new("TextLabel")
     valueLabel.Size = UDim2.new(0.2, 0, 1, 0)
