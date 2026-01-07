@@ -1,3 +1,4 @@
+-- menu.lua
 -- Vertical Hub - Fresh Implementation
 -- Fully vertical menu, optimized UX, only specified features
 
@@ -49,11 +50,12 @@ local State = {
 local gui = Instance.new("ScreenGui")
 gui.Name = "VerticalHub"
 gui.Parent = player:WaitForChild("PlayerGui")
-gui.Enabled = false
+gui.Enabled = true  -- Start enabled but hidden via position
 
 local main = Instance.new("Frame")
 main.Size = UDim2.new(0, 300, 0, 600)
-main.Position = UDim2.new(0.5, -150, 0.5, -300)
+main.Position = UDim2.new(1, 300, 0.5, -300)  -- Start offscreen to the right
+main.AnchorPoint = Vector2.new(1, 0.5)
 main.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 main.Parent = gui
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 8)
@@ -92,7 +94,7 @@ padding.PaddingLeft = UDim.new(0, 10)
 padding.PaddingRight = UDim.new(0, 10)
 padding.Parent = scroll
 
--- UI Component Functions
+-- UI Component Functions (updated with animations)
 local function createSectionLabel(text)
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 0, 30)
@@ -136,7 +138,8 @@ local function createToggle(text, callback)
     button.MouseButton1Click:Connect(function()
         state = not state
         button.Text = state and "On" or "Off"
-        button.BackgroundColor3 = state and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)
+        local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(button, tweenInfo, {BackgroundColor3 = state and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)}):Play()
         callback(state)
     end)
 
@@ -144,7 +147,8 @@ local function createToggle(text, callback)
         Set = function(value)
             state = value
             button.Text = state and "On" or "Off"
-            button.BackgroundColor3 = state and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)
+            local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(button, tweenInfo, {BackgroundColor3 = state and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)}):Play()
         end
     }
 end
@@ -206,7 +210,8 @@ local function createSlider(text, min, max, default, callback)
         if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local rel = math.clamp((input.Position.X - barFrame.AbsolutePosition.X) / barFrame.AbsoluteSize.X, 0, 1)
             value = math.floor(min + (max - min) * rel + 0.5)
-            fill.Size = UDim2.new(rel, 0, 1, 0)
+            local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(fill, tweenInfo, {Size = UDim2.new(rel, 0, 1, 0)}):Play()
             valueLabel.Text = tostring(value)
             callback(value)
         end
@@ -222,7 +227,8 @@ local function createSlider(text, min, max, default, callback)
             v = math.clamp(v, min, max)
             value = v
             local rel = (v - min) / (max - min)
-            fill.Size = UDim2.new(rel, 0, 1, 0)
+            local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(fill, tweenInfo, {Size = UDim2.new(rel, 0, 1, 0)}):Play()
             valueLabel.Text = tostring(v)
         end
     }
@@ -259,11 +265,15 @@ createToggle("Distance", function(v) State.ESP.Distance = v end)
 createSlider("Max Distance", 100, 5000, 1000, function(v) State.ESP.MaxDistance = v end)
 createToggle("Team Check", function(v) State.ESP.TeamCheck = v end)
 
--- Toggle Menu (Insert Key)
+-- Toggle Menu (M Key) with animation
+local menuVisible = false
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.M then
-        gui.Enabled = not gui.Enabled
+        menuVisible = not menuVisible
+        local targetPos = menuVisible and UDim2.new(1, 0, 0.5, -300) or UDim2.new(1, 300, 0.5, -300)
+        local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        TweenService:Create(main, tweenInfo, {Position = targetPos}):Play()
     end
 end)
 
@@ -489,12 +499,17 @@ RunService.RenderStepped:Connect(function()
     camera.CFrame = CFrame.lookAt(camera.CFrame.Position, camera.CFrame.Position + newLook)
 end)
 
--- Silent Aim (Raycast Hook)
+-- Silent Aim (Raycast Hook) with weapon check
 local oldNamecall = nil
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     if not State.Combat.SilentAim or getnamecallmethod() ~= "Raycast" or self ~= Workspace then
         return oldNamecall(self, ...)
     end
+
+    local char = player.Character
+    if not char then return oldNamecall(self, ...) end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if not tool then return oldNamecall(self, ...) end  -- Only if holding a weapon/tool
 
     if math.random(1, 100) > State.Combat.SilentHitChance then
         return oldNamecall(self, ...)
