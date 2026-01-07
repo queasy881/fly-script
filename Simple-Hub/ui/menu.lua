@@ -1,12 +1,14 @@
 -- menu.lua
 -- Vertical Hub - Fresh Implementation
--- Fully vertical menu, optimized UX, only specified features
+-- Fully vertical menu, optimized UX, only specified features, with tabs and keybinds, fixed fly
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+
+local Components = require(script.Parent["components"])  -- Assume components.lua is loaded appropriately
 
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
@@ -46,6 +48,11 @@ local State = {
     }
 }
 
+-- Keybinds and Toggles
+local Keybinds = {}
+local Toggles = {}
+local waitingForBind = nil
+
 -- GUI Creation
 local gui = Instance.new("ScreenGui")
 gui.Name = "VerticalHub"
@@ -71,9 +78,21 @@ title.TextSize = 18
 title.Parent = main
 Instance.new("UICorner", title).CornerRadius = UDim.new(0, 8)
 
+local tabBar = Instance.new("Frame")
+tabBar.Size = UDim2.new(1, 0, 0, 30)
+tabBar.Position = UDim2.new(0, 0, 0, 40)
+tabBar.BackgroundTransparency = 1
+tabBar.Parent = main
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tabLayout.Padding = UDim.new(0, 5)
+tabLayout.Parent = tabBar
+
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, 0, 1, -40)
-scroll.Position = UDim2.new(0, 0, 0, 40)
+scroll.Size = UDim2.new(1, 0, 1, -70)
+scroll.Position = UDim2.new(0, 0, 0, 70)
 scroll.BackgroundTransparency = 1
 scroll.ScrollBarThickness = 4
 scroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 255)
@@ -94,176 +113,102 @@ padding.PaddingLeft = UDim.new(0, 10)
 padding.PaddingRight = UDim.new(0, 10)
 padding.Parent = scroll
 
--- UI Component Functions (updated with animations)
-local function createSectionLabel(text)
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 30)
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(150, 150, 255)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 14
-    label.Parent = scroll
-    return label
+local currentTab = "Movement"
+
+local function createTabButton(name)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.33, -10, 1, 0)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Parent = tabBar
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    btn.MouseButton1Click:Connect(function()
+        currentTab = name
+        rebuildScroll()
+        for _, b in tabBar:GetChildren() do
+            if b:IsA("TextButton") then
+                b.BackgroundColor3 = (b.Text == name) and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)
+                b.TextColor3 = (b.Text == name) and Color3.fromRGB(255,255,255) or Color3.fromRGB(200,200,200)
+            end
+        end
+    end)
+
+    return btn
 end
 
-local function createToggle(text, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 30)
-    frame.BackgroundTransparency = 1
-    frame.Parent = scroll
+createTabButton("Movement")
+createTabButton("Combat")
+createTabButton("ESP")
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 13
-    label.Parent = frame
+-- Update the tab bar to have three tabs
 
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0.3, 0, 1, 0)
-    button.Position = UDim2.new(0.7, 0, 0, 0)
-    button.Text = "Off"
-    button.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.Gotham
-    button.TextSize = 12
-    button.Parent = frame
-    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 4)
-    Instance.new("UIStroke", button).Color = Color3.fromRGB(60, 60, 80)
-
-    local state = false
-    button.MouseButton1Click:Connect(function()
-        state = not state
-        button.Text = state and "On" or "Off"
-        local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        TweenService:Create(button, tweenInfo, {BackgroundColor3 = state and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)}):Play()
-        callback(state)
-    end)
-
-    return {
-        Set = function(value)
-            state = value
-            button.Text = state and "On" or "Off"
-            local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            TweenService:Create(button, tweenInfo, {BackgroundColor3 = state and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(40, 40, 50)}):Play()
+local function rebuildScroll()
+    for _, child in ipairs(scroll:GetChildren()) do
+        if child:IsA("GuiObject") and child ~= layout and child ~= padding then
+            child:Destroy()
         end
-    }
+    end
+
+    Toggles = {}  -- Reset toggles on rebuild
+
+    if currentTab == "Movement" then
+        Components.createSectionLabel(scroll, "Movement")
+        Toggles.WalkSpeed = Components.createToggle(scroll, "WalkSpeed", function(v) State.Movement.WalkSpeed = v end)
+        Components.createSlider(scroll, "WalkSpeed Value", 16, 100, 16, function(v) State.Movement.WalkSpeedValue = v end)
+        Toggles.SlideBoost = Components.createToggle(scroll, "Slide Boost", function(v) State.Movement.SlideBoost = v end)
+        Toggles.Fly = Components.createToggle(scroll, "Fly", function(v) State.Movement.Fly = v end)
+        Components.createSlider(scroll, "Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
+        Toggles.Noclip = Components.createToggle(scroll, "Noclip", function(v) State.Movement.Noclip = v end)
+        Toggles.InfiniteJump = Components.createToggle(scroll, "Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
+    elseif currentTab == "Combat" then
+        Components.createSectionLabel(scroll, "Combat")
+        Toggles.AimAssist = Components.createToggle(scroll, "Aim Assist", function(v) State.Combat.AimAssist = v end)
+        Components.createSlider(scroll, "Aim Smoothness", 1, 50, 15, function(v) State.Combat.AimSmoothness = v / 100 end)
+        Components.createSlider(scroll, "Aim FOV", 50, 500, 150, function(v) State.Combat.AimFOV = v end)
+        Toggles.AimPrediction = Components.createToggle(scroll, "Aim Prediction", function(v) State.Combat.AimPrediction = v end)
+        Components.createSlider(scroll, "Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
+        Toggles.SilentAim = Components.createToggle(scroll, "Silent Aim", function(v) State.Combat.SilentAim = v end)
+        Components.createSlider(scroll, "Silent FOV", 50, 500, 150, function(v) State.Combat.SilentFOV = v end)
+        Components.createSlider(scroll, "Silent Hit Chance", 0, 100, 100, function(v) State.Combat.SilentHitChance = v end)
+        Toggles.SilentPrediction = Components.createToggle(scroll, "Silent Prediction", function(v) State.Combat.SilentPrediction = v end)
+        Components.createSlider(scroll, "Silent Prediction Amount", 1, 50, 10, function(v) State.Combat.SilentPredictionAmount = v / 100 end)
+    elseif currentTab == "ESP" then
+        Components.createSectionLabel(scroll, "ESP")
+        Toggles.ESPEnabled = Components.createToggle(scroll, "Enabled", function(v) State.ESP.Enabled = v end)
+        Toggles.ESPBox = Components.createToggle(scroll, "Box", function(v) State.ESP.Box = v end)
+        Toggles.ESPName = Components.createToggle(scroll, "Name", function(v) State.ESP.Name = v end)
+        Toggles.ESPHealth = Components.createToggle(scroll, "Health", function(v) State.ESP.Health = v end)
+        Toggles.ESPDistance = Components.createToggle(scroll, "Distance", function(v) State.ESP.Distance = v end)
+        Components.createSlider(scroll, "Max Distance", 100, 5000, 1000, function(v) State.ESP.MaxDistance = v end)
+        Toggles.ESPTeamCheck = Components.createToggle(scroll, "Team Check", function(v) State.ESP.TeamCheck = v end)
+    end
+
+    -- Set up keybind listeners for the current tab's toggles
+    for feature, toggle in pairs(Toggles) do
+        local btn = toggle.GetKeybindButton()
+        if btn then
+            btn.MouseButton1Click:Connect(function()
+                btn.Text = "..."
+                waitingForBind = function(key)
+                    if key == Enum.KeyCode.Escape then
+                        Keybinds[feature] = nil
+                        btn.Text = "None"
+                    else
+                        Keybinds[feature] = key
+                        btn.Text = key.Name
+                    end
+                    waitingForBind = nil
+                end
+            end)
+        end
+    end
 end
 
-local function createSlider(text, min, max, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 50)
-    frame.BackgroundTransparency = 1
-    frame.Parent = scroll
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0.5, 0)
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 13
-    label.Parent = frame
-
-    local barFrame = Instance.new("Frame")
-    barFrame.Size = UDim2.new(1, 0, 0.5, 0)
-    barFrame.Position = UDim2.new(0, 0, 0.5, 0)
-    barFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    barFrame.Parent = frame
-    Instance.new("UICorner", barFrame).CornerRadius = UDim.new(0, 4)
-
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(100, 120, 255)
-    fill.Parent = barFrame
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
-
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0.2, 0, 1, 0)
-    valueLabel.Position = UDim2.new(0.8, 0, 0, 0)
-    valueLabel.Text = tostring(default)
-    valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Font = Enum.Font.Gotham
-    valueLabel.TextSize = 12
-    valueLabel.Parent = barFrame
-
-    local value = default
-    local dragging = false
-
-    barFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local rel = math.clamp((input.Position.X - barFrame.AbsolutePosition.X) / barFrame.AbsoluteSize.X, 0, 1)
-            value = math.floor(min + (max - min) * rel + 0.5)
-            local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            TweenService:Create(fill, tweenInfo, {Size = UDim2.new(rel, 0, 1, 0)}):Play()
-            valueLabel.Text = tostring(value)
-            callback(value)
-        end
-    end)
-
-    -- Set default
-    local rel = (default - min) / (max - min)
-    fill.Size = UDim2.new(rel, 0, 1, 0)
-    valueLabel.Text = tostring(default)
-
-    return {
-        Set = function(v)
-            v = math.clamp(v, min, max)
-            value = v
-            local rel = (v - min) / (max - min)
-            local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            TweenService:Create(fill, tweenInfo, {Size = UDim2.new(rel, 0, 1, 0)}):Play()
-            valueLabel.Text = tostring(v)
-        end
-    }
-end
-
--- Build Menu
-createSectionLabel("Movement")
-createToggle("WalkSpeed", function(v) State.Movement.WalkSpeed = v end)
-createSlider("WalkSpeed Value", 16, 100, 16, function(v) State.Movement.WalkSpeedValue = v end)
-createToggle("Slide Boost", function(v) State.Movement.SlideBoost = v end)
-createToggle("Fly", function(v) State.Movement.Fly = v end)
-createSlider("Fly Speed", 10, 300, 50, function(v) State.Movement.FlySpeed = v end)
-createToggle("Noclip", function(v) State.Movement.Noclip = v end)
-createToggle("Infinite Jump", function(v) State.Movement.InfiniteJump = v end)
-
-createSectionLabel("Combat")
-createToggle("Aim Assist", function(v) State.Combat.AimAssist = v end)
-createSlider("Aim Smoothness", 1, 50, 15, function(v) State.Combat.AimSmoothness = v / 100 end)
-createSlider("Aim FOV", 50, 500, 150, function(v) State.Combat.AimFOV = v end)
-createToggle("Aim Prediction", function(v) State.Combat.AimPrediction = v end)
-createSlider("Prediction Amount", 1, 50, 10, function(v) State.Combat.PredictionAmount = v / 100 end)
-createToggle("Silent Aim", function(v) State.Combat.SilentAim = v end)
-createSlider("Silent FOV", 50, 500, 150, function(v) State.Combat.SilentFOV = v end)
-createSlider("Silent Hit Chance", 0, 100, 100, function(v) State.Combat.SilentHitChance = v end)
-createToggle("Silent Prediction", function(v) State.Combat.SilentPrediction = v end)
-createSlider("Silent Prediction Amount", 1, 50, 10, function(v) State.Combat.SilentPredictionAmount = v / 100 end)
-
-createSectionLabel("ESP")
-createToggle("Enabled", function(v) State.ESP.Enabled = v end)
-createToggle("Box", function(v) State.ESP.Box = v end)
-createToggle("Name", function(v) State.ESP.Name = v end)
-createToggle("Health", function(v) State.ESP.Health = v end)
-createToggle("Distance", function(v) State.ESP.Distance = v end)
-createSlider("Max Distance", 100, 5000, 1000, function(v) State.ESP.MaxDistance = v end)
-createToggle("Team Check", function(v) State.ESP.TeamCheck = v end)
+rebuildScroll()  -- Initial build for Movement tab
 
 -- Toggle Menu (M Key) with animation
 local menuVisible = false
@@ -275,9 +220,20 @@ UserInputService.InputBegan:Connect(function(input, gp)
         local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
         TweenService:Create(main, tweenInfo, {Position = targetPos}):Play()
     end
+
+    if waitingForBind then
+        waitingForBind(input.KeyCode)
+        return
+    end
+
+    for feature, key in pairs(Keybinds) do
+        if input.KeyCode == key and Toggles[feature] then
+            Toggles[feature].Toggle()
+        end
+    end
 end)
 
--- Feature Implementations
+-- Feature Implementations with fixed fly
 local flyBodyVelocity, flyBodyGyro
 RunService.RenderStepped:Connect(function(delta)
     local char = player.Character
@@ -314,11 +270,15 @@ RunService.RenderStepped:Connect(function(delta)
             local vel = Vector3.new()
             local dir = hum.MoveDirection
             if dir.Magnitude > 0 then
-                vel = camera.CFrame:VectorToWorldSpace(dir)
+                vel = camera.CFrame:VectorToWorldSpace(dir) * State.Movement.FlySpeed
             end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel = vel + camera.CFrame.UpVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then vel = vel - camera.CFrame.UpVector end
-            flyBodyVelocity.Velocity = vel.Unit * State.Movement.FlySpeed
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                vel = vel + Vector3.new(0, State.Movement.FlySpeed, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                vel = vel + Vector3.new(0, -State.Movement.FlySpeed, 0)
+            end
+            flyBodyVelocity.Velocity = vel
         elseif flyBodyVelocity then
             flyBodyVelocity:Destroy()
             flyBodyVelocity = nil
