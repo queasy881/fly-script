@@ -4,18 +4,13 @@
 -- ---------------------------------------------------------------------------
 
 return function(Components)
+	-- use provided components or fallback
 	Components = Components or _G.VertexComponents
-	
+
 	-- ---------------------------------------------------------------------------
 	-- SERVICES
 	-- ---------------------------------------------------------------------------
 	local Players = game:GetService("Players")
-	local function toggleMenu()
-	-- basic open/close logic
-	sidebar.Visible = not sidebar.Visible
-	contentArea.Visible = sidebar.Visible
-end
-
 	local UIS = game:GetService("UserInputService")
 	local RunService = game:GetService("RunService")
 	local TweenService = game:GetService("TweenService")
@@ -25,10 +20,53 @@ end
 	local Stats = game:GetService("Stats")
 	local HttpService = game:GetService("HttpService")
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
-	
+
 	local player = Players.LocalPlayer
 	local camera = workspace.CurrentCamera
 	local mouse = player:GetMouse()
+
+	-- ---------------------------------------------------------------------------
+	-- UI CREATION
+	-- ---------------------------------------------------------------------------
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "VertexHub"
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local sidebar = Instance.new("Frame")
+	sidebar.Name = "Sidebar"
+	sidebar.Size = UDim2.new(0, 220, 0, 600)
+	sidebar.Position = UDim2.new(0, 20, 0.5, 0)
+	sidebar.AnchorPoint = Vector2.new(0, 0.5)
+	sidebar.Visible = false
+	sidebar.Parent = gui
+
+	local contentArea = Instance.new("Frame")
+	contentArea.Name = "ContentArea"
+	contentArea.Size = UDim2.new(0, 600, 0, 600)
+	contentArea.Position = UDim2.new(0, 240, 0.5, 0)
+	contentArea.AnchorPoint = Vector2.new(0, 0.5)
+	contentArea.Visible = false
+	contentArea.Parent = gui
+
+	-- NOW it is safe to define toggleMenu
+	local function toggleMenu()
+		sidebar.Visible = not sidebar.Visible
+		contentArea.Visible = sidebar.Visible
+	end
+
+	-- listen for menu key
+	UIS.InputBegan:Connect(function(input, gp)
+		if gp then return end
+		if input.KeyCode == Enum.KeyCode.M then
+			toggleMenu()
+		end
+	end)
+
+	-- return main state if needed
+	return gui
+end
+
 	
 	-- ---------------------------------------------------------------------------
 	-- CONFIGURATION SYSTEM INTEGRATION
