@@ -45,7 +45,7 @@ return function(Components)
 	contentArea.Parent = gui
 
 	-- ---------------------------------------------------------------------------
-	-- VIBRANT NEON COLOR PALETTE
+	-- NEON COLOR PALETTE
 	-- ---------------------------------------------------------------------------
 	local NeonColors = {
 		ElectricPurple = Color3.fromRGB(180, 70, 255),
@@ -55,7 +55,6 @@ return function(Components)
 		FieryOrange = Color3.fromRGB(255, 100, 0),
 		NeonBlue = Color3.fromRGB(0, 150, 255),
 		VibrantYellow = Color3.fromRGB(255, 255, 0),
-		Background = Color3.fromRGB(10, 10, 15),
 		Glass = Color3.fromRGB(20, 20, 30),
 		GlassLight = Color3.fromRGB(30, 30, 45),
 		GlassHover = Color3.fromRGB(40, 40, 60),
@@ -66,6 +65,40 @@ return function(Components)
 		Outline = Color3.fromRGB(0, 200, 255),
 		Shadow = Color3.fromRGB(0, 0, 0)
 	}
+
+	-- ---------------------------------------------------------------------------
+	-- UTILITY FUNCTIONS
+	-- ---------------------------------------------------------------------------
+	local function getCharacter()
+		return player.Character
+	end
+
+	local function getRoot()
+		local c = getCharacter()
+		return c and c:FindFirstChild("HumanoidRootPart")
+	end
+
+	local function getHumanoid()
+		local c = getCharacter()
+		return c and c:FindFirstChildOfClass("Humanoid")
+	end
+
+	local function getHead()
+		local c = getCharacter()
+		return c and c:FindFirstChild("Head")
+	end
+
+	local function getTool()
+		local c = getCharacter()
+		return c and c:FindFirstChildOfClass("Tool")
+	end
+
+	local function tween(obj, props, time)
+		if not obj then return end
+		local ti = TweenService:Create(obj, TweenInfo.new(time or 0.2), props)
+		ti:Play()
+		return ti
+	end
 
 	-- ---------------------------------------------------------------------------
 	-- CONFIGURATION SYSTEM
@@ -93,7 +126,46 @@ return function(Components)
 	loadConfig()
 
 	-- ---------------------------------------------------------------------------
-	-- MENU TOGGLE FUNCTION (AFTER UI EXISTS)
+	-- ENTITY CACHE
+	-- ---------------------------------------------------------------------------
+	local EntityCache = {
+		players = {},
+		npcs = {},
+		items = {}
+	}
+
+	local function updateEntityCache()
+
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= player then
+				if not EntityCache.players[plr.Name] then
+					EntityCache.players[plr.Name] = {
+						Player = plr,
+						Team = plr.Team
+					}
+				end
+			end
+		end
+
+		EntityCache.npcs = {}
+		for _, obj in ipairs(workspace:GetDescendants()) do
+			if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+				local hum = obj:FindFirstChildOfClass("Humanoid")
+				local root = obj:FindFirstChild("HumanoidRootPart")
+				if hum and hum.Health > 0 and root then
+					table.insert(EntityCache.npcs, {
+						Model = obj,
+						Name = obj.Name,
+						Humanoid = hum,
+						RootPart = root
+					})
+				end
+			end
+		end
+	end
+
+	-- ---------------------------------------------------------------------------
+	-- MENU TOGGLE
 	-- ---------------------------------------------------------------------------
 	local function toggleMenu()
 		sidebar.Visible = not sidebar.Visible
@@ -108,115 +180,17 @@ return function(Components)
 		end
 	end)
 
+	-- start cache updates
+	task.spawn(function()
+		while gui.Parent do
+			updateEntityCache()
+			task.wait(1)
+		end
+	end)
+
 	return gui
 end
 
-	
-	-- ---------------------------------------------------------------------------
-	-- UTILITY FUNCTIONS
-	-- ---------------------------------------------------------------------------
-	local function getCharacter() return player.Character end
-	local function getRoot() local c = getCharacter() return c and c:FindFirstChild("HumanoidRootPart") end
-	local function getHumanoid() local c = getCharacter() return c and c:FindFirstChildOfClass("Humanoid") end
-	local function getHead() local c = getCharacter() return c and c:FindFirstChild("Head") end
-	local function getTool() local c = getCharacter() return c and c:FindFirstChildOfClass("Tool") end
-	
-	local function tween(obj, props, tweenInfo)
-		if not obj then return end
-		local t = 0.2
-		local style = Enum.EasingStyle.Quad
-		local direction = Enum.EasingDirection.Out
-
-		if type(tweenInfo) == "table" then
-			t = tweenInfo.Time or t
-			style = tweenInfo.Style or style
-			direction = tweenInfo.Direction or direction
-		elseif type(tweenInfo) == "number" then
-			t = tweenInfo
-		end
-
-		local ti = TweenInfo.new(t, style, direction)
-		local tw = TweenService:Create(obj, ti, props)
-		tw:Play()
-		return tw
-	end
-	
-	-- ---------------------------------------------------------------------------
-	-- ENTITY CACHE
-	-- ---------------------------------------------------------------------------
-	local EntityCache = { players = {}, npcs = {}, items = {} }
-	
-	local function updateEntityCache()
-		for name, data in pairs(EntityCache.players) do
-			if not data.Player or not data.Player.Parent then
-				EntityCache.players[name] = nil
-			elseif data.Character then
-				if not data.Character.Parent or not data.Humanoid or data.Humanoid.Health <= 0 then
-					data.Character = nil
-					data.Humanoid = nil
-					data.RootPart = nil
-					data.Head = nil
-				end
-			end
-		end
-		
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= player then
-				if not EntityCache.players[plr.Name] then
-					EntityCache.players[plr.Name] = { Player = plr, IsPlayer = true, Team = plr.Team }
-				end
-				local data = EntityCache.players[plr.Name]
-				data.Team = plr.Team
-				if plr.Character and not data.Character then
-					data.Character = plr.Character
-					data.Humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
-					data.RootPart = plr.Character:FindFirstChild("HumanoidRootPart")
-					data.Head = plr.Character:FindFirstChild("Head")
-				end
-			end
-		end
-		
-		EntityCache.npcs = {}
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(obj) then
-				local hum = obj:FindFirstChildOfClass("Humanoid")
-				local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj:FindFirstChild("Head")
-				if hum and hum.Health > 0 and root then
-					table.insert(EntityCache.npcs, {
-						Model = obj, Name = obj.Name, Humanoid = hum, RootPart = root,
-						Head = obj:FindFirstChild("Head"), IsNPC = true
-					})
-				end
-			end
-		end
-		
-		EntityCache.items = {}
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if obj:IsA("Tool") then
-				local handle = obj:FindFirstChild("Handle")
-				if handle then
-					table.insert(EntityCache.items, {Object = obj, Position = handle.Position, Name = obj.Name})
-				end
-			elseif obj:IsA("BasePart") then
-				local n = obj.Name:lower()
-				if n:find("coin") or n:find("gem") or n:find("item") or n:find("pickup") or n:find("chest") then
-					table.insert(EntityCache.items, {Object = obj, Position = obj.Position, Name = obj.Name})
-				end
-			end
-		end
-	end
-	
-	-- ---------------------------------------------------------------------------
-	-- DRAWING API CHECK
-	-- ---------------------------------------------------------------------------
-	local DrawingEnabled = false
-	pcall(function()
-		local test = Drawing.new("Line")
-		if test then
-			test:Remove()
-			DrawingEnabled = true
-		end
-	end)
 	
 	-- ---------------------------------------------------------------------------
 	-- DRAWING OBJECT POOL (FIXED VERSION)
