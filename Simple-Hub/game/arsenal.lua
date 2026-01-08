@@ -1299,7 +1299,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return oldNamecall(self, unpack(args))
-end
+end)
 
 local function getClosestTarget(fov)
     local closest, closestDist = nil, fov
