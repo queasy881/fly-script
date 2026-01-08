@@ -17,6 +17,8 @@ local Expanded = {}
 local espCache = {}
 local hitboxCache = {}
 
+local updateWeaponConfig
+
 -- Colors
 local Colors = {
     Background = Color3.fromRGB(20, 20, 30),
@@ -1105,7 +1107,7 @@ local currentDelay = 0.1
 local justFired = false
 local recoilBuffer = 0
 
-local function updateWeaponConfig()
+updateWeaponConfig = function()
     if not isArsenal then return end
     local char = player.Character
     if not char then return end
