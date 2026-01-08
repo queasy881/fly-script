@@ -511,7 +511,6 @@ topBar.BackgroundColor3 = Colors.Header
 topBar.Parent = main
 corner(topBar, 10)
 
-
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.5, 0, 1, 0)
 title.Text = "HORIZONTAL HUB"
@@ -729,51 +728,9 @@ function rebuildScroll()
             State.Combat.TriggerDelay = v
         end)
         
-        Toggles.AutoClicker = Components.createToggle(scroll, "Auto Clicker", function(v)
-            State.Combat.AutoClicker = v
-            updateWeaponConfig()
-        end, State.Combat.AutoClicker)
-        
-        Components.createSlider(scroll, "Clicks Per Second", 1, 50, State.Combat.CPS, function(v)
-            State.Combat.CPS = v
-        end)
-        
         Toggles.WallBang = Components.createToggle(scroll, "Wall Bang", function(v)
             State.Combat.WallBang = v
         end, State.Combat.WallBang)
-        
-        Components.createSectionLabel(scroll, "Weapon Modifications")
-        
-        Toggles.FasterFireRate = Components.createToggle(scroll, "Faster Fire Rate", function(v)
-            State.Combat.FasterFireRate = v
-            updateWeaponConfig()
-        end, State.Combat.FasterFireRate)
-        
-        Components.createSlider(scroll, "Fire Rate Multiplier", 1, 10, math.floor(State.Combat.FireRateMultiplier), function(v)
-            State.Combat.FireRateMultiplier = v
-            updateWeaponConfig()
-        end)
-        
-        Toggles.NoSpread = Components.createToggle(scroll, "No Spread", function(v)
-            State.Combat.NoSpread = v
-        end, State.Combat.NoSpread)
-        
-        Toggles.NoRecoil = Components.createToggle(scroll, "No Recoil", function(v)
-            State.Combat.NoRecoil = v
-        end, State.Combat.NoRecoil)
-        
-        Toggles.AutoAutomatic = Components.createToggle(scroll, "Auto Automatic", function(v)
-            State.Combat.AutoAutomatic = v
-            updateWeaponConfig()
-        end, State.Combat.AutoAutomatic)
-        
-        Toggles.InstantReload = Components.createToggle(scroll, "Instant Reload", function(v)
-            State.Combat.InstantReload = v
-        end, State.Combat.InstantReload)
-        
-        Toggles.InfiniteAmmo = Components.createToggle(scroll, "Infinite Ammo", function(v)
-            State.Combat.InfiniteAmmo = v
-        end, State.Combat.InfiniteAmmo)
         
         Components.createSectionLabel(scroll, "KILL ALL Function")
         
@@ -928,6 +885,15 @@ function rebuildScroll()
             State.Misc.AutoCollect = v
         end, State.Misc.AutoCollect)
         
+        Toggles.AutoClicker = Components.createToggle(scroll, "Auto Clicker", function(v)
+            State.Combat.AutoClicker = v
+            updateWeaponConfig()
+        end, State.Combat.AutoClicker)
+        
+        Components.createSlider(scroll, "Clicks Per Second", 1, 50, State.Combat.CPS, function(v)
+            State.Combat.CPS = v
+        end)
+        
         Components.createSectionLabel(scroll, "Performance")
         
         Toggles.FPSBoost = Components.createToggle(scroll, "FPS Boost", function(v)
@@ -937,6 +903,39 @@ function rebuildScroll()
         Toggles.ChatLogger = Components.createToggle(scroll, "Chat Logger", function(v)
             State.Misc.ChatLogger = v
         end, State.Misc.ChatLogger)
+        
+        Components.createSectionLabel(scroll, "Weapon Modifications")
+        
+        Toggles.FasterFireRate = Components.createToggle(scroll, "Faster Fire Rate", function(v)
+            State.Combat.FasterFireRate = v
+            updateWeaponConfig()
+        end, State.Combat.FasterFireRate)
+        
+        Components.createSlider(scroll, "Fire Rate Multiplier", 1, 10, math.floor(State.Combat.FireRateMultiplier), function(v)
+            State.Combat.FireRateMultiplier = v
+            updateWeaponConfig()
+        end)
+        
+        Toggles.NoSpread = Components.createToggle(scroll, "No Spread", function(v)
+            State.Combat.NoSpread = v
+        end, State.Combat.NoSpread)
+        
+        Toggles.NoRecoil = Components.createToggle(scroll, "No Recoil", function(v)
+            State.Combat.NoRecoil = v
+        end, State.Combat.NoRecoil)
+        
+        Toggles.AutoAutomatic = Components.createToggle(scroll, "Auto Automatic", function(v)
+            State.Combat.AutoAutomatic = v
+            updateWeaponConfig()
+        end, State.Combat.AutoAutomatic)
+        
+        Toggles.InstantReload = Components.createToggle(scroll, "Instant Reload", function(v)
+            State.Combat.InstantReload = v
+        end, State.Combat.InstantReload)
+        
+        Toggles.InfiniteAmmo = Components.createToggle(scroll, "Infinite Ammo", function(v)
+            State.Combat.InfiniteAmmo = v
+        end, State.Combat.InfiniteAmmo)
     end
     
     for feature, toggle in pairs(Toggles) do
@@ -1573,10 +1572,11 @@ RunService.RenderStepped:Connect(function(delta)
                 local dist = (myRoot.Position - root.Position).Magnitude
                 if dist > State.ESP.MaxDistance then continue end
                 
-                local size = bbSize
+                local size = Vector3.new(4, 6, 2) -- Fixed size to avoid expander effect
+                
                 local corners = {}
                 for x = -1, 1, 2 do for y = -1, 1, 2 do for z = -1, 1, 2 do
-                    local pos = bbCFrame * Vector3.new(x*size.X/2, y*size.Y/2, z*size.Z/2)
+                    local pos = root.CFrame * Vector3.new(x*size.X/2, y*size.Y/2, z*size.Z/2)
                     local screen, onScreen = camera:WorldToViewportPoint(pos)
                     if onScreen then
                         table.insert(corners, Vector2.new(screen.X, screen.Y))
@@ -1809,4 +1809,3 @@ end
 
 print("Horizontal Hub Loaded Successfully!")
 print("Press RightShift to toggle menu")
-    
