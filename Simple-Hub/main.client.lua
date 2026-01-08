@@ -96,7 +96,7 @@ end
 
 -- === GAME OPTIONS (LEAVE FILE NAMES BLANK) ===
 
-createButton("RIVALS", "")
+createButton("RIVALS", "game/rivals.lua")
 createButton("ARSENAL", "")
 createButton("FLICK", "")
 createButton("UNIVERSAL", "")
