@@ -509,7 +509,8 @@ local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 35)
 topBar.BackgroundColor3 = Colors.Header
 topBar.Parent = main
-corner(topBar, {topLeft = 10, topRight = 10, bottomLeft = 0, bottomRight = 0})
+corner(topBar, 10)
+
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.5, 0, 1, 0)
