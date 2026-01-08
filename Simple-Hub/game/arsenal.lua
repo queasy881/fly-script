@@ -68,7 +68,7 @@ function Components.createSectionLabel(parent, text)
     return label
 end
 
-function Components.createToggle(parent, text, callback)
+function Components.createToggle(parent, text, callback, initialState)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 30)
     frame.BackgroundTransparency = 1
@@ -108,7 +108,7 @@ function Components.createToggle(parent, text, callback)
     corner(keybindBtn, 6)
     border(keybindBtn)
 
-    local state = false
+    local state = initialState or false
     local update = function()
         button.Text = state and "ON" or "OFF"
         button.BackgroundColor3 = state and Colors.Accent or Colors.Bar
@@ -120,6 +120,9 @@ function Components.createToggle(parent, text, callback)
         state = not state
         update()
     end)
+
+    -- Update immediately to show correct state
+    update()
 
     return {
         Set = function(value)
@@ -270,7 +273,7 @@ function Components.createSlider(parent, text, min, max, default, callback)
     }
 end
 
-function Components.createGroup(parent, text, callback)
+function Components.createGroup(parent, text, callback, initialState)
     local mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(1, 0, 0, 30)
     mainFrame.BackgroundTransparency = 1
@@ -338,7 +341,7 @@ function Components.createGroup(parent, text, callback)
     subPadding.PaddingLeft = UDim.new(0, 20)
     subPadding.Parent = subFrame
 
-    local state = false
+    local state = initialState or false
     local expanded = Expanded[text] or false
 
     local updateToggle = function()
@@ -364,6 +367,7 @@ function Components.createGroup(parent, text, callback)
         updateExpand()
     end)
 
+    updateToggle()
     updateExpand()
 
     return {
@@ -637,53 +641,58 @@ function rebuildScroll()
         
         Toggles.WalkSpeed = Components.createToggle(scroll, "Walk Speed", function(v)
             State.Movement.WalkSpeed = v
-        end)
-        Components.createSlider(scroll, "Speed Value", 16, 150, 16, function(v)
+        end, State.Movement.WalkSpeed)
+        
+        Components.createSlider(scroll, "Speed Value", 16, 150, State.Movement.WalkSpeedValue, function(v)
             State.Movement.WalkSpeedValue = v
         end)
         
         Toggles.Fly = Components.createToggle(scroll, "Fly", function(v)
             State.Movement.Fly = v
-        end)
-        local flyMethod = Components.createSelector(scroll, "Fly Method", {"Velocity", "CFrame", "BodyVelocity"}, "Velocity", function(m)
+        end, State.Movement.Fly)
+        
+        local flyMethod = Components.createSelector(scroll, "Fly Method", {"Velocity", "CFrame", "BodyVelocity"}, State.Movement.FlyMethod, function(m)
             State.Movement.FlyMethod = m
         end)
-        Components.createSlider(scroll, "Fly Speed", 10, 300, 50, function(v)
+        
+        Components.createSlider(scroll, "Fly Speed", 10, 300, State.Movement.FlySpeed, function(v)
             State.Movement.FlySpeed = v
         end)
         
         Toggles.Noclip = Components.createToggle(scroll, "Noclip", function(v)
             State.Movement.Noclip = v
-        end)
+        end, State.Movement.Noclip)
         
         Toggles.InfiniteJump = Components.createToggle(scroll, "Infinite Jump", function(v)
             State.Movement.InfiniteJump = v
-        end)
+        end, State.Movement.InfiniteJump)
         
         Toggles.AutoJump = Components.createToggle(scroll, "Auto Jump", function(v)
             State.Movement.AutoJump = v
-        end)
+        end, State.Movement.AutoJump)
         
         Toggles.NoSlowdown = Components.createToggle(scroll, "No Slowdown", function(v)
             State.Movement.NoSlowdown = v
-        end)
+        end, State.Movement.NoSlowdown)
         
         Components.createSectionLabel(scroll, "Utilities")
         
         Toggles.AntiAfk = Components.createToggle(scroll, "Anti AFK", function(v)
             State.Movement.AntiAfk = v
-        end)
+        end, State.Movement.AntiAfk)
         
     elseif currentTab == "Combat" then
         Components.createSectionLabel(scroll, "Aim Assist")
         
         Toggles.AimAssist = Components.createToggle(scroll, "Aim Assist", function(v)
             State.Combat.AimAssist = v
-        end)
-        Components.createSlider(scroll, "Smoothness", 1, 50, 15, function(v)
+        end, State.Combat.AimAssist)
+        
+        Components.createSlider(scroll, "Smoothness", 1, 50, math.floor(State.Combat.AimSmoothness * 100), function(v)
             State.Combat.AimSmoothness = v / 100
         end)
-        Components.createSlider(scroll, "FOV", 50, 500, 150, function(v)
+        
+        Components.createSlider(scroll, "FOV", 50, 500, State.Combat.AimFOV, function(v)
             State.Combat.AimFOV = v
         end)
         
@@ -691,8 +700,9 @@ function rebuildScroll()
         
         Toggles.HitboxExpander = Components.createToggle(scroll, "Enable Hitbox Expander", function(v)
             State.Combat.HitboxExpander = v
-        end)
-        Components.createSlider(scroll, "Hitbox Multiplier", 1, 50, 15, function(v)
+        end, State.Combat.HitboxExpander)
+        
+        Components.createSlider(scroll, "Hitbox Multiplier", 1, 50, math.floor(State.Combat.HitboxMultiplier * 10), function(v)
             State.Combat.HitboxMultiplier = v / 10
         end)
         
@@ -700,11 +710,13 @@ function rebuildScroll()
         
         Toggles.SilentAim = Components.createToggle(scroll, "Silent Aim", function(v)
             State.Combat.SilentAim = v
-        end)
-        Components.createSlider(scroll, "Silent FOV", 50, 500, 150, function(v)
+        end, State.Combat.SilentAim)
+        
+        Components.createSlider(scroll, "Silent FOV", 50, 500, State.Combat.SilentFOV, function(v)
             State.Combat.SilentFOV = v
         end)
-        Components.createSlider(scroll, "Hit Chance %", 0, 100, 100, function(v)
+        
+        Components.createSlider(scroll, "Hit Chance %", 0, 100, State.Combat.SilentHitChance, function(v)
             State.Combat.SilentHitChance = v
         end)
         
@@ -712,21 +724,23 @@ function rebuildScroll()
         
         Toggles.TriggerBot = Components.createToggle(scroll, "Trigger Bot", function(v)
             State.Combat.TriggerBot = v
-        end)
-        Components.createSlider(scroll, "Trigger Delay (ms)", 0, 500, 50, function(v)
+        end, State.Combat.TriggerBot)
+        
+        Components.createSlider(scroll, "Trigger Delay (ms)", 0, 500, State.Combat.TriggerDelay, function(v)
             State.Combat.TriggerDelay = v
         end)
         
         Toggles.AutoClicker = Components.createToggle(scroll, "Auto Clicker", function(v)
             State.Combat.AutoClicker = v
-        end)
-        Components.createSlider(scroll, "Clicks Per Second", 1, 50, 10, function(v)
+        end, State.Combat.AutoClicker)
+        
+        Components.createSlider(scroll, "Clicks Per Second", 1, 50, State.Combat.CPS, function(v)
             State.Combat.CPS = v
         end)
         
         Toggles.WallBang = Components.createToggle(scroll, "Wall Bang", function(v)
             State.Combat.WallBang = v
-        end)
+        end, State.Combat.WallBang)
         
         -- NEW: KILL ALL FUNCTION
         Components.createSectionLabel(scroll, "KILL ALL Function")
@@ -740,80 +754,93 @@ function rebuildScroll()
                 State.Combat.KillAllTarget = nil
                 State.Combat.KillAllCooldown = tick()
             end
-        end)
+        end, State.Combat.KillAll)
         
     elseif currentTab == "ESP" then
         Components.createSectionLabel(scroll, "ESP Settings")
         
         Toggles.Enabled = Components.createToggle(scroll, "ESP Enabled", function(v)
             State.ESP.Enabled = v
-        end)
+        end, State.ESP.Enabled)
         
         Components.createSectionLabel(scroll, "Player ESP")
         
         Toggles.Box = Components.createToggle(scroll, "Box ESP", function(v)
             State.ESP.Box = v
-        end)
+        end, State.ESP.Box)
+        
         Toggles.Name = Components.createToggle(scroll, "Name Tags", function(v)
             State.ESP.Name = v
-        end)
+        end, State.ESP.Name)
+        
         Toggles.Health = Components.createToggle(scroll, "Health Bar", function(v)
             State.ESP.Health = v
-        end)
+        end, State.ESP.Health)
+        
         Toggles.HealthBar = Components.createToggle(scroll, "Detailed Health", function(v)
             State.ESP.HealthBar = v
-        end)
+        end, State.ESP.HealthBar)
+        
         Toggles.Distance = Components.createToggle(scroll, "Distance", function(v)
             State.ESP.Distance = v
-        end)
+        end, State.ESP.Distance)
+        
         Toggles.Weapon = Components.createToggle(scroll, "Weapon ESP", function(v)
             State.ESP.Weapon = v
-        end)
+        end, State.ESP.Weapon)
         
         Components.createSectionLabel(scroll, "Visual Features")
         
         Toggles.Tracers = Components.createToggle(scroll, "Tracers", function(v)
             State.ESP.Tracers = v
-        end)
+        end, State.ESP.Tracers)
+        
         Toggles.Chams = Components.createToggle(scroll, "Chams", function(v)
             State.ESP.Chams = v
-        end)
+        end, State.ESP.Chams)
+        
         Toggles.HeadDot = Components.createToggle(scroll, "Head Dot", function(v)
             State.ESP.HeadDot = v
-        end)
+        end, State.ESP.HeadDot)
+        
         Toggles.Outlines = Components.createToggle(scroll, "Outlines", function(v)
             State.ESP.Outlines = v
-        end)
+        end, State.ESP.Outlines)
         
         Components.createSectionLabel(scroll, "Settings")
         
-        Components.createSlider(scroll, "Max Distance", 100, 5000, 1000, function(v)
+        Components.createSlider(scroll, "Max Distance", 100, 5000, State.ESP.MaxDistance, function(v)
             State.ESP.MaxDistance = v
         end)
+        
         Toggles.TeamCheck = Components.createToggle(scroll, "Team Check", function(v)
             State.ESP.TeamCheck = v
-        end)
+        end, State.ESP.TeamCheck)
         
     elseif currentTab == "Visuals" then
         Components.createSectionLabel(scroll, "World Visuals")
         
         Toggles.ChangeTime = Components.createToggle(scroll, "Change Time", function(v)
             State.Visuals.ChangeTime = v
-        end)
-        Components.createSlider(scroll, "Time of Day", 0, 24, 12, function(v)
+        end, State.Visuals.ChangeTime)
+        
+        Components.createSlider(scroll, "Time of Day", 0, 24, State.Visuals.TimeOfDay, function(v)
             State.Visuals.TimeOfDay = v
         end)
         
         Toggles.ChangeAmbient = Components.createToggle(scroll, "Change Ambient", function(v)
             State.Visuals.ChangeAmbient = v
-        end)
-        Components.createSlider(scroll, "Ambient R", 0, 255, 128, function(v)
+        end, State.Visuals.ChangeAmbient)
+        
+        Components.createSlider(scroll, "Ambient R", 0, 255, math.floor(State.Visuals.AmbientR * 255), function(v)
             State.Visuals.AmbientR = v / 255
         end)
-        Components.createSlider(scroll, "Ambient G", 0, 255, 128, function(v)
+        
+        Components.createSlider(scroll, "Ambient G", 0, 255, math.floor(State.Visuals.AmbientG * 255), function(v)
             State.Visuals.AmbientG = v / 255
         end)
-        Components.createSlider(scroll, "Ambient B", 0, 255, 128, function(v)
+        
+        Components.createSlider(scroll, "Ambient B", 0, 255, math.floor(State.Visuals.AmbientB * 255), function(v)
             State.Visuals.AmbientB = v / 255
         end)
         
@@ -821,8 +848,9 @@ function rebuildScroll()
         
         Toggles.ChangeFOV = Components.createToggle(scroll, "Change FOV", function(v)
             State.Visuals.ChangeFOV = v
-        end)
-        Components.createSlider(scroll, "FOV Value", 10, 120, 70, function(v)
+        end, State.Visuals.ChangeFOV)
+        
+        Components.createSlider(scroll, "FOV Value", 10, 120, State.Visuals.FOV, function(v)
             State.Visuals.FOV = v
         end)
         
@@ -830,49 +858,54 @@ function rebuildScroll()
         
         Toggles.FullBright = Components.createToggle(scroll, "Full Bright", function(v)
             State.Visuals.FullBright = v
-        end)
+        end, State.Visuals.FullBright)
+        
         Toggles.NoFog = Components.createToggle(scroll, "No Fog", function(v)
             State.Visuals.NoFog = v
-        end)
+        end, State.Visuals.NoFog)
+        
         Toggles.NoBloom = Components.createToggle(scroll, "No Bloom", function(v)
             State.Visuals.NoBloom = v
-        end)
+        end, State.Visuals.NoBloom)
+        
         Toggles.NoShadows = Components.createToggle(scroll, "No Shadows", function(v)
             State.Visuals.NoShadows = v
-        end)
+        end, State.Visuals.NoShadows)
         
     elseif currentTab == "Miscellaneous" then
         Components.createSectionLabel(scroll, "Game Modifications")
         
         Toggles.SpeedHack = Components.createToggle(scroll, "Speed Hack", function(v)
             State.Misc.SpeedHack = v
-        end)
-        Components.createSlider(scroll, "Speed Multiplier", 1, 100, 10, function(v)
+        end, State.Misc.SpeedHack)
+        
+        Components.createSlider(scroll, "Speed Multiplier", 1, 100, math.floor(State.Misc.SpeedMultiplier * 10), function(v)
             State.Misc.SpeedMultiplier = v / 10
         end)
         
         Toggles.AntiVoid = Components.createToggle(scroll, "Anti Void", function(v)
             State.Misc.AntiVoid = v
-        end)
+        end, State.Misc.AntiVoid)
         
         Components.createSectionLabel(scroll, "Automation")
         
         Toggles.AutoFarm = Components.createToggle(scroll, "Auto Farm", function(v)
             State.Misc.AutoFarm = v
-        end)
+        end, State.Misc.AutoFarm)
+        
         Toggles.AutoCollect = Components.createToggle(scroll, "Auto Collect", function(v)
             State.Misc.AutoCollect = v
-        end)
+        end, State.Misc.AutoCollect)
         
         Components.createSectionLabel(scroll, "Performance")
         
         Toggles.FPSBoost = Components.createToggle(scroll, "FPS Boost", function(v)
             State.Misc.FPSBoost = v
-        end)
+        end, State.Misc.FPSBoost)
         
         Toggles.ChatLogger = Components.createToggle(scroll, "Chat Logger", function(v)
             State.Misc.ChatLogger = v
-        end)
+        end, State.Misc.ChatLogger)
     end
     
     -- Setup keybinds
@@ -932,6 +965,112 @@ end)
 local flyBodyVelocity, flyBodyGyro, walkBodyVelocity
 local lastJumpTime = 0
 local lastClickTime = 0
+
+-- Store original CanCollide states for noclip
+local originalCanCollideStates = {}
+local partsToNoclip = {}
+
+-- FIXED: Smart noclip that only affects buildings, not floor
+local function updateNoclip()
+    local char = player.Character
+    if not char then return end
+    
+    -- Reset previous parts if noclip is off
+    if not State.Movement.Noclip then
+        for part, originalState in pairs(originalCanCollideStates) do
+            if part and part.Parent then
+                part.CanCollide = originalState
+            end
+        end
+        originalCanCollideStates = {}
+        partsToNoclip = {}
+        return
+    end
+    
+    -- Only noclip through buildings, not floor
+    -- Get player position
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local playerY = root.Position.Y
+    
+    -- Find all nearby parts
+    local nearbyParts = {}
+    local maxDistance = 50 -- Only noclip through nearby parts
+    
+    -- Check for parts within range
+    for _, part in pairs(Workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part.CanCollide then
+            local distance = (part.Position - root.Position).Magnitude
+            
+            -- Only noclip through parts that are:
+            -- 1. Nearby
+            -- 2. NOT the floor (check if part is mostly horizontal and near ground level)
+            -- 3. Not part of the player's character
+            if distance < maxDistance and not part:IsDescendantOf(char) then
+                -- Check if part is floor-like (horizontal, large surface area)
+                local isFloor = false
+                
+                -- Check part orientation
+                local upVector = part.CFrame.UpVector
+                local isHorizontal = math.abs(upVector.Y) > 0.7
+                
+                -- Check if part is near ground level
+                local isNearGround = part.Position.Y < playerY + 5 and part.Position.Y > playerY - 10
+                
+                -- Check if part is large (likely a floor/ground piece)
+                local isLarge = part.Size.X * part.Size.Z > 100
+                
+                -- If it's horizontal, near ground, and large, it's probably a floor
+                if isHorizontal and isNearGround and isLarge then
+                    isFloor = true
+                end
+                
+                -- Also check common floor names
+                local floorNames = {
+                    "Floor", "floor", "Ground", "ground", "Baseplate", "baseplate",
+                    "Terrain", "terrain", "Grass", "grass", "Road", "road"
+                }
+                
+                for _, name in pairs(floorNames) do
+                    if string.find(part.Name, name) or string.find(part.Parent.Name, name) then
+                        isFloor = true
+                        break
+                    end
+                end
+                
+                -- Don't noclip through floors
+                if not isFloor then
+                    table.insert(nearbyParts, part)
+                end
+            end
+        end
+    end
+    
+    -- Update noclip for new parts
+    for _, part in pairs(nearbyParts) do
+        if not originalCanCollideStates[part] then
+            originalCanCollideStates[part] = part.CanCollide
+            part.CanCollide = false
+        end
+    end
+    
+    -- Restore CanCollide for parts that are no longer nearby
+    for part, _ in pairs(originalCanCollideStates) do
+        local found = false
+        for _, nearbyPart in pairs(nearbyParts) do
+            if nearbyPart == part then
+                found = true
+                break
+            end
+        end
+        
+        if not found and part and part.Parent then
+            part.CanCollide = originalCanCollideStates[part]
+            originalCanCollideStates[part] = nil
+        end
+    end
+end
 
 -- NEW: KILL ALL FUNCTION IMPLEMENTATION
 local function getClosestEnemy()
@@ -1067,14 +1206,8 @@ RunService.RenderStepped:Connect(function(delta)
             if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
         end
         
-        -- Noclip
-        if State.Movement.Noclip then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
-                end
-            end
-        end
+        -- FIXED: Smart Noclip (only through buildings, not floor)
+        updateNoclip()
         
         -- No Slowdown
         if State.Movement.NoSlowdown then
@@ -1160,6 +1293,13 @@ RunService.RenderStepped:Connect(function(delta)
         game:GetService("ScriptContext").ScriptsDisabled = false
         RunService:SetRobloxGuiFocused(false)
     end
+end)
+
+-- Clean up noclip states when character changes
+player.CharacterAdded:Connect(function()
+    -- Clear noclip states
+    originalCanCollideStates = {}
+    partsToNoclip = {}
 end)
 
 -- Infinite Jump
