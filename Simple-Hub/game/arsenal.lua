@@ -511,7 +511,6 @@ topBar.BackgroundColor3 = Colors.Header
 topBar.Parent = main
 corner(topBar, 10)
 
-
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.5, 0, 1, 0)
 title.Text = "HORIZONTAL HUB"
@@ -1247,25 +1246,23 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local args = {...}
     
     if method == "FindPartOnRayWithIgnoreList" or method == "Raycast" then
+        if State.Combat.NoSpread then
+            if method == "FindPartOnRayWithIgnoreList" then
+                args[1] = Ray.new(args[1].Origin, camera.CFrame.LookVector * 1000)
+            else
+                args[2] = camera.CFrame.LookVector * args[2].Magnitude
+            end
+        end
+        
         if State.Combat.SilentAim and Silent.Target then
             local target = Silent.Target
-            if target
-                and target.Character
-                and target.Part
-                and target.Part.Parent
-                and target.Character:FindFirstChildOfClass("Humanoid")
-                and target.Character:FindFirstChildOfClass("Humanoid").Health > 0
-            then
-                if math.random(1, 100) <= State.Combat.SilentHitChance then
+            if target and target.Character and target.Part and target.Part.Parent and target.Character:FindFirstChildOfClass("Humanoid") and target.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                if math.random(1,100) <= State.Combat.SilentHitChance then
                     local origin = args[1]
                     local direction = args[2]
                     local targetPos = target.Part.Position
-
                     if method == "FindPartOnRayWithIgnoreList" then
-                        args[1] = Ray.new(
-                            origin.Origin,
-                            (targetPos - origin.Origin).Unit * 1000
-                        )
+                        args[1] = Ray.new(origin.Origin, (targetPos - origin.Origin).Unit * 1000)
                     else
                         args[2] = (targetPos - origin).Unit * direction.Magnitude
                     end
@@ -1274,22 +1271,10 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
                 Silent.Target = nil
             end
         end
-        
-        if State.Combat.NoSpread then
-            if method == "FindPartOnRayWithIgnoreList" then
-                args[1] = Ray.new(
-                    args[1].Origin,
-                    camera.CFrame.LookVector * 1000
-                )
-            else
-                args[2] = camera.CFrame.LookVector * args[2].Magnitude
-            end
-        end
     end
     
     return oldNamecall(self, unpack(args))
 end)
-
 
 local function getClosestTarget(fov)
     local closest, closestDist = nil, fov
@@ -1561,9 +1546,11 @@ RunService.RenderStepped:Connect(function(delta)
         if myRoot then
             for _, plr in ipairs(Players:GetPlayers()) do
                 if plr == player or not plr.Character then continue end
-                local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                local head = plr.Character:FindFirstChild("Head")
+                local char = plr.Character
+                local bbCFrame, bbSize = char:GetBoundingBox()
+                local root = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                local head = char:FindFirstChild("Head")
                 if not root or not hum or hum.Health <= 0 then continue end
                 
                 if State.ESP.TeamCheck and plr.Team == myTeam then continue end
@@ -1571,21 +1558,17 @@ RunService.RenderStepped:Connect(function(delta)
                 local dist = (myRoot.Position - root.Position).Magnitude
                 if dist > State.ESP.MaxDistance then continue end
                 
-                local size = Vector3.new(4, 6, 2)
-                if State.Combat.HitboxExpander then
-                    size = size * State.Combat.HitboxMultiplier
-                end
-                
+                local size = bbSize
                 local corners = {}
                 for x = -1, 1, 2 do for y = -1, 1, 2 do for z = -1, 1, 2 do
-                    local pos = root.CFrame * Vector3.new(x*size.X/2, y*size.Y/2, z*size.Z/2)
+                    local pos = bbCFrame * Vector3.new(x*size.X/2, y*size.Y/2, z*size.Z/2)
                     local screen, onScreen = camera:WorldToViewportPoint(pos)
                     if onScreen then
                         table.insert(corners, Vector2.new(screen.X, screen.Y))
                     end
                 end end end
                 
-                if #corners < 8 then continue end
+                if #corners < 4 then continue end
                 
                 local minX, minY = math.huge, math.huge
                 local maxX, maxY = -math.huge, -math.huge
@@ -1750,6 +1733,20 @@ Players.PlayerRemoving:Connect(function(plr)
         end
         espCache[key] = nil
     end
+end)
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= player then
+        plr.CharacterAdded:Connect(function()
+            espCache[tostring(plr)] = nil
+        end)
+    end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function()
+        espCache[tostring(plr)] = nil
+    end)
 end)
 
 UserInputService.JumpRequest:Connect(function()
