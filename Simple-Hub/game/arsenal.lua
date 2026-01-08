@@ -425,9 +425,17 @@ local State = {
         AutoClicker = false,
         CPS = 10,
         WallBang = false,
-        KillAll = false, -- NEW: KILL ALL function
+        KillAll = false,
         KillAllTarget = nil,
-        KillAllCooldown = 0
+        KillAllCooldown = 0,
+        -- NEW: Weapon Modifications
+        FasterFireRate = false,
+        FireRateMultiplier = 2.0,
+        NoSpread = false,
+        NoRecoil = false,
+        AutoAutomatic = false,
+        InstantReload = false,
+        InfiniteAmmo = false
     },
     ESP = {
         Enabled = false,
@@ -742,7 +750,38 @@ function rebuildScroll()
             State.Combat.WallBang = v
         end, State.Combat.WallBang)
         
-        -- NEW: KILL ALL FUNCTION
+        -- NEW: Weapon Modifications Section
+        Components.createSectionLabel(scroll, "Weapon Modifications")
+        
+        Toggles.FasterFireRate = Components.createToggle(scroll, "Faster Fire Rate", function(v)
+            State.Combat.FasterFireRate = v
+        end, State.Combat.FasterFireRate)
+        
+        Components.createSlider(scroll, "Fire Rate Multiplier", 1, 10, math.floor(State.Combat.FireRateMultiplier), function(v)
+            State.Combat.FireRateMultiplier = v
+        end)
+        
+        Toggles.NoSpread = Components.createToggle(scroll, "No Spread", function(v)
+            State.Combat.NoSpread = v
+        end, State.Combat.NoSpread)
+        
+        Toggles.NoRecoil = Components.createToggle(scroll, "No Recoil", function(v)
+            State.Combat.NoRecoil = v
+        end, State.Combat.NoRecoil)
+        
+        Toggles.AutoAutomatic = Components.createToggle(scroll, "Auto Automatic", function(v)
+            State.Combat.AutoAutomatic = v
+        end, State.Combat.AutoAutomatic)
+        
+        Toggles.InstantReload = Components.createToggle(scroll, "Instant Reload", function(v)
+            State.Combat.InstantReload = v
+        end, State.Combat.InstantReload)
+        
+        Toggles.InfiniteAmmo = Components.createToggle(scroll, "Infinite Ammo", function(v)
+            State.Combat.InfiniteAmmo = v
+        end, State.Combat.InfiniteAmmo)
+        
+        -- KILL ALL FUNCTION
         Components.createSectionLabel(scroll, "KILL ALL Function")
         
         Toggles.KillAll = Components.createToggle(scroll, "KILL ALL", function(v)
@@ -988,45 +1027,29 @@ local function updateNoclip()
     end
     
     -- Only noclip through buildings, not floor
-    -- Get player position
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
     
     local playerY = root.Position.Y
+    local maxDistance = 50
     
-    -- Find all nearby parts
     local nearbyParts = {}
-    local maxDistance = 50 -- Only noclip through nearby parts
     
-    -- Check for parts within range
     for _, part in pairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") and part.CanCollide then
             local distance = (part.Position - root.Position).Magnitude
             
-            -- Only noclip through parts that are:
-            -- 1. Nearby
-            -- 2. NOT the floor (check if part is mostly horizontal and near ground level)
-            -- 3. Not part of the player's character
             if distance < maxDistance and not part:IsDescendantOf(char) then
-                -- Check if part is floor-like (horizontal, large surface area)
                 local isFloor = false
-                
-                -- Check part orientation
                 local upVector = part.CFrame.UpVector
                 local isHorizontal = math.abs(upVector.Y) > 0.7
-                
-                -- Check if part is near ground level
                 local isNearGround = part.Position.Y < playerY + 5 and part.Position.Y > playerY - 10
-                
-                -- Check if part is large (likely a floor/ground piece)
                 local isLarge = part.Size.X * part.Size.Z > 100
                 
-                -- If it's horizontal, near ground, and large, it's probably a floor
                 if isHorizontal and isNearGround and isLarge then
                     isFloor = true
                 end
                 
-                -- Also check common floor names
                 local floorNames = {
                     "Floor", "floor", "Ground", "ground", "Baseplate", "baseplate",
                     "Terrain", "terrain", "Grass", "grass", "Road", "road"
@@ -1039,7 +1062,6 @@ local function updateNoclip()
                     end
                 end
                 
-                -- Don't noclip through floors
                 if not isFloor then
                     table.insert(nearbyParts, part)
                 end
@@ -1047,7 +1069,6 @@ local function updateNoclip()
         end
     end
     
-    -- Update noclip for new parts
     for _, part in pairs(nearbyParts) do
         if not originalCanCollideStates[part] then
             originalCanCollideStates[part] = part.CanCollide
@@ -1055,7 +1076,6 @@ local function updateNoclip()
         end
     end
     
-    -- Restore CanCollide for parts that are no longer nearby
     for part, _ in pairs(originalCanCollideStates) do
         local found = false
         for _, nearbyPart in pairs(nearbyParts) do
@@ -1069,6 +1089,146 @@ local function updateNoclip()
             part.CanCollide = originalCanCollideStates[part]
             originalCanCollideStates[part] = nil
         end
+    end
+end
+
+-- Weapon Modification Hooks
+local originalRemotes = {}
+local weaponHooks = {}
+
+-- Hook weapon firing remotes
+local function setupWeaponHooks()
+    -- Find all remote events/functions related to weapons
+    local remotesToHook = {}
+    
+    -- Check ReplicatedStorage
+    local function scanFolder(folder)
+        for _, item in pairs(folder:GetDescendants()) do
+            if item:IsA("RemoteEvent") or item:IsA("RemoteFunction") then
+                local name = item.Name:lower()
+                if name:find("fire") or name:find("shoot") or name:find("weapon") or 
+                   name:find("damage") or name:find("hit") or name:find("ammo") or
+                   name:find("reload") or name:find("spread") or name:find("recoil") then
+                    table.insert(remotesToHook, item)
+                end
+            end
+        end
+    end
+    
+    scanFolder(ReplicatedStorage)
+    
+    for _, remote in pairs(remotesToHook) do
+        if not originalRemotes[remote] then
+            if remote:IsA("RemoteEvent") then
+                originalRemotes[remote] = remote.FireServer
+                remote.FireServer = function(self, ...)
+                    local args = {...}
+                    
+                    -- Apply weapon modifications
+                    if State.Combat.FasterFireRate then
+                        -- Look for fire rate/delay arguments
+                        for i, arg in ipairs(args) do
+                            if type(arg) == "number" and arg > 0 and arg < 1 then
+                                -- This might be a fire delay
+                                args[i] = arg / State.Combat.FireRateMultiplier
+                            end
+                        end
+                    end
+                    
+                    if State.Combat.NoSpread then
+                        -- Look for spread arguments
+                        for i, arg in ipairs(args) do
+                            if type(arg) == "number" and (arg == 0.1 or arg == 0.05 or arg == 0.2) then
+                                -- This might be spread value
+                                args[i] = 0
+                            elseif type(arg) == "table" then
+                                if arg.Spread then arg.Spread = 0 end
+                                if arg.spread then arg.spread = 0 end
+                            end
+                        end
+                    end
+                    
+                    if State.Combat.NoRecoil then
+                        -- Look for recoil arguments
+                        for i, arg in ipairs(args) do
+                            if type(arg) == "table" then
+                                if arg.Recoil then arg.Recoil = 0 end
+                                if arg.recoil then arg.recoil = 0 end
+                                if arg.Kick then arg.Kick = 0 end
+                                if arg.kick then arg.kick = 0 end
+                            end
+                        end
+                    end
+                    
+                    if State.Combat.InstantReload then
+                        -- Look for reload arguments
+                        for i, arg in ipairs(args) do
+                            if type(arg) == "table" then
+                                if arg.ReloadTime then arg.ReloadTime = 0 end
+                                if arg.reloadTime then arg.reloadTime = 0 end
+                                if arg.Reload then arg.Reload = 0 end
+                                if arg.reload then arg.reload = 0 end
+                            end
+                        end
+                    end
+                    
+                    if State.Combat.InfiniteAmmo then
+                        -- Look for ammo arguments
+                        for i, arg in ipairs(args) do
+                            if type(arg) == "table" then
+                                if arg.Ammo then arg.Ammo = 999 end
+                                if arg.ammo then arg.ammo = 999 end
+                                if arg.Clip then arg.Clip = 999 end
+                                if arg.clip then arg.clip = 999 end
+                            end
+                        end
+                    end
+                    
+                    return originalRemotes[remote](self, unpack(args))
+                end
+            elseif remote:IsA("RemoteFunction") then
+                originalRemotes[remote] = remote.InvokeServer
+                remote.InvokeServer = function(self, ...)
+                    local args = {...}
+                    
+                    -- Apply modifications similar to above
+                    if State.Combat.FasterFireRate then
+                        for i, arg in ipairs(args) do
+                            if type(arg) == "number" and arg > 0 and arg < 1 then
+                                args[i] = arg / State.Combat.FireRateMultiplier
+                            end
+                        end
+                    end
+                    
+                    return originalRemotes[remote](self, unpack(args))
+                end
+            end
+        end
+    end
+end
+
+-- Auto Automatic Weapons (makes semi-auto weapons automatic)
+local autoFireConnection
+local function setupAutoAutomatic()
+    if autoFireConnection then
+        autoFireConnection:Disconnect()
+        autoFireConnection = nil
+    end
+    
+    if State.Combat.AutoAutomatic then
+        local lastAutoFire = 0
+        autoFireConnection = RunService.RenderStepped:Connect(function()
+            if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+                local currentTime = tick()
+                if currentTime - lastAutoFire > (1 / State.Combat.FireRateMultiplier) then
+                    -- Simulate mouse click for automatic fire
+                    mouse1press()
+                    task.wait(0.01)
+                    mouse1release()
+                    lastAutoFire = currentTime
+                end
+            end
+        end)
     end
 end
 
@@ -1219,18 +1379,29 @@ RunService.RenderStepped:Connect(function(delta)
         end
     end
     
-    -- KILL ALL FUNCTION (NEW)
+    -- Weapon Modifications Update
+    if State.Combat.AutoAutomatic then
+        setupAutoAutomatic()
+    elseif autoFireConnection then
+        autoFireConnection:Disconnect()
+        autoFireConnection = nil
+    end
+    
+    -- Setup weapon hooks if not already set up
+    if not weaponHooks.SetupDone then
+        weaponHooks.SetupDone = true
+        setupWeaponHooks()
+    end
+    
+    -- KILL ALL FUNCTION
     if State.Combat.KillAll then
-        -- Only process every 0.5 seconds to prevent spamming
         if tick() - State.Combat.KillAllCooldown > 0.5 then
             State.Combat.KillAllCooldown = tick()
             
-            -- If we don't have a target or target is dead, get a new one
             if not State.Combat.KillAllTarget or not State.Combat.KillAllTarget.Character then
                 State.Combat.KillAllTarget = getClosestEnemy()
             end
             
-            -- Check if current target is still valid
             if State.Combat.KillAllTarget and State.Combat.KillAllTarget.Character then
                 local targetHum = State.Combat.KillAllTarget.Character:FindFirstChildOfClass("Humanoid")
                 if not targetHum or targetHum.Health <= 0 then
@@ -1238,11 +1409,9 @@ RunService.RenderStepped:Connect(function(delta)
                 end
             end
             
-            -- Teleport behind the target if we have one
             if State.Combat.KillAllTarget then
                 teleportBehindTarget(State.Combat.KillAllTarget)
                 
-                -- Auto-enable aim assist and triggerbot if not already enabled
                 if not State.Combat.AimAssist and Toggles.AimAssist then
                     Toggles.AimAssist.Set(true)
                 end
@@ -1253,7 +1422,6 @@ RunService.RenderStepped:Connect(function(delta)
             end
         end
     else
-        -- Reset target when Kill All is disabled
         State.Combat.KillAllTarget = nil
     end
     
@@ -1297,9 +1465,10 @@ end)
 
 -- Clean up noclip states when character changes
 player.CharacterAdded:Connect(function()
-    -- Clear noclip states
     originalCanCollideStates = {}
     partsToNoclip = {}
+    weaponHooks.SetupDone = false
+    setupWeaponHooks()
 end)
 
 -- Infinite Jump
@@ -1687,6 +1856,13 @@ if State.Misc.FPSBoost then
     end
 end
 
+-- Initialize weapon hooks
+task.spawn(function()
+    task.wait(2) -- Wait for game to load
+    setupWeaponHooks()
+end)
+
 print("Horizontal Hub Loaded Successfully!")
 print("Press RightShift to toggle menu")
+print("Weapon Modifications added: Faster Fire Rate, No Spread, No Recoil, Auto Automatic")
 print("KILL ALL function added to Combat tab")
