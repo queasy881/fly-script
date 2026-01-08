@@ -1275,7 +1275,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return oldNamecall(self, unpack(args))
-end)
+end
 
 local function getClosestTarget(fov)
     local closest, closestDist = nil, fov
@@ -1409,14 +1409,28 @@ RunService.RenderStepped:Connect(function(delta)
             hum.PlatformStand = true
             
             local speed = State.Movement.FlySpeed
-            local vel = Vector3.new()
-            local dir = hum.MoveDirection
-            if dir.Magnitude > 0 then
-                vel = camera.CFrame:VectorToWorldSpace(dir)
+            local vel = Vector3.new(0, 0, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                vel = vel + camera.CFrame.LookVector
             end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel = vel + Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then vel = vel - Vector3.new(0,1,0) end
-            if vel.Magnitude > 0 then vel = vel.Unit * speed end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                vel = vel - camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                vel = vel - camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                vel = vel + camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                vel = vel + Vector3.new(0, 1, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                vel = vel - Vector3.new(0, 1, 0)
+            end
+            if vel.Magnitude > 0 then
+                vel = vel.Unit * speed
+            end
             
             if State.Movement.FlyMethod == "Velocity" then
                 if not flyBodyVelocity then
@@ -1552,7 +1566,7 @@ RunService.RenderStepped:Connect(function(delta)
                 local root = char:FindFirstChild("HumanoidRootPart")
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 local head = char:FindFirstChild("Head")
-                if not root or not hum or hum.Health <= 0 then continue end
+                if not root or not hum or hum.Health <= 0 or not head then continue end
                 
                 if State.ESP.TeamCheck and plr.Team == myTeam then continue end
                 
@@ -1795,3 +1809,4 @@ end
 
 print("Horizontal Hub Loaded Successfully!")
 print("Press RightShift to toggle menu")
+    
