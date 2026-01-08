@@ -1837,6 +1837,38 @@ RunService.RenderStepped:Connect(function(delta)
             end
         end
     end
+    
+    -- Apply weapon modifications
+    if currentTool then
+        local weaponFolder = ReplicatedStorage.Weapons:FindFirstChild(currentTool.Name)
+        if weaponFolder then
+            if State.Combat.NoSpread then
+                if weaponFolder:FindFirstChild("Spread") then
+                    weaponFolder.Spread.Value = 0
+                end
+            end
+            if State.Combat.NoRecoil then
+                if weaponFolder:FindFirstChild("Recoil") then
+                    weaponFolder.Recoil.Value = 0
+                end
+            end
+            if State.Combat.AutoAutomatic then
+                if weaponFolder:FindFirstChild("Auto") then
+                    weaponFolder.Auto.Value = true
+                end
+            end
+            if State.Combat.InstantReload then
+                if weaponFolder:FindFirstChild("ReloadTime") then
+                    weaponFolder.ReloadTime.Value = 0
+                end
+            end
+            if State.Combat.InfiniteAmmo then
+                if currentTool:FindFirstChild("Ammo") and currentTool:FindFirstChild("MaxAmmo") then
+                    currentTool.Ammo.Value = currentTool.MaxAmmo.Value
+                end
+            end
+        end
+    end
 end)
 
 player.CharacterAdded:Connect(function()
