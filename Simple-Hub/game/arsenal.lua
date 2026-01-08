@@ -509,7 +509,7 @@ local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 35)
 topBar.BackgroundColor3 = Colors.Header
 topBar.Parent = main
-corner(topBar, 10)
+corner(topBar, {topLeft = 10, topRight = 10, bottomLeft = 0, bottomRight = 0})
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.5, 0, 1, 0)
@@ -1274,7 +1274,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return oldNamecall(self, unpack(args))
-end)
+end
 
 local function getClosestTarget(fov)
     local closest, closestDist = nil, fov
@@ -1468,7 +1468,7 @@ RunService.RenderStepped:Connect(function(delta)
     end
     lastCameraCFrame = camera.CFrame
     
-    if State.Combat.AimAssist then
+    if State.Combat.AimAssist and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local target = getClosestTarget(State.Combat.AimFOV)
         if target then
             local aimPos = target.Part.Position
@@ -1568,7 +1568,7 @@ RunService.RenderStepped:Connect(function(delta)
                     end
                 end end end
                 
-                if #corners < 4 then continue end
+                if #corners < 8 then continue end
                 
                 local minX, minY = math.huge, math.huge
                 local maxX, maxY = -math.huge, -math.huge
@@ -1629,6 +1629,8 @@ RunService.RenderStepped:Connect(function(delta)
                     drawings.box.PointD = Vector2.new(minX, maxY)
                     drawings.box.Color = color
                     drawings.box.Visible = true
+                else
+                    drawings.box.Visible = false
                 end
                 
                 if State.ESP.Name then
@@ -1636,6 +1638,8 @@ RunService.RenderStepped:Connect(function(delta)
                     drawings.name.Position = Vector2.new((minX + maxX)/2, minY - 14)
                     drawings.name.Color = color
                     drawings.name.Visible = true
+                else
+                    drawings.name.Visible = false
                 end
                 
                 if State.ESP.Health then
@@ -1655,7 +1659,12 @@ RunService.RenderStepped:Connect(function(delta)
                         drawings.healthBar.PointD = Vector2.new(minX - 2, maxY)
                         drawings.healthBar.Color = healthColor
                         drawings.healthBar.Visible = true
+                    else
+                        drawings.healthBar.Visible = false
                     end
+                else
+                    drawings.health.Visible = false
+                    drawings.healthBar.Visible = false
                 end
                 
                 if State.ESP.Distance then
@@ -1663,6 +1672,8 @@ RunService.RenderStepped:Connect(function(delta)
                     drawings.distance.Position = Vector2.new((minX + maxX)/2, maxY + 2)
                     drawings.distance.Color = color
                     drawings.distance.Visible = true
+                else
+                    drawings.distance.Visible = false
                 end
                 
                 if State.ESP.Tracers then
@@ -1670,12 +1681,16 @@ RunService.RenderStepped:Connect(function(delta)
                     drawings.tracer.To = Vector2.new(screenRoot.X, screenRoot.Y)
                     drawings.tracer.Color = color
                     drawings.tracer.Visible = true
+                else
+                    drawings.tracer.Visible = false
                 end
                 
                 if State.ESP.HeadDot then
                     drawings.headDot.Position = Vector2.new(screenHead.X, screenHead.Y)
                     drawings.headDot.Color = Color3.fromRGB(255, 0, 0)
                     drawings.headDot.Visible = true
+                else
+                    drawings.headDot.Visible = false
                 end
                 
                 if State.ESP.Weapon then
@@ -1684,6 +1699,8 @@ RunService.RenderStepped:Connect(function(delta)
                     drawings.weapon.Position = Vector2.new((minX + maxX)/2, maxY + 14)
                     drawings.weapon.Color = color
                     drawings.weapon.Visible = true
+                else
+                    drawings.weapon.Visible = false
                 end
                 
                 if State.ESP.Chams then
@@ -1698,6 +1715,8 @@ RunService.RenderStepped:Connect(function(delta)
                     drawings.chams.OutlineColor = color
                     drawings.chams.Enabled = true
                     drawings.chams.Parent = plr.Character
+                else
+                    drawings.chams.Enabled = false
                 end
                 
                 if State.ESP.Outlines then
