@@ -1,11 +1,38 @@
 -- main.client.lua
--- Simple Game Selector GUI Loader
+-- Simple Game Selector (GitHub Repo Loader)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local HttpService = game:GetService("HttpService")
 
--- Create GUI
+-- CHANGE THIS ONLY IF YOUR REPO URL CHANGES
+local BASE =
+    "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
+
+-- Safe loader
+local function loadFromRepo(path)
+	print("[LOADING FILE]", path)
+
+	local ok, src = pcall(function()
+		return game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
+	end)
+
+	if not ok or not src then
+		warn("[LOAD FAILED]", path)
+		return
+	end
+
+	local fn, err = loadstring(src)
+	if not fn then
+		warn("[LOADSTRING ERROR]", err)
+		return
+	end
+
+	pcall(fn)
+end
+
+-- GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GameSelectorGui"
 ScreenGui.ResetOnSpawn = false
@@ -18,11 +45,10 @@ Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Frame.BorderSizePixel = 0
 Frame.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
-UICorner.Parent = Frame
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = Frame
 
--- Title
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.fromScale(1, 0.2)
 Title.BackgroundTransparency = 1
@@ -32,21 +58,19 @@ Title.Font = Enum.Font.GothamBold
 Title.TextScaled = true
 Title.Parent = Frame
 
--- Button container
 local ButtonsFrame = Instance.new("Frame")
 ButtonsFrame.Size = UDim2.fromScale(1, 0.8)
 ButtonsFrame.Position = UDim2.fromScale(0, 0.2)
 ButtonsFrame.BackgroundTransparency = 1
 ButtonsFrame.Parent = Frame
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 10)
-UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-UIListLayout.Parent = ButtonsFrame
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 10)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Layout.VerticalAlignment = Enum.VerticalAlignment.Center
+Layout.Parent = ButtonsFrame
 
--- Button creator
-local function createButton(text, callback)
+local function createButton(text, filePath)
 	local Button = Instance.new("TextButton")
 	Button.Size = UDim2.fromScale(0.8, 0.18)
 	Button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
@@ -54,52 +78,27 @@ local function createButton(text, callback)
 	Button.TextColor3 = Color3.fromRGB(255, 255, 255)
 	Button.Font = Enum.Font.Gotham
 	Button.TextScaled = true
-	Button.AutoButtonColor = true
+	Button.Parent = ButtonsFrame
 
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius = UDim.new(0, 8)
-	Corner.Parent = Button
+	local BtnCorner = Instance.new("UICorner")
+	BtnCorner.CornerRadius = UDim.new(0, 8)
+	BtnCorner.Parent = Button
 
 	Button.MouseButton1Click:Connect(function()
-		pcall(callback)
+		if filePath ~= "" then
+			loadFromRepo(filePath)
+		else
+			warn(text .. " file path not set")
+		end
 		ScreenGui:Destroy()
 	end)
-
-	Button.Parent = ButtonsFrame
 end
 
--- === GAME LOADERS (REPLACE LOADSTRINGS) ===
+-- === GAME OPTIONS (LEAVE FILE NAMES BLANK) ===
 
-createButton("RIVALS", function()
-	loadstring([[
+createButton("RIVALS", "")
+createButton("ARSENAL", "")
+createButton("FLICK", "")
+createButton("UNIVERSAL", "")
 
-		-- RIVALS SCRIPT HERE
-
-	]])()
-end)
-
-createButton("ARSENAL", function()
-	loadstring([[
-
-		-- ARSENAL SCRIPT HERE
-
-	]])()
-end)
-
-createButton("FLICK", function()
-	loadstring([[
-
-		-- FLICK SCRIPT HERE
-
-	]])()
-end)
-
-createButton("UNIVERSAL", function()
-	loadstring([[
-
-		-- UNIVERSAL SCRIPT HERE
-
-	]])()
-end)
-
-print("[Game Selector] GUI Loaded")
+print("[Game Selector] Loaded")
