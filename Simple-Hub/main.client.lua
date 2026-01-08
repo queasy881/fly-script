@@ -1,70 +1,105 @@
 -- main.client.lua
--- Vertex Hub loader
--- FIXED VERSION
+-- Simple Game Selector GUI Loader
 
-local BASE = "https://raw.githubusercontent.com/queasy881/fly-script/main/Simple-Hub/"
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local function load(path)
-	print("[LOADING]", path)
-	local ok, src = pcall(function()
-		return game:HttpGet(BASE .. path .. "?nocache=" .. tostring(os.clock()))
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GameSelectorGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.fromScale(0.3, 0.4)
+Frame.Position = UDim2.fromScale(0.35, 0.3)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = Frame
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.fromScale(1, 0.2)
+Title.BackgroundTransparency = 1
+Title.Text = "Which game do you want to open?"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+Title.Parent = Frame
+
+-- Button container
+local ButtonsFrame = Instance.new("Frame")
+ButtonsFrame.Size = UDim2.fromScale(1, 0.8)
+ButtonsFrame.Position = UDim2.fromScale(0, 0.2)
+ButtonsFrame.BackgroundTransparency = 1
+ButtonsFrame.Parent = Frame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 10)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+UIListLayout.Parent = ButtonsFrame
+
+-- Button creator
+local function createButton(text, callback)
+	local Button = Instance.new("TextButton")
+	Button.Size = UDim2.fromScale(0.8, 0.18)
+	Button.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	Button.Text = text
+	Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Button.Font = Enum.Font.Gotham
+	Button.TextScaled = true
+	Button.AutoButtonColor = true
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 8)
+	Corner.Parent = Button
+
+	Button.MouseButton1Click:Connect(function()
+		pcall(callback)
+		ScreenGui:Destroy()
 	end)
-	if not ok or not src then
-		warn("[LOAD SKIP]", path)
-		return nil
-	end
-	local fn, err = loadstring(src)
-	if not fn then
-		warn("[LOAD ERROR]", path, err)
-		return nil
-	end
-	local ok2, result = pcall(fn)
-	if not ok2 then
-		warn("[RUN ERROR]", path, result)
-		return nil
-	end
-	return result
+
+	Button.Parent = ButtonsFrame
 end
 
--- Load utilities (safe)
-pcall(function() load("utils/helpers.lua") end)
-pcall(function() load("utils/math.lua") end)
-pcall(function() load("utils/raycast.lua") end)
+-- === GAME LOADERS (REPLACE LOADSTRINGS) ===
 
--- Load UI modules
-local Animations = load("ui/animations.lua")
-local Components = load("ui/components.lua")
-local Tabs = load("ui/tabs.lua")
+createButton("RIVALS", function()
+	loadstring([[
 
-_G.VertexAnimations = Animations
-_G.VertexComponents = Components
-_G.VertexTabs = Tabs
+		-- RIVALS SCRIPT HERE
 
--- Load controller
-local Controller = load("controller.lua")
+	]])()
+end)
 
--- Register modules
-if Controller and Controller.registerModule then
-	pcall(function() Controller.registerModule("Fly", load("movement/fly.lua")) end)
-	pcall(function() Controller.registerModule("Noclip", load("movement/noclip.lua")) end)
-	pcall(function() Controller.registerModule("WalkSpeed", load("movement/walkspeed.lua")) end)
-	pcall(function() Controller.registerModule("JumpPower", load("movement/jumppower.lua")) end)
-	pcall(function() Controller.registerModule("AimAssist", load("combat/aim_assist.lua")) end)
-	pcall(function() Controller.registerModule("SilentAim", load("combat/silent_aim.lua")) end)
-	pcall(function() Controller.registerModule("FOV", load("combat/fov.lua")) end)
-	pcall(function() Controller.registerModule("Fullbright", load("extra/fullbright.lua")) end)
-	pcall(function() Controller.registerModule("AntiAFK", load("extra/anti-afk.lua")) end)
-end
+createButton("ARSENAL", function()
+	loadstring([[
 
--- Load menu
-local startMenu = load("ui/menu.lua")
+		-- ARSENAL SCRIPT HERE
 
-if startMenu then
-	startMenu({
-		Tabs = Tabs,
-		Components = Components,
-		Animations = Animations
-	})
-end
+	]])()
+end)
 
-print("[Vertex Hub] Loaded")
+createButton("FLICK", function()
+	loadstring([[
+
+		-- FLICK SCRIPT HERE
+
+	]])()
+end)
+
+createButton("UNIVERSAL", function()
+	loadstring([[
+
+		-- UNIVERSAL SCRIPT HERE
+
+	]])()
+end)
+
+print("[Game Selector] GUI Loaded")
