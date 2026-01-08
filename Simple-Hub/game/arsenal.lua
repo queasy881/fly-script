@@ -434,7 +434,7 @@ local State = {
         AutoAutomatic = false,
         InstantReload = false,
         InfiniteAmmo = false,
-        TeamCheck = false  -- New: Combat-specific team check
+        TeamCheck = false
     },
     ESP = {
         Enabled = false,
@@ -738,14 +738,14 @@ function rebuildScroll()
         Toggles.KillAll = Components.createToggle(scroll, "KILL ALL", function(v)
             State.Combat.KillAll = v
             if v then
-                if Toggles.AimAssist then Toggles.AimAssist.Set(true) end
+                Toggles.AimAssist.Set(true)
+                State.Combat.AimAssist = true
                 if Toggles.TriggerBot then Toggles.TriggerBot.Set(true) end
                 State.Combat.KillAllTarget = nil
                 State.Combat.KillAllCooldown = tick()
             end
         end, State.Combat.KillAll)
         
-        -- New: Combat team check toggle
         Toggles.TeamCheck = Components.createToggle(scroll, "Team Check", function(v)
             State.Combat.TeamCheck = v
         end, State.Combat.TeamCheck)
@@ -1156,6 +1156,16 @@ UserInputService.InputEnded:Connect(function(input, gp)
     end
 end)
 
+local function isValidTarget(plr)
+    local char = plr.Character
+    if not char then return false end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not hum or not root or hum.Health <= 0 then return false end
+    if root.Position.Y < -10 then return false end  -- Reject if below map threshold (adjust as needed for game)
+    return true
+end
+
 local function getClosestEnemy()
     local myTeam = player.Team
     local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -1168,13 +1178,8 @@ local function getClosestEnemy()
         if plr == player then continue end
         if State.Combat.TeamCheck and plr.Team == myTeam then continue end
         
-        local char = plr.Character
-        if not char then continue end
-        
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        local root = char:FindFirstChild("HumanoidRootPart")
-        
-        if hum and hum.Health > 0 and root then
+        if isValidTarget(plr) then
+            local root = plr.Character:FindFirstChild("HumanoidRootPart")
             local dist = (myRoot.Position - root.Position).Magnitude
             if dist < closestDist and dist <= State.ESP.MaxDistance then
                 closestDist = dist
@@ -1187,7 +1192,7 @@ local function getClosestEnemy()
 end
 
 local function teleportBehindTarget(targetPlayer)
-    if not targetPlayer or not targetPlayer.Character then return false end
+    if not targetPlayer or not isValidTarget(targetPlayer) then return false end
     
     local char = player.Character
     if not char then return false end
@@ -1313,6 +1318,8 @@ local function getClosestTarget(fov)
         local hum = plr.Character:FindFirstChildOfClass("Humanoid")
         if not root or not hum or hum.Health <= 0 then continue end
         
+        if State.Combat.TeamCheck and plr.Team == player.Team then continue end
+        
         local targetPart = head or root
         local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
         if not onScreen then continue end
@@ -1353,21 +1360,11 @@ local triggerPressing = false
 local damping = 5  -- Adjustable damping factor for recoil
 
 RunService.RenderStepped:Connect(function(delta)
-    if not State.ESP.Enabled then 
-        for _, drawings in pairs(espCache) do
-            for _, d in pairs(drawings) do
-                if typeof(d) == "Instance" then
-                    d.Enabled = false
-                else
-                    d.Visible = false
-                end
-            end
-        end
-        return 
-    end
-    
     if State.Combat.SilentAim then
         Silent.Target = Silent:getClosest(State.Combat.SilentFOV)
+        if Silent.Target and not isValidTarget(Silent.Target.Player) then
+            Silent.Target = nil
+        end
     else
         Silent.Target = nil
     end
@@ -1443,17 +1440,19 @@ RunService.RenderStepped:Connect(function(delta)
             
             local speed = State.Movement.FlySpeed
             local vel = Vector3.new(0, 0, 0)
+            local flatLook = Vector3.new(camera.CFrame.LookVector.X, 0, camera.CFrame.LookVector.Z).Unit
+            local flatRight = Vector3.new(camera.CFrame.RightVector.X, 0, camera.CFrame.RightVector.Z).Unit
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                vel = vel + camera.CFrame.LookVector
+                vel = vel + flatLook
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                vel = vel - camera.CFrame.LookVector
+                vel = vel - flatLook
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                vel = vel - camera.CFrame.RightVector
+                vel = vel - flatRight
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                vel = vel + camera.CFrame.RightVector
+                vel = vel + flatRight
             end
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
                 vel = vel + Vector3.new(0, 1, 0)
@@ -1557,15 +1556,9 @@ RunService.RenderStepped:Connect(function(delta)
     end
     
     if State.Combat.KillAll then
-        if not State.Combat.KillAllTarget or not State.Combat.KillAllTarget.Character then
+        if not State.Combat.KillAllTarget or not isValidTarget(State.Combat.KillAllTarget) then
+            State.Combat.KillAllTarget = nil
             State.Combat.KillAllTarget = getClosestEnemy()
-        end
-        
-        if State.Combat.KillAllTarget and State.Combat.KillAllTarget.Character then
-            local targetHum = State.Combat.KillAllTarget.Character:FindFirstChildOfClass("Humanoid")
-            if not targetHum or targetHum.Health <= 0 then
-                State.Combat.KillAllTarget = getClosestEnemy()
-            end
         end
         
         if State.Combat.KillAllTarget then
@@ -1657,11 +1650,10 @@ RunService.RenderStepped:Connect(function(delta)
                 local dist = (myRoot.Position - root.Position).Magnitude
                 if dist > State.ESP.MaxDistance then continue end
                 
-                local size = Vector3.new(4, 6, 2) -- Fixed size to avoid expander effect
-                
                 local corners = {}
                 for x = -1, 1, 2 do for y = -1, 1, 2 do for z = -1, 1, 2 do
-                    local pos = root.CFrame * Vector3.new(x*size.X/2, y*size.Y/2, z*size.Z/2)
+                    local offset = Vector3.new(x*bbSize.X/2, y*bbSize.Y/2, z*bbSize.Z/2)
+                    local pos = bbCFrame:PointToWorldSpace(offset)  -- Use bounding box for accurate positions
                     local screen, onScreen = camera:WorldToViewportPoint(pos)
                     if onScreen then
                         table.insert(corners, Vector2.new(screen.X, screen.Y))
@@ -1828,6 +1820,17 @@ RunService.RenderStepped:Connect(function(delta)
                             part.Material = Enum.Material.ForceField
                         end
                     end
+                end
+            end
+        end
+    else
+        -- Full cleanup when ESP disabled
+        for _, drawings in pairs(espCache) do
+            for _, d in pairs(drawings) do
+                if typeof(d) == "Instance" then
+                    d.Enabled = false
+                else
+                    d.Visible = false
                 end
             end
         end
