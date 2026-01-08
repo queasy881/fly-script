@@ -1249,13 +1249,23 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     if method == "FindPartOnRayWithIgnoreList" or method == "Raycast" then
         if State.Combat.SilentAim and Silent.Target then
             local target = Silent.Target
-            if target and target.Character and target.Part and target.Part.Parent and target.Character:FindFirstChildOfClass("Humanoid") and target.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                if math.random(1,100) <= State.Combat.SilentHitChance then
+            if target
+                and target.Character
+                and target.Part
+                and target.Part.Parent
+                and target.Character:FindFirstChildOfClass("Humanoid")
+                and target.Character:FindFirstChildOfClass("Humanoid").Health > 0
+            then
+                if math.random(1, 100) <= State.Combat.SilentHitChance then
                     local origin = args[1]
                     local direction = args[2]
                     local targetPos = target.Part.Position
+
                     if method == "FindPartOnRayWithIgnoreList" then
-                        args[1] = Ray.new(origin.Origin, (targetPos - origin.Origin).Unit * 1000)
+                        args[1] = Ray.new(
+                            origin.Origin,
+                            (targetPos - origin.Origin).Unit * 1000
+                        )
                     else
                         args[2] = (targetPos - origin).Unit * direction.Magnitude
                     end
@@ -1267,7 +1277,10 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         
         if State.Combat.NoSpread then
             if method == "FindPartOnRayWithIgnoreList" then
-                args[1] = Ray.new(args[1].Origin, camera.CFrame.LookVector * 1000)
+                args[1] = Ray.new(
+                    args[1].Origin,
+                    camera.CFrame.LookVector * 1000
+                )
             else
                 args[2] = camera.CFrame.LookVector * args[2].Magnitude
             end
@@ -1275,7 +1288,8 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return oldNamecall(self, unpack(args))
-end
+end)
+
 
 local function getClosestTarget(fov)
     local closest, closestDist = nil, fov
