@@ -1,5 +1,6 @@
 -- Enhanced Horizontal Hub
 -- Combined features with Hitbox Expander and additional utilities
+-- Fixed menu persistence and added KILL ALL function
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -419,7 +420,10 @@ local State = {
         TriggerDelay = 50,
         AutoClicker = false,
         CPS = 10,
-        WallBang = false
+        WallBang = false,
+        KillAll = false, -- NEW: KILL ALL function
+        KillAllTarget = nil,
+        KillAllCooldown = 0
     },
     ESP = {
         Enabled = false,
@@ -467,6 +471,23 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "HorizontalHub"
 gui.Parent = player:WaitForChild("PlayerGui")
 gui.Enabled = true
+
+-- Function to recreate GUI when player respawns/teleports
+local function recreateGUI()
+    if not gui or not gui.Parent then
+        gui = Instance.new("ScreenGui")
+        gui.Name = "HorizontalHub"
+        gui.Parent = player:WaitForChild("PlayerGui")
+        gui.Enabled = true
+        main.Parent = gui
+    end
+end
+
+-- Listen for character changes to fix menu bug
+player.CharacterAdded:Connect(function()
+    task.wait(0.5) -- Wait for PlayerGui to be ready
+    recreateGUI()
+end)
 
 local main = Instance.new("Frame")
 main.Size = UDim2.new(0, 650, 0, 450)
@@ -707,6 +728,20 @@ function rebuildScroll()
             State.Combat.WallBang = v
         end)
         
+        -- NEW: KILL ALL FUNCTION
+        Components.createSectionLabel(scroll, "KILL ALL Function")
+        
+        Toggles.KillAll = Components.createToggle(scroll, "KILL ALL", function(v)
+            State.Combat.KillAll = v
+            if v then
+                -- Automatically enable aim assist and triggerbot when Kill All is enabled
+                if Toggles.AimAssist then Toggles.AimAssist.Set(true) end
+                if Toggles.TriggerBot then Toggles.TriggerBot.Set(true) end
+                State.Combat.KillAllTarget = nil
+                State.Combat.KillAllCooldown = tick()
+            end
+        end)
+        
     elseif currentTab == "ESP" then
         Components.createSectionLabel(scroll, "ESP Settings")
         
@@ -863,7 +898,7 @@ end
 
 -- Close Button
 closeBtn.MouseButton1Click:Connect(function()
-    gui:Destroy()
+    gui.Enabled = not gui.Enabled
 end)
 
 -- Initialize
@@ -897,6 +932,58 @@ end)
 local flyBodyVelocity, flyBodyGyro, walkBodyVelocity
 local lastJumpTime = 0
 local lastClickTime = 0
+
+-- NEW: KILL ALL FUNCTION IMPLEMENTATION
+local function getClosestEnemy()
+    local myTeam = player.Team
+    local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return nil end
+    
+    local closest = nil
+    local closestDist = math.huge
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr == player then continue end
+        if State.ESP.TeamCheck and plr.Team == myTeam then continue end
+        
+        local char = plr.Character
+        if not char then continue end
+        
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local root = char:FindFirstChild("HumanoidRootPart")
+        
+        if hum and hum.Health > 0 and root then
+            local dist = (myRoot.Position - root.Position).Magnitude
+            if dist < closestDist and dist <= State.ESP.MaxDistance then
+                closestDist = dist
+                closest = plr
+            end
+        end
+    end
+    
+    return closest
+end
+
+local function teleportBehindTarget(targetPlayer)
+    if not targetPlayer or not targetPlayer.Character then return false end
+    
+    local char = player.Character
+    if not char then return false end
+    
+    local myRoot = char:FindFirstChild("HumanoidRootPart")
+    local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if not myRoot or not targetRoot then return false end
+    
+    -- Calculate position 3 studs behind the target
+    local targetCFrame = targetRoot.CFrame
+    local behindOffset = targetCFrame.LookVector * -3
+    
+    -- Teleport behind the target
+    myRoot.CFrame = CFrame.new(targetCFrame.Position + behindOffset, targetCFrame.Position)
+    
+    return true
+end
 
 RunService.RenderStepped:Connect(function(delta)
     local char = player.Character
@@ -997,6 +1084,44 @@ RunService.RenderStepped:Connect(function(delta)
                 end
             end
         end
+    end
+    
+    -- KILL ALL FUNCTION (NEW)
+    if State.Combat.KillAll then
+        -- Only process every 0.5 seconds to prevent spamming
+        if tick() - State.Combat.KillAllCooldown > 0.5 then
+            State.Combat.KillAllCooldown = tick()
+            
+            -- If we don't have a target or target is dead, get a new one
+            if not State.Combat.KillAllTarget or not State.Combat.KillAllTarget.Character then
+                State.Combat.KillAllTarget = getClosestEnemy()
+            end
+            
+            -- Check if current target is still valid
+            if State.Combat.KillAllTarget and State.Combat.KillAllTarget.Character then
+                local targetHum = State.Combat.KillAllTarget.Character:FindFirstChildOfClass("Humanoid")
+                if not targetHum or targetHum.Health <= 0 then
+                    State.Combat.KillAllTarget = getClosestEnemy()
+                end
+            end
+            
+            -- Teleport behind the target if we have one
+            if State.Combat.KillAllTarget then
+                teleportBehindTarget(State.Combat.KillAllTarget)
+                
+                -- Auto-enable aim assist and triggerbot if not already enabled
+                if not State.Combat.AimAssist and Toggles.AimAssist then
+                    Toggles.AimAssist.Set(true)
+                end
+                
+                if not State.Combat.TriggerBot and Toggles.TriggerBot then
+                    Toggles.TriggerBot.Set(true)
+                end
+            end
+        end
+    else
+        -- Reset target when Kill All is disabled
+        State.Combat.KillAllTarget = nil
     end
     
     -- Visuals
@@ -1424,3 +1549,4 @@ end
 
 print("Horizontal Hub Loaded Successfully!")
 print("Press RightShift to toggle menu")
+print("KILL ALL function added to Combat tab")
