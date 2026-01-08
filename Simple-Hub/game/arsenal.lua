@@ -121,7 +121,6 @@ function Components.createToggle(parent, text, callback, initialState)
         update()
     end)
 
-    -- Update immediately to show correct state
     update()
 
     return {
@@ -428,7 +427,6 @@ local State = {
         KillAll = false,
         KillAllTarget = nil,
         KillAllCooldown = 0,
-        -- NEW: Weapon Modifications
         FasterFireRate = false,
         FireRateMultiplier = 2.0,
         NoSpread = false,
@@ -484,7 +482,6 @@ gui.Name = "HorizontalHub"
 gui.Parent = player:WaitForChild("PlayerGui")
 gui.Enabled = true
 
--- Function to recreate GUI when player respawns/teleports
 local function recreateGUI()
     if not gui or not gui.Parent then
         gui = Instance.new("ScreenGui")
@@ -495,9 +492,8 @@ local function recreateGUI()
     end
 end
 
--- Listen for character changes to fix menu bug
 player.CharacterAdded:Connect(function()
-    task.wait(0.5) -- Wait for PlayerGui to be ready
+    task.wait(0.5)
     recreateGUI()
 end)
 
@@ -509,7 +505,6 @@ main.Parent = gui
 corner(main, 10)
 border(main, Color3.fromRGB(50, 50, 70))
 
--- Top Bar
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 35)
 topBar.BackgroundColor3 = Colors.Header
@@ -547,7 +542,6 @@ closeBtn.TextSize = 14
 closeBtn.Parent = topBar
 corner(closeBtn, 6)
 
--- Tab Container
 local tabContainer = Instance.new("Frame")
 tabContainer.Size = UDim2.new(0, 150, 1, -35)
 tabContainer.Position = UDim2.new(0, 0, 0, 35)
@@ -564,7 +558,6 @@ tabPadding.PaddingTop = UDim.new(0, 10)
 tabPadding.PaddingLeft = UDim.new(0, 10)
 tabPadding.Parent = tabContainer
 
--- Content Container
 local contentContainer = Instance.new("Frame")
 contentContainer.Size = UDim2.new(1, -160, 1, -45)
 contentContainer.Position = UDim2.new(0, 155, 0, 40)
@@ -592,7 +585,6 @@ contentPadding.PaddingLeft = UDim.new(0, 10)
 contentPadding.PaddingRight = UDim.new(0, 10)
 contentPadding.Parent = scroll
 
--- Tabs
 local tabs = {
     "Movement",
     "Combat",
@@ -606,7 +598,6 @@ local Toggles = {}
 local Keybinds = {}
 local waitingForBind = nil
 
--- Create Tab Buttons
 local tabButtons = {}
 for _, tabName in ipairs(tabs) do
     local btn = Instance.new("TextButton")
@@ -634,7 +625,6 @@ for _, tabName in ipairs(tabs) do
     table.insert(tabButtons, btn)
 end
 
--- Rebuild Scroll Content
 function rebuildScroll()
     for _, child in ipairs(scroll:GetChildren()) do
         if child:IsA("GuiObject") and child ~= layout and child ~= contentPadding then
@@ -740,6 +730,7 @@ function rebuildScroll()
         
         Toggles.AutoClicker = Components.createToggle(scroll, "Auto Clicker", function(v)
             State.Combat.AutoClicker = v
+            updateWeaponConfig()
         end, State.Combat.AutoClicker)
         
         Components.createSlider(scroll, "Clicks Per Second", 1, 50, State.Combat.CPS, function(v)
@@ -750,15 +741,16 @@ function rebuildScroll()
             State.Combat.WallBang = v
         end, State.Combat.WallBang)
         
-        -- NEW: Weapon Modifications Section
         Components.createSectionLabel(scroll, "Weapon Modifications")
         
         Toggles.FasterFireRate = Components.createToggle(scroll, "Faster Fire Rate", function(v)
             State.Combat.FasterFireRate = v
+            updateWeaponConfig()
         end, State.Combat.FasterFireRate)
         
         Components.createSlider(scroll, "Fire Rate Multiplier", 1, 10, math.floor(State.Combat.FireRateMultiplier), function(v)
             State.Combat.FireRateMultiplier = v
+            updateWeaponConfig()
         end)
         
         Toggles.NoSpread = Components.createToggle(scroll, "No Spread", function(v)
@@ -771,6 +763,7 @@ function rebuildScroll()
         
         Toggles.AutoAutomatic = Components.createToggle(scroll, "Auto Automatic", function(v)
             State.Combat.AutoAutomatic = v
+            updateWeaponConfig()
         end, State.Combat.AutoAutomatic)
         
         Toggles.InstantReload = Components.createToggle(scroll, "Instant Reload", function(v)
@@ -781,13 +774,11 @@ function rebuildScroll()
             State.Combat.InfiniteAmmo = v
         end, State.Combat.InfiniteAmmo)
         
-        -- KILL ALL FUNCTION
         Components.createSectionLabel(scroll, "KILL ALL Function")
         
         Toggles.KillAll = Components.createToggle(scroll, "KILL ALL", function(v)
             State.Combat.KillAll = v
             if v then
-                -- Automatically enable aim assist and triggerbot when Kill All is enabled
                 if Toggles.AimAssist then Toggles.AimAssist.Set(true) end
                 if Toggles.TriggerBot then Toggles.TriggerBot.Set(true) end
                 State.Combat.KillAllTarget = nil
@@ -947,7 +938,6 @@ function rebuildScroll()
         end, State.Misc.ChatLogger)
     end
     
-    -- Setup keybinds
     for feature, toggle in pairs(Toggles) do
         local btn = toggle.GetKeybindButton and toggle.GetKeybindButton()
         if btn then
@@ -968,17 +958,14 @@ function rebuildScroll()
     end
 end
 
--- Close Button
 closeBtn.MouseButton1Click:Connect(function()
     gui.Enabled = not gui.Enabled
 end)
 
--- Initialize
 rebuildScroll()
 tabButtons[1].BackgroundColor3 = Colors.Accent
 tabButtons[1].TextColor3 = Colors.Text
 
--- Toggle Menu (RightShift Key)
 local menuVisible = true
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -1000,21 +987,17 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
--- Feature Implementations
 local flyBodyVelocity, flyBodyGyro, walkBodyVelocity
 local lastJumpTime = 0
 local lastClickTime = 0
 
--- Store original CanCollide states for noclip
 local originalCanCollideStates = {}
 local partsToNoclip = {}
 
--- FIXED: Smart noclip that only affects buildings, not floor
 local function updateNoclip()
     local char = player.Character
     if not char then return end
     
-    -- Reset previous parts if noclip is off
     if not State.Movement.Noclip then
         for part, originalState in pairs(originalCanCollideStates) do
             if part and part.Parent then
@@ -1026,7 +1009,6 @@ local function updateNoclip()
         return
     end
     
-    -- Only noclip through buildings, not floor
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
     
@@ -1092,147 +1074,67 @@ local function updateNoclip()
     end
 end
 
--- Weapon Modification Hooks
-local originalRemotes = {}
-local weaponHooks = {}
+local isArsenal = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage:FindFirstChild("Events")
 
--- Hook weapon firing remotes
-local function setupWeaponHooks()
-    -- Find all remote events/functions related to weapons
-    local remotesToHook = {}
-    
-    -- Check ReplicatedStorage
-    local function scanFolder(folder)
-        for _, item in pairs(folder:GetDescendants()) do
-            if item:IsA("RemoteEvent") or item:IsA("RemoteFunction") then
-                local name = item.Name:lower()
-                if name:find("fire") or name:find("shoot") or name:find("weapon") or 
-                   name:find("damage") or name:find("hit") or name:find("ammo") or
-                   name:find("reload") or name:find("spread") or name:find("recoil") then
-                    table.insert(remotesToHook, item)
-                end
+local lastCameraCFrame = camera.CFrame
+local currentTool = nil
+local fireConnection
+local lastFireTime = 0
+local currentDelay = 0.1
+local justFired = false
+local recoilBuffer = 0
+
+local function updateWeaponConfig()
+    if not isArsenal then return end
+    local char = player.Character
+    if not char then return end
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool == currentTool and fireConnection then return end
+    if fireConnection then fireConnection:Disconnect() fireConnection = nil end
+    currentTool = tool
+    if tool then
+        local weaponFolder = ReplicatedStorage.Weapons:FindFirstChild(tool.Name)
+        if weaponFolder then
+            local isAuto = weaponFolder:FindFirstChild("Auto") and weaponFolder.Auto.Value or false
+            local fireTime = weaponFolder:FindFirstChild("FireTime") and weaponFolder.FireTime.Value or 0.1
+            if State.Combat.FasterFireRate then
+                fireTime = fireTime / State.Combat.FireRateMultiplier
             end
-        end
-    end
-    
-    scanFolder(ReplicatedStorage)
-    
-    for _, remote in pairs(remotesToHook) do
-        if not originalRemotes[remote] then
-            if remote:IsA("RemoteEvent") then
-                originalRemotes[remote] = remote.FireServer
-                remote.FireServer = function(self, ...)
-                    local args = {...}
-                    
-                    -- Apply weapon modifications
-                    if State.Combat.FasterFireRate then
-                        -- Look for fire rate/delay arguments
-                        for i, arg in ipairs(args) do
-                            if type(arg) == "number" and arg > 0 and arg < 1 then
-                                -- This might be a fire delay
-                                args[i] = arg / State.Combat.FireRateMultiplier
-                            end
+            currentDelay = math.max(fireTime, 0.033) -- avoid kick
+            local needsLoop = State.Combat.AutoAutomatic or State.Combat.FasterFireRate or State.Combat.AutoClicker or not isAuto
+            if needsLoop then
+                fireConnection = RunService.Heartbeat:Connect(function()
+                    if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
+                    local now = tick()
+                    if now - lastFireTime >= currentDelay then
+                        if currentTool then
+                            currentTool:Activate()
+                            justFired = true
                         end
+                        lastFireTime = now
                     end
-                    
-                    if State.Combat.NoSpread then
-                        -- Look for spread arguments
-                        for i, arg in ipairs(args) do
-                            if type(arg) == "number" and (arg == 0.1 or arg == 0.05 or arg == 0.2) then
-                                -- This might be spread value
-                                args[i] = 0
-                            elseif type(arg) == "table" then
-                                if arg.Spread then arg.Spread = 0 end
-                                if arg.spread then arg.spread = 0 end
-                            end
-                        end
-                    end
-                    
-                    if State.Combat.NoRecoil then
-                        -- Look for recoil arguments
-                        for i, arg in ipairs(args) do
-                            if type(arg) == "table" then
-                                if arg.Recoil then arg.Recoil = 0 end
-                                if arg.recoil then arg.recoil = 0 end
-                                if arg.Kick then arg.Kick = 0 end
-                                if arg.kick then arg.kick = 0 end
-                            end
-                        end
-                    end
-                    
-                    if State.Combat.InstantReload then
-                        -- Look for reload arguments
-                        for i, arg in ipairs(args) do
-                            if type(arg) == "table" then
-                                if arg.ReloadTime then arg.ReloadTime = 0 end
-                                if arg.reloadTime then arg.reloadTime = 0 end
-                                if arg.Reload then arg.Reload = 0 end
-                                if arg.reload then arg.reload = 0 end
-                            end
-                        end
-                    end
-                    
-                    if State.Combat.InfiniteAmmo then
-                        -- Look for ammo arguments
-                        for i, arg in ipairs(args) do
-                            if type(arg) == "table" then
-                                if arg.Ammo then arg.Ammo = 999 end
-                                if arg.ammo then arg.ammo = 999 end
-                                if arg.Clip then arg.Clip = 999 end
-                                if arg.clip then arg.clip = 999 end
-                            end
-                        end
-                    end
-                    
-                    return originalRemotes[remote](self, unpack(args))
-                end
-            elseif remote:IsA("RemoteFunction") then
-                originalRemotes[remote] = remote.InvokeServer
-                remote.InvokeServer = function(self, ...)
-                    local args = {...}
-                    
-                    -- Apply modifications similar to above
-                    if State.Combat.FasterFireRate then
-                        for i, arg in ipairs(args) do
-                            if type(arg) == "number" and arg > 0 and arg < 1 then
-                                args[i] = arg / State.Combat.FireRateMultiplier
-                            end
-                        end
-                    end
-                    
-                    return originalRemotes[remote](self, unpack(args))
-                end
+                end)
             end
         end
     end
 end
 
--- Auto Automatic Weapons (makes semi-auto weapons automatic)
-local autoFireConnection
-local function setupAutoAutomatic()
-    if autoFireConnection then
-        autoFireConnection:Disconnect()
-        autoFireConnection = nil
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        updateWeaponConfig()
     end
-    
-    if State.Combat.AutoAutomatic then
-        local lastAutoFire = 0
-        autoFireConnection = RunService.RenderStepped:Connect(function()
-            if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-                local currentTime = tick()
-                if currentTime - lastAutoFire > (1 / State.Combat.FireRateMultiplier) then
-                    -- Simulate mouse click for automatic fire
-                    mouse1press()
-                    task.wait(0.01)
-                    mouse1release()
-                    lastAutoFire = currentTime
-                end
-            end
-        end)
-    end
-end
+end)
 
--- NEW: KILL ALL FUNCTION IMPLEMENTATION
+UserInputService.InputEnded:Connect(function(input, gp)
+    if gp then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if currentTool then
+            currentTool:Deactivate()
+        end
+    end
+end)
+
 local function getClosestEnemy()
     local myTeam = player.Team
     local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -1274,490 +1176,14 @@ local function teleportBehindTarget(targetPlayer)
     
     if not myRoot or not targetRoot then return false end
     
-    -- Calculate position 3 studs behind the target
     local targetCFrame = targetRoot.CFrame
     local behindOffset = targetCFrame.LookVector * -3
     
-    -- Teleport behind the target
     myRoot.CFrame = CFrame.new(targetCFrame.Position + behindOffset, targetCFrame.Position)
     
     return true
 end
 
-RunService.RenderStepped:Connect(function(delta)
-    local char = player.Character
-    if not char then return end
-    
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local root = char:FindFirstChild("HumanoidRootPart")
-    
-    if hum and root then
-        -- Walk Speed
-        if State.Movement.WalkSpeed then
-            local speed = State.Movement.WalkSpeedValue
-            local moveDir = hum.MoveDirection * speed
-            
-            if State.Movement.WalkMethod == "Humanoid" then
-                hum.WalkSpeed = speed
-                if walkBodyVelocity then walkBodyVelocity:Destroy() walkBodyVelocity = nil end
-            elseif State.Movement.WalkMethod == "Velocity" then
-                hum.WalkSpeed = 0
-                if not walkBodyVelocity then
-                    walkBodyVelocity = Instance.new("BodyVelocity")
-                    walkBodyVelocity.MaxForce = Vector3.new(1e5, 0, 1e5)
-                    walkBodyVelocity.Parent = root
-                end
-                walkBodyVelocity.Velocity = moveDir
-            end
-        else
-            hum.WalkSpeed = 16
-            if walkBodyVelocity then walkBodyVelocity:Destroy() walkBodyVelocity = nil end
-        end
-        
-        -- Auto Jump
-        if State.Movement.AutoJump and hum:GetState() == Enum.HumanoidStateType.Running and tick() - lastJumpTime > 0.5 then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            lastJumpTime = tick()
-        end
-        
-        -- Fly
-        if State.Movement.Fly then
-            hum:ChangeState(Enum.HumanoidStateType.Physics)
-            hum.PlatformStand = true
-            
-            local speed = State.Movement.FlySpeed
-            local vel = Vector3.new()
-            local dir = hum.MoveDirection
-            if dir.Magnitude > 0 then
-                vel = camera.CFrame:VectorToWorldSpace(dir)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel = vel + Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then vel = vel - Vector3.new(0,1,0) end
-            if vel.Magnitude > 0 then vel = vel.Unit * speed end
-            
-            if State.Movement.FlyMethod == "Velocity" then
-                if not flyBodyVelocity then
-                    flyBodyVelocity = Instance.new("BodyVelocity")
-                    flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-                    flyBodyVelocity.Parent = root
-                    flyBodyGyro = Instance.new("BodyGyro")
-                    flyBodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-                    flyBodyGyro.P = 1e4
-                    flyBodyGyro.Parent = root
-                end
-                flyBodyGyro.CFrame = camera.CFrame
-                flyBodyVelocity.Velocity = vel
-            elseif State.Movement.FlyMethod == "CFrame" then
-                if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
-                if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
-                root.CFrame = CFrame.lookAt(root.Position, root.Position + camera.CFrame.LookVector) + vel * delta
-            elseif State.Movement.FlyMethod == "BodyVelocity" then
-                if not flyBodyVelocity then
-                    flyBodyVelocity = Instance.new("BodyVelocity")
-                    flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-                    flyBodyVelocity.Velocity = vel
-                    flyBodyVelocity.Parent = root
-                end
-                flyBodyVelocity.Velocity = vel
-            end
-        else
-            hum.PlatformStand = false
-            if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
-            if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
-        end
-        
-        -- FIXED: Smart Noclip (only through buildings, not floor)
-        updateNoclip()
-        
-        -- No Slowdown
-        if State.Movement.NoSlowdown then
-            for _, force in ipairs(char:GetDescendants()) do
-                if force:IsA("BodyForce") or force:IsA("BodyVelocity") then
-                    force:Destroy()
-                end
-            end
-        end
-    end
-    
-    -- Weapon Modifications Update
-    if State.Combat.AutoAutomatic then
-        setupAutoAutomatic()
-    elseif autoFireConnection then
-        autoFireConnection:Disconnect()
-        autoFireConnection = nil
-    end
-    
-    -- Setup weapon hooks if not already set up
-    if not weaponHooks.SetupDone then
-        weaponHooks.SetupDone = true
-        setupWeaponHooks()
-    end
-    
-    -- KILL ALL FUNCTION
-    if State.Combat.KillAll then
-        if tick() - State.Combat.KillAllCooldown > 0.5 then
-            State.Combat.KillAllCooldown = tick()
-            
-            if not State.Combat.KillAllTarget or not State.Combat.KillAllTarget.Character then
-                State.Combat.KillAllTarget = getClosestEnemy()
-            end
-            
-            if State.Combat.KillAllTarget and State.Combat.KillAllTarget.Character then
-                local targetHum = State.Combat.KillAllTarget.Character:FindFirstChildOfClass("Humanoid")
-                if not targetHum or targetHum.Health <= 0 then
-                    State.Combat.KillAllTarget = getClosestEnemy()
-                end
-            end
-            
-            if State.Combat.KillAllTarget then
-                teleportBehindTarget(State.Combat.KillAllTarget)
-                
-                if not State.Combat.AimAssist and Toggles.AimAssist then
-                    Toggles.AimAssist.Set(true)
-                end
-                
-                if not State.Combat.TriggerBot and Toggles.TriggerBot then
-                    Toggles.TriggerBot.Set(true)
-                end
-            end
-        end
-    else
-        State.Combat.KillAllTarget = nil
-    end
-    
-    -- Visuals
-    if State.Visuals.ChangeTime then
-        Lighting.TimeOfDay = string.format("%02d:00:00", State.Visuals.TimeOfDay)
-    end
-    if State.Visuals.ChangeAmbient then
-        Lighting.Ambient = Color3.new(State.Visuals.AmbientR, State.Visuals.AmbientG, State.Visuals.AmbientB)
-    end
-    if State.Visuals.ChangeFOV then
-        camera.FieldOfView = State.Visuals.FOV
-    end
-    if State.Visuals.FullBright then
-        Lighting.GlobalShadows = false
-        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    end
-    if State.Visuals.NoFog then
-        if Lighting:FindFirstChild("FogEnd") then
-            Lighting.FogEnd = 100000
-        end
-    end
-    if State.Visuals.NoShadows then
-        Lighting.GlobalShadows = false
-    end
-    
-    -- Auto Clicker
-    if State.Combat.AutoClicker and tick() - lastClickTime > (1 / State.Combat.CPS) then
-        mouse1press()
-        task.wait(0.01)
-        mouse1release()
-        lastClickTime = tick()
-    end
-    
-    -- Speed Hack
-    if State.Misc.SpeedHack then
-        game:GetService("ScriptContext").ScriptsDisabled = false
-        RunService:SetRobloxGuiFocused(false)
-    end
-end)
-
--- Clean up noclip states when character changes
-player.CharacterAdded:Connect(function()
-    originalCanCollideStates = {}
-    partsToNoclip = {}
-    weaponHooks.SetupDone = false
-    setupWeaponHooks()
-end)
-
--- Infinite Jump
-UserInputService.JumpRequest:Connect(function()
-    if State.Movement.InfiniteJump then
-        local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
--- Anti AFK
-if State.Movement.AntiAfk then
-    for _, v in next, getconnections(player.Idled) do
-        v:Disable()
-    end
-end
-
--- ESP Implementation
-RunService.RenderStepped:Connect(function()
-    for _, drawings in pairs(espCache) do
-        for _, d in pairs(drawings) do
-            if typeof(d) == "Instance" then
-                d.Enabled = false
-            else
-                d.Visible = false
-            end
-        end
-    end
-    
-    if not State.ESP.Enabled then return end
-    
-    local myTeam = player.Team
-    local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
-    
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr == player or not plr.Character then continue end
-        local root = plr.Character:FindFirstChild("HumanoidRootPart")
-        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-        local head = plr.Character:FindFirstChild("Head")
-        if not root or not hum or hum.Health <= 0 then continue end
-        
-        if State.ESP.TeamCheck and plr.Team == myTeam then continue end
-        
-        local dist = (myRoot.Position - root.Position).Magnitude
-        if dist > State.ESP.MaxDistance then continue end
-        
-        -- Apply hitbox expansion
-        local size = Vector3.new(4, 6, 2)
-        if State.Combat.HitboxExpander then
-            size = size * State.Combat.HitboxMultiplier
-        end
-        
-        local corners = {}
-        for x = -1, 1, 2 do for y = -1, 1, 2 do for z = -1, 1, 2 do
-            local pos = root.CFrame * Vector3.new(x*size.X/2, y*size.Y/2, z*size.Z/2)
-            local screen, onScreen = camera:WorldToViewportPoint(pos)
-            if onScreen then
-                table.insert(corners, Vector2.new(screen.X, screen.Y))
-            end
-        end end end
-        
-        if #corners < 8 then continue end
-        
-        local minX, minY = math.huge, math.huge
-        local maxX, maxY = -math.huge, -math.huge
-        for _, pos in ipairs(corners) do
-            minX = math.min(minX, pos.X)
-            minY = math.min(minY, pos.Y)
-            maxX = math.max(maxX, pos.X)
-            maxY = math.max(maxY, pos.Y)
-        end
-        
-        local width = maxX - minX
-        local height = maxY - minY
-        
-        local key = tostring(plr)
-        if not espCache[key] then
-            espCache[key] = {
-                box = Drawing.new("Quad"),
-                name = Drawing.new("Text"),
-                health = Drawing.new("Line"),
-                healthBar = Drawing.new("Quad"),
-                distance = Drawing.new("Text"),
-                tracer = Drawing.new("Line"),
-                headDot = Drawing.new("Circle"),
-                weapon = Drawing.new("Text"),
-                chams = Instance.new("Highlight")
-            }
-            espCache[key].box.Thickness = 1
-            espCache[key].name.Size = 13
-            espCache[key].name.Center = true
-            espCache[key].name.Outline = true
-            espCache[key].health.Thickness = 2
-            espCache[key].healthBar.Thickness = 1
-            espCache[key].distance.Size = 11
-            espCache[key].distance.Center = true
-            espCache[key].distance.Outline = true
-            espCache[key].tracer.Thickness = 1
-            espCache[key].headDot.Radius = 3
-            espCache[key].headDot.NumSides = 12
-            espCache[key].headDot.Filled = true
-            espCache[key].weapon.Size = 11
-            espCache[key].weapon.Center = true
-            espCache[key].weapon.Outline = true
-            espCache[key].chams.FillTransparency = 0.5
-            espCache[key].chams.OutlineTransparency = 0.5
-        end
-        
-        local drawings = espCache[key]
-        local screenHead, onScreenHead = camera:WorldToViewportPoint(head.Position)
-        local screenRoot, onScreenRoot = camera:WorldToViewportPoint(root.Position)
-        if not onScreenHead or not onScreenRoot then continue end
-        
-        local color = plr.Team == myTeam and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
-        
-        if State.ESP.Box then
-            drawings.box.PointA = Vector2.new(minX, minY)
-            drawings.box.PointB = Vector2.new(maxX, minY)
-            drawings.box.PointC = Vector2.new(maxX, maxY)
-            drawings.box.PointD = Vector2.new(minX, maxY)
-            drawings.box.Color = color
-            drawings.box.Visible = true
-        end
-        
-        if State.ESP.Name then
-            drawings.name.Text = plr.Name
-            drawings.name.Position = Vector2.new((minX + maxX)/2, minY - 14)
-            drawings.name.Color = color
-            drawings.name.Visible = true
-        end
-        
-        if State.ESP.Health then
-            local healthPercent = hum.Health / hum.MaxHealth
-            local healthY = maxY - height * healthPercent
-            local healthColor = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
-            
-            drawings.health.From = Vector2.new(minX - 4, maxY)
-            drawings.health.To = Vector2.new(minX - 4, healthY)
-            drawings.health.Color = healthColor
-            drawings.health.Visible = true
-            
-            if State.ESP.HealthBar then
-                drawings.healthBar.PointA = Vector2.new(minX - 6, maxY)
-                drawings.healthBar.PointB = Vector2.new(minX - 6, healthY)
-                drawings.healthBar.PointC = Vector2.new(minX - 2, healthY)
-                drawings.healthBar.PointD = Vector2.new(minX - 2, maxY)
-                drawings.healthBar.Color = healthColor
-                drawings.healthBar.Visible = true
-            end
-        end
-        
-        if State.ESP.Distance then
-            drawings.distance.Text = math.floor(dist) .. " studs"
-            drawings.distance.Position = Vector2.new((minX + maxX)/2, maxY + 2)
-            drawings.distance.Color = color
-            drawings.distance.Visible = true
-        end
-        
-        if State.ESP.Tracers then
-            drawings.tracer.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-            drawings.tracer.To = Vector2.new(screenRoot.X, screenRoot.Y)
-            drawings.tracer.Color = color
-            drawings.tracer.Visible = true
-        end
-        
-        if State.ESP.HeadDot then
-            drawings.headDot.Position = Vector2.new(screenHead.X, screenHead.Y)
-            drawings.headDot.Color = Color3.fromRGB(255, 0, 0)
-            drawings.headDot.Visible = true
-        end
-        
-        if State.ESP.Weapon then
-            local weapon = plr.Character:FindFirstChildOfClass("Tool")
-            drawings.weapon.Text = weapon and weapon.Name or "Unarmed"
-            drawings.weapon.Position = Vector2.new((minX + maxX)/2, maxY + 14)
-            drawings.weapon.Color = color
-            drawings.weapon.Visible = true
-        end
-        
-        if State.ESP.Chams then
-            drawings.chams.Adornee = plr.Character
-            drawings.chams.FillColor = color
-            drawings.chams.OutlineColor = color
-            drawings.chams.Enabled = true
-            drawings.chams.Parent = plr.Character
-        end
-        
-        if State.ESP.Outlines then
-            for _, part in ipairs(plr.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.Material = Enum.Material.ForceField
-                end
-            end
-        end
-    end
-end)
-
--- Cleanup ESP when player leaves
-Players.PlayerRemoving:Connect(function(plr)
-    local key = tostring(plr)
-    if espCache[key] then
-        for _, d in pairs(espCache[key]) do
-            if typeof(d) == "Instance" then
-                d:Destroy()
-            else
-                d:Remove()
-            end
-        end
-        espCache[key] = nil
-    end
-end)
-
--- Aim Assist
-local function getClosestTarget(fov)
-    local closest, closestDist = nil, fov
-    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-    local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr == player or not plr.Character then continue end
-        local root = plr.Character:FindFirstChild("HumanoidRootPart")
-        local head = plr.Character:FindFirstChild("Head")
-        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-        if not root or not hum or hum.Health <= 0 then continue end
-        
-        local targetPart = head or root
-        local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
-        if not onScreen then continue end
-        
-        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
-        if dist >= closestDist then continue end
-        
-        closest = {Part = targetPart, Root = root, Player = plr}
-        closestDist = dist
-    end
-    
-    return closest
-end
-
-RunService.RenderStepped:Connect(function()
-    if not State.Combat.AimAssist then return end
-    
-    local target = getClosestTarget(State.Combat.AimFOV)
-    if not target then return end
-    
-    local aimPos = target.Part.Position
-    if State.Combat.AimPrediction then
-        local myVel = (player.Character and player.Character:FindFirstChild("HumanoidRootPart") or {}).AssemblyLinearVelocity or Vector3.zero
-        local relVel = target.Root.AssemblyLinearVelocity - myVel
-        aimPos += relVel * State.Combat.PredictionAmount
-    end
-    
-    local targetDir = (aimPos - camera.CFrame.Position).Unit
-    local newLook = camera.CFrame.LookVector:Lerp(targetDir, 1 - State.Combat.AimSmoothness)
-    camera.CFrame = CFrame.lookAt(camera.CFrame.Position, camera.CFrame.Position + newLook)
-end)
-
--- Trigger Bot
-local function findTargetUnderCrosshair()
-    local ray = camera:ViewportPointToRay(mouse.X, mouse.Y)
-    local result = Workspace:Raycast(ray.Origin, ray.Direction * 1000)
-    
-    if result and result.Instance then
-        local model = result.Instance:FindFirstAncestorOfClass("Model")
-        if model then
-            local plr = Players:GetPlayerFromCharacter(model)
-            if plr and plr ~= player then
-                return true
-            end
-        end
-    end
-    return false
-end
-
-RunService.RenderStepped:Connect(function()
-    if State.Combat.TriggerBot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        if findTargetUnderCrosshair() then
-            task.wait(State.Combat.TriggerDelay / 1000)
-            mouse1press()
-            task.wait(0.05)
-            mouse1release()
-        end
-    end
-end)
-
--- Silent Aim (Hitbox Expansion Integrated)
 local Silent = {}
 Silent.Target = nil
 
@@ -1814,39 +1240,518 @@ function Silent:getClosest(fov)
     return closest
 end
 
--- Hook for silent aim
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     local args = {...}
     
-    if State.Combat.SilentAim and method == "FindPartOnRayWithIgnoreList" and Silent.Target then
-        if math.random(1,100) <= State.Combat.SilentHitChance then
-            local targetPos = Silent.Target.Part.Position
-            if State.Combat.HitboxExpander then
-                targetPos = targetPos + Vector3.new(
-                    (math.random() * 2 - 1) * State.Combat.HitboxMultiplier,
-                    (math.random() * 2 - 1) * State.Combat.HitboxMultiplier,
-                    (math.random() * 2 - 1) * State.Combat.HitboxMultiplier
-                )
+    if method == "FindPartOnRayWithIgnoreList" or method == "Raycast" then
+        if State.Combat.SilentAim and Silent.Target then
+            local target = Silent.Target
+            if target and target.Character and target.Part and target.Part.Parent and target.Character:FindFirstChildOfClass("Humanoid") and target.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                if math.random(1,100) <= State.Combat.SilentHitChance then
+                    local origin = args[1]
+                    local direction = args[2]
+                    local targetPos = target.Part.Position
+                    if method == "FindPartOnRayWithIgnoreList" then
+                        args[1] = Ray.new(origin.Origin, (targetPos - origin.Origin).Unit * 1000)
+                    else
+                        args[2] = (targetPos - origin).Unit * direction.Magnitude
+                    end
+                end
+            else
+                Silent.Target = nil
             end
-            args[1] = Ray.new(camera.CFrame.Position, (targetPos - camera.CFrame.Position).Unit * 1000)
+        end
+        
+        if State.Combat.NoSpread then
+            if method == "FindPartOnRayWithIgnoreList" then
+                args[1] = Ray.new(args[1].Origin, camera.CFrame.LookVector * 1000)
+            else
+                args[2] = camera.CFrame.LookVector * args[2].Magnitude
+            end
         end
     end
     
     return oldNamecall(self, unpack(args))
-end)
+end
 
--- Update silent aim target
-RunService.RenderStepped:Connect(function()
+local function getClosestTarget(fov)
+    local closest, closestDist = nil, fov
+    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+    local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr == player or not plr.Character then continue end
+        local root = plr.Character:FindFirstChild("HumanoidRootPart")
+        local head = plr.Character:FindFirstChild("Head")
+        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+        if not root or not hum or hum.Health <= 0 then continue end
+        
+        local targetPart = head or root
+        local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
+        if not onScreen then continue end
+        
+        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+        if dist >= closestDist then continue end
+        
+        closest = {Part = targetPart, Root = root, Player = plr}
+        closestDist = dist
+    end
+    
+    return closest
+end
+
+local function findTargetUnderCrosshair()
+    local ray = camera:ViewportPointToRay(mouse.X, mouse.Y)
+    local result = Workspace:Raycast(ray.Origin, ray.Direction * 1000)
+    
+    if result and result.Instance then
+        local model = result.Instance:FindFirstAncestorOfClass("Model")
+        if model then
+            local plr = Players:GetPlayerFromCharacter(model)
+            if plr and plr ~= player then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+RunService.RenderStepped:Connect(function(delta)
+    if not State.ESP.Enabled then 
+        for _, drawings in pairs(espCache) do
+            for _, d in pairs(drawings) do
+                if typeof(d) == "Instance" then
+                    d.Enabled = false
+                else
+                    d.Visible = false
+                end
+            end
+        end
+        return 
+    end
+    
     if State.Combat.SilentAim then
         Silent.Target = Silent:getClosest(State.Combat.SilentFOV)
     else
         Silent.Target = nil
     end
+    
+    if State.Combat.HitboxExpander then
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr == player then continue end
+            if State.ESP.TeamCheck and plr.Team == player.Team then continue end
+            local char = plr.Character
+            if char then
+                local root = char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    if not hitboxCache[root] then
+                        hitboxCache[root] = {
+                            Size = root.Size,
+                            Transparency = root.Transparency,
+                            CanCollide = root.CanCollide
+                        }
+                    end
+                    root.Size = hitboxCache[root].Size * State.Combat.HitboxMultiplier
+                    root.Transparency = 0.7
+                    root.CanCollide = false
+                end
+            end
+        end
+    else
+        for root, data in pairs(hitboxCache) do
+            if root and root.Parent then
+                root.Size = data.Size
+                root.Transparency = data.Transparency
+                root.CanCollide = data.CanCollide
+            end
+        end
+        hitboxCache = {}
+    end
+    
+    local char = player.Character
+    if not char then return end
+    
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    
+    if hum and root then
+        if State.Movement.WalkSpeed then
+            local speed = State.Movement.WalkSpeedValue
+            local moveDir = hum.MoveDirection * speed
+            
+            if State.Movement.WalkMethod == "Humanoid" then
+                hum.WalkSpeed = speed
+                if walkBodyVelocity then walkBodyVelocity:Destroy() walkBodyVelocity = nil end
+            elseif State.Movement.WalkMethod == "Velocity" then
+                hum.WalkSpeed = 0
+                if not walkBodyVelocity then
+                    walkBodyVelocity = Instance.new("BodyVelocity")
+                    walkBodyVelocity.MaxForce = Vector3.new(1e5, 0, 1e5)
+                    walkBodyVelocity.Parent = root
+                end
+                walkBodyVelocity.Velocity = moveDir
+            end
+        else
+            hum.WalkSpeed = 16
+            if walkBodyVelocity then walkBodyVelocity:Destroy() walkBodyVelocity = nil end
+        end
+        
+        if State.Movement.AutoJump and hum:GetState() == Enum.HumanoidStateType.Running and tick() - lastJumpTime > 0.5 then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            lastJumpTime = tick()
+        end
+        
+        if State.Movement.Fly then
+            hum:ChangeState(Enum.HumanoidStateType.Physics)
+            hum.PlatformStand = true
+            
+            local speed = State.Movement.FlySpeed
+            local vel = Vector3.new()
+            local dir = hum.MoveDirection
+            if dir.Magnitude > 0 then
+                vel = camera.CFrame:VectorToWorldSpace(dir)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then vel = vel + Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then vel = vel - Vector3.new(0,1,0) end
+            if vel.Magnitude > 0 then vel = vel.Unit * speed end
+            
+            if State.Movement.FlyMethod == "Velocity" then
+                if not flyBodyVelocity then
+                    flyBodyVelocity = Instance.new("BodyVelocity")
+                    flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                    flyBodyVelocity.Parent = root
+                    flyBodyGyro = Instance.new("BodyGyro")
+                    flyBodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+                    flyBodyGyro.P = 1e4
+                    flyBodyGyro.Parent = root
+                end
+                flyBodyGyro.CFrame = camera.CFrame
+                flyBodyVelocity.Velocity = vel
+            elseif State.Movement.FlyMethod == "CFrame" then
+                if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
+                if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
+                root.CFrame = root.CFrame + vel * delta
+            elseif State.Movement.FlyMethod == "BodyVelocity" then
+                if not flyBodyVelocity then
+                    flyBodyVelocity = Instance.new("BodyVelocity")
+                    flyBodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                    flyBodyVelocity.Velocity = vel
+                    flyBodyVelocity.Parent = root
+                end
+                flyBodyVelocity.Velocity = vel
+            end
+        else
+            hum.PlatformStand = false
+            if flyBodyVelocity then flyBodyVelocity:Destroy() flyBodyVelocity = nil end
+            if flyBodyGyro then flyBodyGyro:Destroy() flyBodyGyro = nil end
+        end
+        
+        updateNoclip()
+        
+        if State.Movement.NoSlowdown then
+            for _, force in ipairs(char:GetDescendants()) do
+                if force:IsA("BodyForce") or force:IsA("BodyVelocity") then
+                    force:Destroy()
+                end
+            end
+        end
+    end
+    
+    if State.Combat.NoRecoil and justFired then
+        local deltaX, deltaY, deltaZ = (camera.CFrame * lastCameraCFrame:Inverse()):ToEulerAnglesXYZ()
+        recoilBuffer = recoilBuffer + deltaX
+        camera.CFrame = camera.CFrame * CFrame.Angles(-recoilBuffer / 2, 0, 0)
+        recoilBuffer = recoilBuffer / 2
+        justFired = false
+    end
+    lastCameraCFrame = camera.CFrame
+    
+    if State.Combat.AimAssist then
+        local target = getClosestTarget(State.Combat.AimFOV)
+        if target then
+            local aimPos = target.Part.Position
+            local targetDir = (aimPos - camera.CFrame.Position).Unit
+            local newLook = camera.CFrame.LookVector:Lerp(targetDir, 1 - State.Combat.AimSmoothness)
+            camera.CFrame = CFrame.lookAt(camera.CFrame.Position, camera.CFrame.Position + newLook)
+        end
+    end
+    
+    if State.Combat.TriggerBot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        if findTargetUnderCrosshair() then
+            task.wait(State.Combat.TriggerDelay / 1000)
+            mouse1press()
+            task.wait(0.05)
+            mouse1release()
+        end
+    end
+    
+    if State.Combat.KillAll then
+        if tick() - State.Combat.KillAllCooldown > 0.5 then
+            State.Combat.KillAllCooldown = tick()
+            
+            if not State.Combat.KillAllTarget or not State.Combat.KillAllTarget.Character then
+                State.Combat.KillAllTarget = getClosestEnemy()
+            end
+            
+            if State.Combat.KillAllTarget and State.Combat.KillAllTarget.Character then
+                local targetHum = State.Combat.KillAllTarget.Character:FindFirstChildOfClass("Humanoid")
+                if not targetHum or targetHum.Health <= 0 then
+                    State.Combat.KillAllTarget = getClosestEnemy()
+                end
+            end
+            
+            if State.Combat.KillAllTarget then
+                teleportBehindTarget(State.Combat.KillAllTarget)
+                
+                if not State.Combat.AimAssist and Toggles.AimAssist then
+                    Toggles.AimAssist.Set(true)
+                end
+                
+                if not State.Combat.TriggerBot and Toggles.TriggerBot then
+                    Toggles.TriggerBot.Set(true)
+                end
+            end
+        end
+    else
+        State.Combat.KillAllTarget = nil
+    end
+    
+    if State.Visuals.ChangeTime then
+        Lighting.TimeOfDay = string.format("%02d:00:00", State.Visuals.TimeOfDay)
+    end
+    if State.Visuals.ChangeAmbient then
+        Lighting.Ambient = Color3.new(State.Visuals.AmbientR, State.Visuals.AmbientG, State.Visuals.AmbientB)
+    end
+    if State.Visuals.ChangeFOV then
+        camera.FieldOfView = State.Visuals.FOV
+    end
+    if State.Visuals.FullBright then
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+    end
+    if State.Visuals.NoFog then
+        if Lighting:FindFirstChild("FogEnd") then
+            Lighting.FogEnd = 100000
+        end
+    end
+    if State.Visuals.NoShadows then
+        Lighting.GlobalShadows = false
+    end
+    
+    if State.ESP.Enabled then
+        local myTeam = player.Team
+        local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr == player or not plr.Character then continue end
+                local root = plr.Character:FindFirstChild("HumanoidRootPart")
+                local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                local head = plr.Character:FindFirstChild("Head")
+                if not root or not hum or hum.Health <= 0 then continue end
+                
+                if State.ESP.TeamCheck and plr.Team == myTeam then continue end
+                
+                local dist = (myRoot.Position - root.Position).Magnitude
+                if dist > State.ESP.MaxDistance then continue end
+                
+                local size = Vector3.new(4, 6, 2)
+                if State.Combat.HitboxExpander then
+                    size = size * State.Combat.HitboxMultiplier
+                end
+                
+                local corners = {}
+                for x = -1, 1, 2 do for y = -1, 1, 2 do for z = -1, 1, 2 do
+                    local pos = root.CFrame * Vector3.new(x*size.X/2, y*size.Y/2, z*size.Z/2)
+                    local screen, onScreen = camera:WorldToViewportPoint(pos)
+                    if onScreen then
+                        table.insert(corners, Vector2.new(screen.X, screen.Y))
+                    end
+                end end end
+                
+                if #corners < 8 then continue end
+                
+                local minX, minY = math.huge, math.huge
+                local maxX, maxY = -math.huge, -math.huge
+                for _, pos in ipairs(corners) do
+                    minX = math.min(minX, pos.X)
+                    minY = math.min(minY, pos.Y)
+                    maxX = math.max(maxX, pos.X)
+                    maxY = math.max(maxY, pos.Y)
+                end
+                
+                local width = maxX - minX
+                local height = maxY - minY
+                
+                local key = tostring(plr)
+                if not espCache[key] then
+                    espCache[key] = {
+                        box = Drawing.new("Quad"),
+                        name = Drawing.new("Text"),
+                        health = Drawing.new("Line"),
+                        healthBar = Drawing.new("Quad"),
+                        distance = Drawing.new("Text"),
+                        tracer = Drawing.new("Line"),
+                        headDot = Drawing.new("Circle"),
+                        weapon = Drawing.new("Text"),
+                        chams = Instance.new("Highlight")
+                    }
+                    espCache[key].box.Thickness = 1
+                    espCache[key].name.Size = 13
+                    espCache[key].name.Center = true
+                    espCache[key].name.Outline = true
+                    espCache[key].health.Thickness = 2
+                    espCache[key].healthBar.Thickness = 1
+                    espCache[key].distance.Size = 11
+                    espCache[key].distance.Center = true
+                    espCache[key].distance.Outline = true
+                    espCache[key].tracer.Thickness = 1
+                    espCache[key].headDot.Radius = 3
+                    espCache[key].headDot.NumSides = 12
+                    espCache[key].headDot.Filled = true
+                    espCache[key].weapon.Size = 11
+                    espCache[key].weapon.Center = true
+                    espCache[key].weapon.Outline = true
+                    espCache[key].chams.FillTransparency = 0.5
+                    espCache[key].chams.OutlineTransparency = 0.5
+                end
+                
+                local drawings = espCache[key]
+                local screenHead, onScreenHead = camera:WorldToViewportPoint(head.Position)
+                local screenRoot, onScreenRoot = camera:WorldToViewportPoint(root.Position)
+                if not onScreenHead or not onScreenRoot then continue end
+                
+                local color = plr.Team == myTeam and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
+                
+                if State.ESP.Box then
+                    drawings.box.PointA = Vector2.new(minX, minY)
+                    drawings.box.PointB = Vector2.new(maxX, minY)
+                    drawings.box.PointC = Vector2.new(maxX, maxY)
+                    drawings.box.PointD = Vector2.new(minX, maxY)
+                    drawings.box.Color = color
+                    drawings.box.Visible = true
+                end
+                
+                if State.ESP.Name then
+                    drawings.name.Text = plr.Name
+                    drawings.name.Position = Vector2.new((minX + maxX)/2, minY - 14)
+                    drawings.name.Color = color
+                    drawings.name.Visible = true
+                end
+                
+                if State.ESP.Health then
+                    local healthPercent = hum.Health / hum.MaxHealth
+                    local healthY = maxY - height * healthPercent
+                    local healthColor = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
+                    
+                    drawings.health.From = Vector2.new(minX - 4, maxY)
+                    drawings.health.To = Vector2.new(minX - 4, healthY)
+                    drawings.health.Color = healthColor
+                    drawings.health.Visible = true
+                    
+                    if State.ESP.HealthBar then
+                        drawings.healthBar.PointA = Vector2.new(minX - 6, maxY)
+                        drawings.healthBar.PointB = Vector2.new(minX - 6, healthY)
+                        drawings.healthBar.PointC = Vector2.new(minX - 2, healthY)
+                        drawings.healthBar.PointD = Vector2.new(minX - 2, maxY)
+                        drawings.healthBar.Color = healthColor
+                        drawings.healthBar.Visible = true
+                    end
+                end
+                
+                if State.ESP.Distance then
+                    drawings.distance.Text = math.floor(dist) .. " studs"
+                    drawings.distance.Position = Vector2.new((minX + maxX)/2, maxY + 2)
+                    drawings.distance.Color = color
+                    drawings.distance.Visible = true
+                end
+                
+                if State.ESP.Tracers then
+                    drawings.tracer.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                    drawings.tracer.To = Vector2.new(screenRoot.X, screenRoot.Y)
+                    drawings.tracer.Color = color
+                    drawings.tracer.Visible = true
+                end
+                
+                if State.ESP.HeadDot then
+                    drawings.headDot.Position = Vector2.new(screenHead.X, screenHead.Y)
+                    drawings.headDot.Color = Color3.fromRGB(255, 0, 0)
+                    drawings.headDot.Visible = true
+                end
+                
+                if State.ESP.Weapon then
+                    local weapon = plr.Character:FindFirstChildOfClass("Tool")
+                    drawings.weapon.Text = weapon and weapon.Name or "Unarmed"
+                    drawings.weapon.Position = Vector2.new((minX + maxX)/2, maxY + 14)
+                    drawings.weapon.Color = color
+                    drawings.weapon.Visible = true
+                end
+                
+                if State.ESP.Chams then
+                    if drawings.chams.Adornee ~= plr.Character then
+                        drawings.chams:Destroy()
+                        drawings.chams = Instance.new("Highlight")
+                        drawings.chams.FillTransparency = 0.5
+                        drawings.chams.OutlineTransparency = 0.5
+                    end
+                    drawings.chams.Adornee = plr.Character
+                    drawings.chams.FillColor = color
+                    drawings.chams.OutlineColor = color
+                    drawings.chams.Enabled = true
+                    drawings.chams.Parent = plr.Character
+                end
+                
+                if State.ESP.Outlines then
+                    for _, part in ipairs(plr.Character:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            part.Material = Enum.Material.ForceField
+                        end
+                    end
+                end
+            end
+        end
+    end
 end)
 
--- FPS Boost
+player.CharacterAdded:Connect(function()
+    originalCanCollideStates = {}
+    partsToNoclip = {}
+    hitboxCache = {}
+    currentTool = nil
+    if fireConnection then fireConnection:Disconnect() fireConnection = nil end
+    recoilBuffer = 0
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    local key = tostring(plr)
+    if espCache[key] then
+        for _, d in pairs(espCache[key]) do
+            if typeof(d) == "Instance" then
+                d:Destroy()
+            else
+                d:Remove()
+            end
+        end
+        espCache[key] = nil
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if State.Movement.InfiniteJump then
+        local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+if State.Movement.AntiAfk then
+    for _, v in next, getconnections(player.Idled) do
+        v:Disable()
+    end
+end
+
 if State.Misc.FPSBoost then
     settings().Rendering.QualityLevel = 1
     for _, v in ipairs(Workspace:GetDescendants()) do
@@ -1856,13 +1761,5 @@ if State.Misc.FPSBoost then
     end
 end
 
--- Initialize weapon hooks
-task.spawn(function()
-    task.wait(2) -- Wait for game to load
-    setupWeaponHooks()
-end)
-
 print("Horizontal Hub Loaded Successfully!")
 print("Press RightShift to toggle menu")
-print("Weapon Modifications added: Faster Fire Rate, No Spread, No Recoil, Auto Automatic")
-print("KILL ALL function added to Combat tab")
