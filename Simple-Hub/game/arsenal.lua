@@ -433,7 +433,8 @@ local State = {
         NoRecoil = false,
         AutoAutomatic = false,
         InstantReload = false,
-        InfiniteAmmo = false
+        InfiniteAmmo = false,
+        TeamCheck = false  -- New: Combat-specific team check
     },
     ESP = {
         Enabled = false,
@@ -478,14 +479,14 @@ local State = {
 
 -- GUI Creation (Horizontal Layout)
 local gui = Instance.new("ScreenGui")
-gui.Name = "HorizontalHub"
+gui.Name = "VertexHub"
 gui.Parent = player:WaitForChild("PlayerGui")
 gui.Enabled = true
 
 local function recreateGUI()
     if not gui or not gui.Parent then
         gui = Instance.new("ScreenGui")
-        gui.Name = "HorizontalHub"
+        gui.Name = "VertexHub"
         gui.Parent = player:WaitForChild("PlayerGui")
         gui.Enabled = true
         main.Parent = gui
@@ -513,7 +514,7 @@ corner(topBar, 10)
 
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0.5, 0, 1, 0)
-title.Text = "HORIZONTAL HUB"
+title.Text = "VERTEX HUB"
 title.TextColor3 = Colors.Accent
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.GothamBold
@@ -743,6 +744,11 @@ function rebuildScroll()
                 State.Combat.KillAllCooldown = tick()
             end
         end, State.Combat.KillAll)
+        
+        -- New: Combat team check toggle
+        Toggles.TeamCheck = Components.createToggle(scroll, "Team Check", function(v)
+            State.Combat.TeamCheck = v
+        end, State.Combat.TeamCheck)
         
     elseif currentTab == "ESP" then
         Components.createSectionLabel(scroll, "ESP Settings")
@@ -994,6 +1000,9 @@ local lastClickTime = 0
 local originalCanCollideStates = {}
 local partsToNoclip = {}
 
+local noclipUpdateFrame = 0
+local noclipUpdateInterval = 5  -- Update noclip every 5 frames for performance
+
 local function updateNoclip()
     local char = player.Character
     if not char then return end
@@ -1012,16 +1021,28 @@ local function updateNoclip()
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
     
+    noclipUpdateFrame = noclipUpdateFrame + 1
+    if noclipUpdateFrame < noclipUpdateInterval then return end
+    noclipUpdateFrame = 0
+    
     local playerY = root.Position.Y
     local maxDistance = 50
     
-    local nearbyParts = {}
+    local params = OverlapParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {char}
     
-    for _, part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("BasePart") and part.CanCollide then
+    local regionMin = root.Position - Vector3.new(maxDistance, maxDistance, maxDistance)
+    local regionMax = root.Position + Vector3.new(maxDistance, maxDistance, maxDistance)
+    local nearbyParts = Workspace:GetPartBoundsInBox(root.CFrame, Vector3.new(maxDistance * 2, maxDistance * 2, maxDistance * 2), params)
+    
+    local newNearby = {}
+    
+    for _, part in pairs(nearbyParts) do
+        if part:IsA("BasePart") and part.CanCollide and not part:IsDescendantOf(char) then
             local distance = (part.Position - root.Position).Magnitude
             
-            if distance < maxDistance and not part:IsDescendantOf(char) then
+            if distance < maxDistance then
                 local isFloor = false
                 local upVector = part.CFrame.UpVector
                 local isHorizontal = math.abs(upVector.Y) > 0.7
@@ -1045,13 +1066,13 @@ local function updateNoclip()
                 end
                 
                 if not isFloor then
-                    table.insert(nearbyParts, part)
+                    table.insert(newNearby, part)
                 end
             end
         end
     end
     
-    for _, part in pairs(nearbyParts) do
+    for _, part in pairs(newNearby) do
         if not originalCanCollideStates[part] then
             originalCanCollideStates[part] = part.CanCollide
             part.CanCollide = false
@@ -1060,7 +1081,7 @@ local function updateNoclip()
     
     for part, _ in pairs(originalCanCollideStates) do
         local found = false
-        for _, nearbyPart in pairs(nearbyParts) do
+        for _, nearbyPart in pairs(newNearby) do
             if nearbyPart == part then
                 found = true
                 break
@@ -1145,7 +1166,7 @@ local function getClosestEnemy()
     
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr == player then continue end
-        if State.ESP.TeamCheck and plr.Team == myTeam then continue end
+        if State.Combat.TeamCheck and plr.Team == myTeam then continue end
         
         local char = plr.Character
         if not char then continue end
@@ -1188,7 +1209,7 @@ local Silent = {}
 Silent.Target = nil
 
 local rayParams = RaycastParams.new()
-rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
 rayParams.IgnoreWater = true
 
 local function updateFilter()
@@ -1210,7 +1231,7 @@ if player.Character then updateFilter() end
 function Silent:getClosest(fov)
     local closest = nil
     local shortestDist = math.huge
-    local origin = camera.CFrame.Position
+    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
     
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr == player then continue end
@@ -1221,19 +1242,23 @@ function Silent:getClosest(fov)
         
         if not hum or not root or hum.Health <= 0 then continue end
         
-        if State.ESP.TeamCheck and plr.Team == player.Team then continue end
+        if State.Combat.TeamCheck and plr.Team == player.Team then continue end
         
         local targetPart = char:FindFirstChild("Head") or root
-        local distance = (targetPart.Position - origin).Magnitude
+        local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
+        if not onScreen then continue end
         
-        if distance < shortestDist then
+        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+        if dist > fov then continue end
+        
+        if dist < shortestDist then
+            shortestDist = dist
             closest = {
                 Player = plr,
                 Character = char,
                 Part = targetPart,
                 Root = root
             }
-            shortestDist = distance
         end
     end
     
@@ -1274,7 +1299,7 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     
     return oldNamecall(self, unpack(args))
-end)
+end
 
 local function getClosestTarget(fov)
     local closest, closestDist = nil, fov
@@ -1318,6 +1343,15 @@ local function findTargetUnderCrosshair()
     return false
 end
 
+local killAllTeleportFrame = 0
+local killAllTeleportInterval = 10  -- Teleport every 10 frames
+
+local lastTriggerTime = 0
+local lastPressTime = 0
+local triggerPressing = false
+
+local damping = 5  -- Adjustable damping factor for recoil
+
 RunService.RenderStepped:Connect(function(delta)
     if not State.ESP.Enabled then 
         for _, drawings in pairs(espCache) do
@@ -1341,7 +1375,7 @@ RunService.RenderStepped:Connect(function(delta)
     if State.Combat.HitboxExpander then
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr == player then continue end
-            if State.ESP.TeamCheck and plr.Team == player.Team then continue end
+            if State.Combat.TeamCheck and plr.Team == player.Team then continue end
             local char = plr.Character
             if char then
                 local root = char:FindFirstChild("HumanoidRootPart")
@@ -1476,14 +1510,27 @@ RunService.RenderStepped:Connect(function(delta)
     if State.Combat.NoRecoil and justFired then
         local deltaX, deltaY, deltaZ = (camera.CFrame * lastCameraCFrame:Inverse()):ToEulerAnglesXYZ()
         recoilBuffer = recoilBuffer + deltaX
-        camera.CFrame = camera.CFrame * CFrame.Angles(-recoilBuffer / 2, 0, 0)
-        recoilBuffer = recoilBuffer / 2
+        camera.CFrame = camera.CFrame * CFrame.Angles(-recoilBuffer * delta, 0, 0)
+        recoilBuffer = recoilBuffer * math.exp(-damping * delta)  -- FPS-independent damping
+        recoilBuffer = math.clamp(recoilBuffer, -0.5, 0.5)  -- Clamp to prevent over-correction
         justFired = false
     end
     lastCameraCFrame = camera.CFrame
     
-    if State.Combat.AimAssist and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local target = getClosestTarget(State.Combat.AimFOV)
+    -- Explicit Aim Assist activation logic
+    local aimActive = false
+    if State.Combat.KillAll then
+        aimActive = true
+    elseif State.Combat.AimAssist and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        aimActive = true
+    end
+    if aimActive then
+        local target
+        if State.Combat.KillAll and State.Combat.KillAllTarget then
+            target = {Part = State.Combat.KillAllTarget.Character:FindFirstChild("Head") or State.Combat.KillAllTarget.Character:FindFirstChild("HumanoidRootPart")}
+        else
+            target = getClosestTarget(State.Combat.AimFOV)
+        end
         if target then
             local aimPos = target.Part.Position
             local targetDir = (aimPos - camera.CFrame.Position).Unit
@@ -1492,40 +1539,54 @@ RunService.RenderStepped:Connect(function(delta)
         end
     end
     
+    -- Timestamp-based TriggerBot without yields
+    local now = tick()
     if State.Combat.TriggerBot and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        if findTargetUnderCrosshair() then
-            task.wait(State.Combat.TriggerDelay / 1000)
-            mouse1press()
-            task.wait(0.05)
-            mouse1release()
+        if findTargetUnderCrosshair() and now - lastTriggerTime >= State.Combat.TriggerDelay / 1000 then
+            if not triggerPressing then
+                mouse1press()
+                triggerPressing = true
+                lastPressTime = now
+            end
         end
+    end
+    if triggerPressing and now - lastPressTime >= 0.05 then
+        mouse1release()
+        triggerPressing = false
+        lastTriggerTime = now
     end
     
     if State.Combat.KillAll then
-        if tick() - State.Combat.KillAllCooldown > 0.5 then
-            State.Combat.KillAllCooldown = tick()
-            
-            if not State.Combat.KillAllTarget or not State.Combat.KillAllTarget.Character then
+        if not State.Combat.KillAllTarget or not State.Combat.KillAllTarget.Character then
+            State.Combat.KillAllTarget = getClosestEnemy()
+        end
+        
+        if State.Combat.KillAllTarget and State.Combat.KillAllTarget.Character then
+            local targetHum = State.Combat.KillAllTarget.Character:FindFirstChildOfClass("Humanoid")
+            if not targetHum or targetHum.Health <= 0 then
                 State.Combat.KillAllTarget = getClosestEnemy()
             end
-            
-            if State.Combat.KillAllTarget and State.Combat.KillAllTarget.Character then
-                local targetHum = State.Combat.KillAllTarget.Character:FindFirstChildOfClass("Humanoid")
-                if not targetHum or targetHum.Health <= 0 then
-                    State.Combat.KillAllTarget = getClosestEnemy()
+        end
+        
+        if State.Combat.KillAllTarget then
+            local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if myRoot then
+                local dist = (myRoot.Position - State.Combat.KillAllTarget.Character:FindFirstChild("HumanoidRootPart").Position).Magnitude
+                if dist > 4 then
+                    killAllTeleportFrame = killAllTeleportFrame + 1
+                    if killAllTeleportFrame >= killAllTeleportInterval then
+                        teleportBehindTarget(State.Combat.KillAllTarget)
+                        killAllTeleportFrame = 0
+                    end
                 end
             end
             
-            if State.Combat.KillAllTarget then
-                teleportBehindTarget(State.Combat.KillAllTarget)
-                
-                if not State.Combat.AimAssist and Toggles.AimAssist then
-                    Toggles.AimAssist.Set(true)
-                end
-                
-                if not State.Combat.TriggerBot and Toggles.TriggerBot then
-                    Toggles.TriggerBot.Set(true)
-                end
+            if not State.Combat.AimAssist and Toggles.AimAssist then
+                Toggles.AimAssist.Set(true)
+            end
+            
+            if not State.Combat.TriggerBot and Toggles.TriggerBot then
+                Toggles.TriggerBot.Set(true)
             end
         end
     else
@@ -1559,13 +1620,37 @@ RunService.RenderStepped:Connect(function(delta)
         local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
         if myRoot then
             for _, plr in ipairs(Players:GetPlayers()) do
-                if plr == player or not plr.Character then continue end
+                if plr == player or not plr.Character then 
+                    local key = tostring(plr)
+                    if espCache[key] then
+                        for _, d in pairs(espCache[key]) do
+                            if typeof(d) == "Instance" then
+                                d.Enabled = false
+                            else
+                                d.Visible = false
+                            end
+                        end
+                    end
+                    continue 
+                end
                 local char = plr.Character
                 local bbCFrame, bbSize = char:GetBoundingBox()
                 local root = char:FindFirstChild("HumanoidRootPart")
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 local head = char:FindFirstChild("Head")
-                if not root or not hum or hum.Health <= 0 or not head then continue end
+                if not root or not hum or hum.Health <= 0 or not head then 
+                    local key = tostring(plr)
+                    if espCache[key] then
+                        for _, d in pairs(espCache[key]) do
+                            if typeof(d) == "Instance" then
+                                d.Enabled = false
+                            else
+                                d.Visible = false
+                            end
+                        end
+                    end
+                    continue 
+                end
                 
                 if State.ESP.TeamCheck and plr.Team == myTeam then continue end
                 
@@ -1633,7 +1718,16 @@ RunService.RenderStepped:Connect(function(delta)
                 local drawings = espCache[key]
                 local screenHead, onScreenHead = camera:WorldToViewportPoint(head.Position)
                 local screenRoot, onScreenRoot = camera:WorldToViewportPoint(root.Position)
-                if not onScreenHead or not onScreenRoot then continue end
+                if not onScreenHead or not onScreenRoot then 
+                    for _, d in pairs(drawings) do
+                        if typeof(d) == "Instance" then
+                            d.Enabled = false
+                        else
+                            d.Visible = false
+                        end
+                    end
+                    continue 
+                end
                 
                 local color = plr.Team == myTeam and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 50, 50)
                 
@@ -1719,12 +1813,6 @@ RunService.RenderStepped:Connect(function(delta)
                 end
                 
                 if State.ESP.Chams then
-                    if drawings.chams.Adornee ~= plr.Character then
-                        drawings.chams:Destroy()
-                        drawings.chams = Instance.new("Highlight")
-                        drawings.chams.FillTransparency = 0.5
-                        drawings.chams.OutlineTransparency = 0.5
-                    end
                     drawings.chams.Adornee = plr.Character
                     drawings.chams.FillColor = color
                     drawings.chams.OutlineColor = color
@@ -1807,5 +1895,5 @@ if State.Misc.FPSBoost then
     end
 end
 
-print("Horizontal Hub Loaded Successfully!")
+print("Vertex Hub Loaded Successfully!")
 print("Press RightShift to toggle menu")
