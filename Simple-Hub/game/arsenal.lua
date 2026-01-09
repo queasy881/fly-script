@@ -10,12 +10,18 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local getupvalue = debug.getupvalue
+local setupvalue = debug.setupvalue
+local getconstants = debug.getconstants
+local getgc = getgc or get_gc_objects
+
 local player = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 local mouse = player:GetMouse()
 local Expanded = {}
 local espCache = {}
 local hitboxCache = {}
+local originalWeaponValues = {}
 
 local updateWeaponConfig
 
@@ -1099,6 +1105,9 @@ end
 
 local isArsenal = ReplicatedStorage:FindFirstChild("Weapons") and ReplicatedStorage:FindFirstChild("Events")
 
+local events = ReplicatedStorage:FindFirstChild("Events")
+local registerHit = events and events:FindFirstChild("RegisterHit")
+
 local lastCameraCFrame = camera.CFrame
 local currentTool = nil
 local fireConnection
@@ -1118,13 +1127,18 @@ updateWeaponConfig = function()
     if tool then
         local weaponFolder = ReplicatedStorage.Weapons:FindFirstChild(tool.Name)
         if weaponFolder then
+            if not originalWeaponValues[tool.Name] then
+                originalWeaponValues[tool.Name] = {}
+                for _, v in pairs(weaponFolder:GetChildren()) do
+                    if v:IsA("ValueBase") then
+                        originalWeaponValues[tool.Name][v.Name] = v.Value
+                    end
+                end
+            end
             local isAuto = weaponFolder:FindFirstChild("Auto") and weaponFolder.Auto.Value or false
             local fireTime = weaponFolder:FindFirstChild("FireTime") and weaponFolder.FireTime.Value or 0.1
-            if State.Combat.FasterFireRate then
-                fireTime = fireTime / State.Combat.FireRateMultiplier
-            end
-            currentDelay = math.max(fireTime, 0.033) -- avoid kick
-            local needsLoop = State.Combat.AutoAutomatic or State.Combat.FasterFireRate or State.Combat.AutoClicker or not isAuto
+            currentDelay = fireTime
+            local needsLoop = State.Combat.AutoClicker or not isAuto
             if needsLoop then
                 fireConnection = RunService.Heartbeat:Connect(function()
                     if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
@@ -1138,6 +1152,46 @@ updateWeaponConfig = function()
                     end
                 end)
             end
+            if State.Combat.NoSpread then
+                applyNoSpread(weaponFolder)
+            end
+            if State.Combat.NoRecoil then
+                applyNoRecoil(weaponFolder)
+            end
+            if State.Combat.FasterFireRate then
+                local fireTime = weaponFolder:FindFirstChild("FireTime")
+                if fireTime then
+                    fireTime.Value = fireTime.Value / State.Combat.FireRateMultiplier
+                end
+                local cooldown = weaponFolder:FindFirstChild("Cooldown")
+                if cooldown then
+                    cooldown.Value = cooldown.Value / State.Combat.FireRateMultiplier
+                end
+            end
+            if State.Combat.AutoAutomatic then
+                local auto = weaponFolder:FindFirstChild("Auto")
+                if auto then auto.Value = true end
+            end
+            if State.Combat.InstantReload or State.Combat.InfiniteAmmo then
+                local reloadTime = weaponFolder:FindFirstChild("ReloadTime")
+                if reloadTime then reloadTime.Value = 0 end
+            end
+        end
+    end
+end
+
+local function applyNoSpread(weaponFolder)
+    for _, v in pairs(weaponFolder:GetChildren()) do
+        if v:IsA("NumberValue") and (v.Name:lower():find("spread") or v.Name:lower():find("bloom")) then
+            v.Value = 0
+        end
+    end
+end
+
+local function applyNoRecoil(weaponFolder)
+    for _, v in pairs(weaponFolder:GetChildren()) do
+        if v:IsA("NumberValue") and (v.Name:lower():find("recoil") or v.Name:lower():find("kick")) then
+            v.Value = 0
         end
     end
 end
@@ -1215,6 +1269,33 @@ end
 local Silent = {}
 Silent.Target = nil
 
+local function hookWeaponFire()
+    for _, v in ipairs(getgc(true)) do
+        if type(v) == "function" then
+            local info = debug.getinfo(v)
+            if info.name == "Fire" or info.name == "Shoot" then
+                local constants = getconstants(v)
+                for _, c in ipairs(constants) do
+                    if tostring(c):lower():find("bullet") then
+                        hookfunction(v, function(...)
+                            local args = {...}
+
+                            if State.Combat.SilentAim and Silent.Target then
+                                local t = Silent.Target
+                                if t.Part and t.Part.Parent then
+                                    args[2] = t.Part.Position
+                                end
+                            end
+
+                            return v(unpack(args))
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end
+
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 rayParams.IgnoreWater = true
@@ -1283,24 +1364,6 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
                 args[1] = Ray.new(args[1].Origin, camera.CFrame.LookVector * 1000)
             else
                 args[2] = camera.CFrame.LookVector * args[2].Magnitude
-            end
-        end
-        
-        if State.Combat.SilentAim and Silent.Target then
-            local target = Silent.Target
-            if target and target.Character and target.Part and target.Part.Parent and target.Character:FindFirstChildOfClass("Humanoid") and target.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
-                if math.random(1,100) <= State.Combat.SilentHitChance then
-                    local origin = args[1]
-                    local direction = args[2]
-                    local targetPos = target.Part.Position
-                    if method == "FindPartOnRayWithIgnoreList" then
-                        args[1] = Ray.new(origin.Origin, (targetPos - origin.Origin).Unit * 1000)
-                    else
-                        args[2] = (targetPos - origin).Unit * direction.Magnitude
-                    end
-                end
-            else
-                Silent.Target = nil
             end
         end
     end
@@ -1841,30 +1904,64 @@ RunService.RenderStepped:Connect(function(delta)
     -- Apply weapon modifications
     if currentTool then
         local weaponFolder = ReplicatedStorage.Weapons:FindFirstChild(currentTool.Name)
-        if weaponFolder then
-            if State.Combat.NoSpread then
-                if weaponFolder:FindFirstChild("Spread") then
-                    weaponFolder.Spread.Value = 0
+        if weaponFolder and originalWeaponValues[currentTool.Name] then
+            for _, v in pairs(weaponFolder:GetChildren()) do
+                if v:IsA("ValueBase") and originalWeaponValues[currentTool.Name][v.Name] then
+                    local orig = originalWeaponValues[currentTool.Name][v.Name]
+                    if State.Combat.NoSpread and (string.match(v.Name:lower(), "spread") or string.match(v.Name:lower(), "bloom")) then
+                        v.Value = 0
+                    elseif State.Combat.NoRecoil and string.match(v.Name:lower(), "recoil") then
+                        v.Value = 0
+                    elseif State.Combat.FasterFireRate and (string.match(v.Name:lower(), "firetime") or string.match(v.Name:lower(), "cooldown")) then
+                        v.Value = orig / State.Combat.FireRateMultiplier
+                    elseif State.Combat.AutoAutomatic and v.Name == "Auto" then
+                        v.Value = true
+                    elseif State.Combat.InstantReload and (string.match(v.Name:lower(), "reloadtime") or string.match(v.Name:lower(), "reloaddelay")) then
+                        v.Value = 0
+                    else
+                        v.Value = orig
+                    end
                 end
             end
-            if State.Combat.NoRecoil then
-                if weaponFolder:FindFirstChild("Recoil") then
-                    weaponFolder.Recoil.Value = 0
+        end
+        if State.Combat.InfiniteAmmo then
+            local ammo = currentTool:FindFirstChild("Ammo")
+            local maxAmmo = currentTool:FindFirstChild("MaxAmmo")
+            if ammo and maxAmmo then
+                ammo.Value = maxAmmo.Value
+            end
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if currentTool and State.Combat.SilentAim and Silent.Target and registerHit then
+        if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+            local target = Silent.Target
+            local targetPart = target.Part
+            local targetPos = targetPart.Position
+            if State.Combat.AimPrediction then
+                targetPos = targetPos + target.Root.Velocity * State.Combat.PredictionAmount
+            end
+            local origin = camera.CFrame.Position
+            local direction = (targetPos - origin).Unit
+            local distance = (targetPos - origin).Magnitude
+            local rayResult = Workspace:Raycast(origin, direction * distance, rayParams)
+            local visible = true
+            if rayResult then
+                if not rayResult.Instance:IsDescendantOf(target.Character) then
+                    visible = false
                 end
             end
-            if State.Combat.AutoAutomatic then
-                if weaponFolder:FindFirstChild("Auto") then
-                    weaponFolder.Auto.Value = true
-                end
-            end
-            if State.Combat.InstantReload then
-                if weaponFolder:FindFirstChild("ReloadTime") then
-                    weaponFolder.ReloadTime.Value = 0
-                end
-            end
-            if State.Combat.InfiniteAmmo then
-                if currentTool:FindFirstChild("Ammo") and currentTool:FindFirstChild("MaxAmmo") then
-                    currentTool.Ammo.Value = currentTool.MaxAmmo.Value
+            if visible or State.Combat.WallBang then
+                if math.random(1, 100) <= State.Combat.SilentHitChance then
+                    local normal = rayResult and rayResult.Normal or -direction
+                    local material = rayResult and rayResult.Material or targetPart.Material
+                    local isHeadshot = targetPart.Name == "Head"
+                    local weaponFolder = ReplicatedStorage.Weapons:FindFirstChild(currentTool.Name)
+                    local bulletSpeed = weaponFolder and weaponFolder:FindFirstChild("BulletSpeed") and weaponFolder.BulletSpeed.Value or 2000
+                    local weaponName = currentTool.Name
+                    registerHit:FireServer(targetPart, targetPos, normal, material, isHeadshot, bulletSpeed, weaponName)
                 end
             end
         end
@@ -1878,6 +1975,7 @@ player.CharacterAdded:Connect(function()
     currentTool = nil
     if fireConnection then fireConnection:Disconnect() fireConnection = nil end
     recoilBuffer = 0
+    task.delay(2, hookWeaponFire)
 end)
 
 Players.PlayerRemoving:Connect(function(plr)
